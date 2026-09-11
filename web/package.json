@@ -1,0 +1,15 @@
+{
+  "name": "kpi-a1-automation-web",
+  "private": true,
+  "version": "2.0.0",
+  "description": "React dashboard with Tailwind CSS v4 for eKPI Automation",
+  "scripts": {
+    "build": "npm run build:js && npm run build:css",
+    "build:js": "node build_js.cjs",
+    "build:css": "node build_css.cjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "tailwindcss": "4.1.10"
+  }
+}

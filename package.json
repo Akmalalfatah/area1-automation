@@ -1,0 +1,30 @@
+{
+  "name": "kpi-a1-automation",
+  "private": true,
+  "version": "3.0.0",
+  "description": "eKPI Automation - single Node.js/Express service",
+  "type": "module",
+  "scripts": {
+    "start": "node server.cjs",
+    "dev": "node --watch server.cjs",
+    "build:web": "node -e \"console.log('Using bundled web/static assets for deployment.')\"",
+    "build:web:local": "npm --prefix web run build",
+    "check": "node --check server/index.js && node --check server/services.js && node --check server/db.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@xmldom/xmldom": "^0.8.11",
+    "dotenv": "^16.4.7",
+    "exceljs": "^4.4.0",
+    "express": "^5.1.0",
+    "fflate": "^0.8.2",
+    "multer": "^2.0.2",
+    "mysql2": "^3.14.1"
+  },
+  "overrides": {
+    "qs": "^6.16.0",
+    "uuid": "^11.1.1"
+  }
+}

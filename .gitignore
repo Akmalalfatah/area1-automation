@@ -1,0 +1,5 @@
+node_modules/
+.npm-cache/
+server/.env
+data/runs/*
+!data/runs/.gitkeep
