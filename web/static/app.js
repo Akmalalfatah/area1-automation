@@ -434,7 +434,7 @@ async function captureElementToBlob(element) {
     const fontSize = parseFloat(style.fontSize) || 10;
     const value = cell.innerText.trim();
     const isNumericValue = /^[+-]?(?:\d[\d.,]*|\.\d+)%?$/.test(value);
-    const renderFontSize = isNumericValue ? Math.max(fontSize + 2, 18) : fontSize;
+    const renderFontSize = isNumericValue ? Math.max(fontSize + 2, 16) : fontSize;
     ctx.font = `${isNumericValue ? "700" : style.fontWeight} ${renderFontSize}px ${style.fontFamily}`;
     ctx.fillStyle = style.color || "#26384F";
     ctx.textAlign = "center";
