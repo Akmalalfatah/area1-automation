@@ -3,7 +3,6 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import ExcelJS from 'exceljs'
 import {NOP_ORDER, NOP_TO_REGION, REGION_NOPS, ROW_DEFINITIONS, SOURCE_ROWS} from './constants.js'
-import {DEFAULT_REPORT_PROMPT} from './prompts/default-report.js'
 import {loadHistoryDataset, loadPreviousHistoryDataset, saveHistory} from './db.js'
 
 export class ValidationError extends Error {}
@@ -90,7 +89,7 @@ export function buildDataset(extracted,date,filename){
 }
 
 const runDir=(runsDir,id)=>path.join(runsDir,id), statePath=(runsDir,id)=>path.join(runDir(runsDir,id),'state.json')
-export async function createRun(runsDir){const id=crypto.randomBytes(6).toString('hex');await fs.mkdir(runDir(runsDir,id),{recursive:true});const state={id,upload:null,processed:false,report:null,prompt:DEFAULT_REPORT_PROMPT};await saveState(runsDir,state);return state}
+export async function createRun(runsDir){const id=crypto.randomBytes(6).toString('hex');await fs.mkdir(runDir(runsDir,id),{recursive:true});const state={id,upload:null,processed:false,report:null,prompt:'',history:true};await saveState(runsDir,state);return state}
 export async function loadState(runsDir,id){try{return JSON.parse(await fs.readFile(statePath(runsDir,id),'utf8'))}catch(error){if(error.code==='ENOENT')throw new ValidationError('Run tidak ditemukan.');throw error}}
 export async function saveState(runsDir,state){await fs.mkdir(runDir(runsDir,state.id),{recursive:true});await fs.writeFile(statePath(runsDir,state.id),JSON.stringify(state,null,2))}
 
