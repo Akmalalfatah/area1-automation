@@ -391,7 +391,7 @@ function KpiTable({ dashboard, region, nop, rowGroup, tableRef }) {
           const aggregate=row.type==='aggregate', score=row.type==='score', categoryRow=row.type==='category'
           return <tr key={row.key} className={aggregate?'font-semibold':''}>
             <td className={`sticky left-0 z-10 border-b border-r border-[#C6D0DC] px-3 py-2 ${score||categoryRow?'bg-[#1D426E] text-center font-semibold text-white':aggregate?'bg-[#E8EDF2]':'bg-white'}`}>{row.label}</td>
-            <td className={`sticky left-[390px] z-10 border-b border-r border-[#C6D0DC] px-2 py-2 text-center ${score||categoryRow?'bg-[#1D426E] font-semibold text-white':aggregate?'bg-[#E8EDF2]':'bg-white'}`}>{row.key==='kpi_score'?'100%':formatWeight(row.weight)}</td>
+            <td className={`kpi-numeric-cell sticky left-[390px] z-10 border-b border-r border-[#C6D0DC] px-2 py-2 text-center ${score||categoryRow?'bg-[#1D426E] text-white':aggregate?'bg-[#E8EDF2]':'bg-white'}`}>{row.key==='kpi_score'?'100%':formatWeight(row.weight)}</td>
             {nops.map(n=>{
               const raw=n.values[row.key]
               let bg='#fff',color='#26384F'
@@ -399,7 +399,7 @@ function KpiTable({ dashboard, region, nop, rowGroup, tableRef }) {
               else if(score){bg=CATEGORY_COLORS[n.values.category]||'#fff';color='#fff'}
               else if(aggregate){bg='#E8EDF2';color='#334155'}
               else if(row.type==='component'){bg=heatColor(raw,rowValues[row.key])}
-              return <td key={`${n.entryKey||n.name}-${row.key}`} style={{background:bg,color}} className={`border-b border-r border-[#C6D0DC] px-2 py-2 text-center tabular-nums ${score||categoryRow?'font-semibold':''}`}>{categoryRow?(raw||''):formatNumber(raw)}</td>
+              return <td key={`${n.entryKey||n.name}-${row.key}`} style={{background:bg,color}} className={`border-b border-r border-[#C6D0DC] px-2 py-2 text-center tabular-nums ${categoryRow?'':'kpi-numeric-cell'}`}>{categoryRow?(raw||''):formatNumber(raw)}</td>
             })}
           </tr>
         })}</tbody>
@@ -537,9 +537,10 @@ async function captureElementToBlob(element) {
     const fontSize=parseFloat(style.fontSize)||10
     const value=cell.innerText.trim()
     const isNumericValue=/^[+-]?(?:\d[\d.,]*|\.\d+)%?$/.test(value)
-    ctx.font=`${isNumericValue?'700':style.fontWeight} ${fontSize}px ${style.fontFamily}`
+    const renderFontSize=isNumericValue?Math.max(fontSize+2,14):fontSize
+    ctx.font=`${isNumericValue?'700':style.fontWeight} ${renderFontSize}px ${style.fontFamily}`
     ctx.fillStyle=style.color||'#26384F';ctx.textAlign='center';ctx.textBaseline='middle'
-    drawWrappedText(ctx,cell.innerText,x+w/2,y+h/2,Math.max(12,w-10),Math.max(11,fontSize+3))
+    drawWrappedText(ctx,cell.innerText,x+w/2,y+h/2,Math.max(12,w-10),Math.max(11,renderFontSize+4))
   })
   viewport.scrollLeft=previousLeft;viewport.scrollTop=previousTop
   const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png',1))
