@@ -514,23 +514,30 @@ async function captureElementToBlob(element) {
   const tableRect=table.getBoundingClientRect()
   const width=Math.ceil(table.scrollWidth)
   const height=Math.ceil(table.scrollHeight)
+  // Keep the table's layout size, but draw three times as many pixels so the
+  // downloaded PNG stays legible when opened, zoomed, or shared in chat.
+  const imageScale=3
+  const canvasWidth=width+32,canvasHeight=height+32
   const canvas = document.createElement('canvas')
-  canvas.width = width + 32
-  canvas.height = height + 32
+  canvas.width = canvasWidth * imageScale
+  canvas.height = canvasHeight * imageScale
   const ctx = canvas.getContext('2d')
+  ctx.scale(imageScale,imageScale)
   ctx.fillStyle = '#ffffff'
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  ctx.fillRect(0, 0, canvasWidth, canvasHeight)
   Array.from(table.querySelectorAll('th,td')).forEach(cell=>{
     const rect=cell.getBoundingClientRect()
     const x=Math.round(rect.left-tableRect.left)+16, y=Math.round(rect.top-tableRect.top)+16
     const w=Math.round(rect.width), h=Math.round(rect.height)
-    if(x+w<16||x>canvas.width-16||y+h<16||y>canvas.height-16)return
+    if(x+w<16||x>canvasWidth-16||y+h<16||y>canvasHeight-16)return
     const style=getComputedStyle(cell)
     ctx.fillStyle=style.backgroundColor&&style.backgroundColor!=='rgba(0, 0, 0, 0)'?style.backgroundColor:'#ffffff'
     ctx.fillRect(x,y,w,h)
     ctx.strokeStyle='#C6D0DC';ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,w-1,h-1)
     const fontSize=parseFloat(style.fontSize)||10
-    ctx.font=`${style.fontWeight} ${fontSize}px ${style.fontFamily}`
+    const value=cell.innerText.trim()
+    const isNumericValue=/^[+-]?(?:\d[\d.,]*|\.\d+)%?$/.test(value)
+    ctx.font=`${isNumericValue?'700':style.fontWeight} ${fontSize}px ${style.fontFamily}`
     ctx.fillStyle=style.color||'#26384F';ctx.textAlign='center';ctx.textBaseline='middle'
     drawWrappedText(ctx,cell.innerText,x+w/2,y+h/2,Math.max(12,w-10),Math.max(11,fontSize+3))
   })
