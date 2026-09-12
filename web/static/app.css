@@ -947,7 +947,7 @@ button { cursor: pointer; }
 .kpi-capture { width: 100%; min-width: 0; max-width: 100%; overflow: hidden; }
 .kpi-table { width: max-content; min-width: 100%; }
 .kpi-table .kpi-numeric-cell,
-.kpi-table .kpi-category-cell { font-size: 16px; font-weight: 700; line-height: 1.25; }
+.kpi-table .kpi-category-cell { font-size: 14px; font-weight: 700; line-height: 1.25; }
 .preventive-table th { border-right: 1px solid #102c4d; padding: 13px 12px; text-align: left; font-weight: 600; white-space: nowrap; }
 .preventive-table td { border-right: 1px solid #d7dfe8; border-bottom: 1px solid #d7dfe8; padding: 12px; color: #42536a; vertical-align: middle; white-space: nowrap; }
 .preventive-table tbody tr:nth-child(even) td { background: #f7f9fc; }
