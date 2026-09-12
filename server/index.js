@@ -1,7 +1,8 @@
 import express from 'express'
 import multer from 'multer'
 import fs from 'node:fs/promises'
-import {BOOK1_START_COLUMNS, DEFAULT_PROMPT, NOP_ORDER, REGION_NOPS, ROW_DEFINITIONS} from './constants.js'
+import {BOOK1_START_COLUMNS, NOP_ORDER, REGION_NOPS, ROW_DEFINITIONS} from './constants.js'
+import {DEFAULT_REPORT_PROMPT} from './prompts/default-report.js'
 import {RUNS_DIR, SERVER_DIR, TEMPLATE_PATH, WEB_DIR} from './config.js'
 import {databaseEnabled, deleteHistory, initDb, latestPreventiveUpload, listHistory, loadPreviousHistoryDataset, loadPreventiveRows, savePreventiveUpload} from './db.js'
 import {buildAnalysis, createRun, dashboardPayload, generateReport, loadDataset, loadState, processRun, saveState, uploadAndProcess, ValidationError} from './services.js'
@@ -13,10 +14,10 @@ app.use(express.json({limit:'1mb'}))
 app.use('/static',express.static(`${WEB_DIR}/static`))
 app.get('/',(_req,res)=>res.sendFile(`${WEB_DIR}/index.html`))
 app.get('/api/health',(_req,res)=>res.json({status:'ok',runtime:'node'}))
-app.get('/api/config',(_req,res)=>res.json({regions:REGION_NOPS,default_prompt:DEFAULT_PROMPT,database_enabled:databaseEnabled}))
+app.get('/api/config',(_req,res)=>res.json({regions:REGION_NOPS,default_prompt:DEFAULT_REPORT_PROMPT,database_enabled:databaseEnabled}))
 
 app.post('/api/runs',asyncHandler(async(_req,res)=>res.json(await createRun(RUNS_DIR))))
-app.get('/api/runs/:id',asyncHandler(async(req,res)=>{try{res.json(await loadState(RUNS_DIR,req.params.id))}catch(error){const dataset=await loadDataset(RUNS_DIR,req.params.id).catch(()=>null);if(!dataset)throw error;res.json({id:req.params.id,upload:null,processed:true,report:null,prompt:DEFAULT_PROMPT,history:true})}}))
+app.get('/api/runs/:id',asyncHandler(async(req,res)=>{try{res.json(await loadState(RUNS_DIR,req.params.id))}catch(error){const dataset=await loadDataset(RUNS_DIR,req.params.id).catch(()=>null);if(!dataset)throw error;res.json({id:req.params.id,upload:null,processed:true,report:null,prompt:DEFAULT_REPORT_PROMPT,history:true})}}))
 app.post('/api/runs/:id/upload',upload.single('file'),asyncHandler(async(req,res)=>{assertXlsx(req.file);assertDate(req.body.upload_date);res.json(await uploadAndProcess(RUNS_DIR,req.params.id,req.file,req.body.upload_date))}))
 app.post('/api/runs/:id/process',asyncHandler(async(req,res)=>{const dataset=await processRun(RUNS_DIR,req.params.id);res.json({ok:true,date:dataset.date})}))
 app.get('/api/runs/:id/dashboard',asyncHandler(async(req,res)=>res.json(await dashboardPayload(RUNS_DIR,req.params.id,req.query.region||null,req.query.nop||null,req.query.category||null))))

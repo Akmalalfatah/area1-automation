@@ -2,7 +2,8 @@ import crypto from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import ExcelJS from 'exceljs'
-import {DEFAULT_PROMPT, NOP_ORDER, NOP_TO_REGION, REGION_NOPS, ROW_DEFINITIONS, SOURCE_ROWS} from './constants.js'
+import {NOP_ORDER, NOP_TO_REGION, REGION_NOPS, ROW_DEFINITIONS, SOURCE_ROWS} from './constants.js'
+import {DEFAULT_REPORT_PROMPT} from './prompts/default-report.js'
 import {loadHistoryDataset, loadPreviousHistoryDataset, saveHistory} from './db.js'
 
 export class ValidationError extends Error {}
@@ -89,7 +90,7 @@ export function buildDataset(extracted,date,filename){
 }
 
 const runDir=(runsDir,id)=>path.join(runsDir,id), statePath=(runsDir,id)=>path.join(runDir(runsDir,id),'state.json')
-export async function createRun(runsDir){const id=crypto.randomBytes(6).toString('hex');await fs.mkdir(runDir(runsDir,id),{recursive:true});const state={id,upload:null,processed:false,report:null,prompt:DEFAULT_PROMPT};await saveState(runsDir,state);return state}
+export async function createRun(runsDir){const id=crypto.randomBytes(6).toString('hex');await fs.mkdir(runDir(runsDir,id),{recursive:true});const state={id,upload:null,processed:false,report:null,prompt:DEFAULT_REPORT_PROMPT};await saveState(runsDir,state);return state}
 export async function loadState(runsDir,id){try{return JSON.parse(await fs.readFile(statePath(runsDir,id),'utf8'))}catch(error){if(error.code==='ENOENT')throw new ValidationError('Run tidak ditemukan.');throw error}}
 export async function saveState(runsDir,state){await fs.mkdir(runDir(runsDir,state.id),{recursive:true});await fs.writeFile(statePath(runsDir,state.id),JSON.stringify(state,null,2))}
 
@@ -113,7 +114,7 @@ export function buildAnalysis(dataset,region=null,nop=null,categoryFilter=null,b
   for(const item of selected){const current=item.values.kpi_score,previous=lookup[item.name]?.values?.kpi_score;if(Number.isFinite(current)&&Number.isFinite(previous))comparisons.push({nop:item.name,region:item.region,start:previous,end:current,delta:current-previous,start_category:category(previous),end_category:category(current)})}
   const currentNops=selected.map(item=>({nop:item.name,region:item.region,score:item.values.kpi_score,category:item.values.category}))
   if(!comparisons.length)comparisons=currentNops.filter(item=>Number.isFinite(item.score)).map(item=>({nop:item.nop,region:item.region,start:null,end:item.score,delta:null,start_category:null,end_category:item.category}))
-  let changes=[];const eligible=ROW_DEFINITIONS.filter(row=>['score','component'].includes(row.type)).map(row=>row.key)
+  let changes=[];const eligible=ROW_DEFINITIONS.filter(row=>row.type==='component').map(row=>row.key)
   for(const item of selected){const prior=lookup[item.name];if(!prior)continue;for(const key of eligible){const start=prior.values[key],end=item.values[key];if(Number.isFinite(start)&&Number.isFinite(end))changes.push({nop:item.name,key,component:rows[key].label,start,end,delta:end-start})}}
   if(!changes.length)for(const key of eligible){const values=selected.map(item=>item.values[key]).filter(Number.isFinite);if(values.length)changes.push({key,component:rows[key].label,start:null,end:values.reduce((a,b)=>a+b,0)/values.length,delta:null})}
   const available=Boolean(baseline), rank=(items,reverse=false)=>[...items].sort((a,b)=>{const av=available?a.delta:a.end,bv=available?b.delta:b.end;return reverse?bv-av:av-bv}).slice(0,5), scores=currentNops.map(x=>x.score).filter(Number.isFinite)
@@ -126,8 +127,9 @@ const roundAi=value=>Array.isArray(value)?value.map(roundAi):value&&typeof value
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms))
 export async function generateReport(prompt,analysis){
   const key=process.env.GEMINI_API_KEY;if(!key)throw new Error('GEMINI_API_KEY belum dikonfigurasi di server/.env.')
-  const models=[process.env.GEMINI_MODEL||'gemini-3.5-flash-lite',process.env.GEMINI_FALLBACK_MODEL||'gemini-3.5-flash'].filter((x,i,a)=>x&&a.indexOf(x)===i), errors=[]
-  const body={systemInstruction:{parts:[{text:prompt}]},contents:[{role:'user',parts:[{text:`Berikut DATA TERSTRUKTUR hasil kalkulasi sistem. Gunakan angka dan ranking ini apa adanya.\n\n${JSON.stringify(roundAi(analysis),null,2)}`}]}]}
+  const models=[process.env.GEMINI_MODEL||'gemini-2.5-flash-lite',process.env.GEMINI_FALLBACK_MODEL||'gemini-2.5-flash'].filter((x,i,a)=>x&&a.indexOf(x)===i), errors=[]
+  const reportGuard='\n\nATURAN SISTEM TETAP: KPI Score adalah ringkasan per NOP dan tidak boleh dicantumkan dalam ranking komponen TOP 5 BEST maupun TOP 5 WORST. Gunakan hanya top_components dan worst_components yang dikirim sistem.'
+  const body={systemInstruction:{parts:[{text:`${prompt}${reportGuard}`}]},contents:[{role:'user',parts:[{text:`Berikut DATA TERSTRUKTUR hasil kalkulasi sistem. Gunakan angka dan ranking ini apa adanya.\n\n${JSON.stringify(roundAi(analysis),null,2)}`}]}]}
   for(const model of models)for(let attempt=0;attempt<3;attempt++){try{const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(45000)});const data=await response.json();if(!response.ok)throw new Error(`Gemini API error (${response.status}) pada ${model}: ${data.error?.message||response.statusText}`);const text=data.candidates?.flatMap(x=>x.content?.parts||[]).map(x=>x.text).filter(Boolean).join('\n').trim();if(!text)throw new Error('Gemini API tidak mengembalikan output text.');return text}catch(error){errors.push(error.message);if(attempt<2)await sleep(1000*2**attempt+Math.random()*500)}}
   throw new Error(`Semua model Gemini gagal menghasilkan report. ${errors.join(' | ')}`)
 }
