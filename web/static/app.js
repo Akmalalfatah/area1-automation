@@ -245,16 +245,16 @@ function PreventiveDashboardCards({ data, file, date, busy, loading, filters, on
   const rows = data && data.rows || [];
   const visibleRows = rows.slice(0, 100);
   const details = (row) => [
-    ["SCHEDULE DATE", shortDate(row.schedule_date)], ["ACTUAL DATE", shortDate(row.actual_date)], ["SUBMITTED DATE", shortDate(row.submitted_date)], ["STATUS", row.status || "-"],
+    ["SCHEDULE DATE", shortDate(row.schedule_date)], ["SUBMITTED DATE", shortDate(row.submitted_date)], ["STATUS", row.status || "-"],
     ["TICKET NO", row.ticket_no || "-"], ["REGIONAL", row.regional || "-"], ["CLUSTER", row.cluster || "-"], ["PIC", row.pic || "-"],
-    ["CLASS SITE", row.class_site || "-"], ["TYPE SITE", row.type_site || "-"], ["INTERVAL", row.interval || "-"], ["LAST MAINTENANCE", shortDate(row.last_maintenance)],
+    ["CLASS SITE", row.class_site || "-"], ["TYPE SITE", row.type_site || "-"], ["INTERVAL", row.interval || "-"], ["LAST MAINTENANCE", shortDate(row.submitted_date)],
     ["DIFF DAYS", row.diff_days || "-"], ["AREA", row.area || "-"], ["CREATED DATE", shortDate(row.created_date)]
   ];
   const summary = h("div", { className: "grid grid-cols-4 gap-4" },
     h(PreventiveSummaryCard, { label: "PLAN SITE", value: data && data.plan != null ? data.plan : 0, detail: `${shortDate(filters.dateFrom)} sampai ${shortDate(filters.dateTo)}`, tone: "navy" }),
-    h(PreventiveSummaryCard, { label: "ACTUAL SUBMITTED", value: data && data.actual != null ? data.actual : 0, detail: "Site unik dengan Actual Date terisi", tone: "green" }),
-    h(PreventiveSummaryCard, { label: "ACHIEVEMENT", value: `${formatNumber(data && data.achievement != null ? data.achievement : 0)}%`, detail: "Actual dibanding Plan pada filter aktif", tone: "orange" }),
-    h(PreventiveSummaryCard, { label: "BELUM SUBMIT", value: data && data.pending != null ? data.pending : 0, detail: "Site plan yang belum memiliki Actual Date", tone: "red" })
+    h(PreventiveSummaryCard, { label: "SUBMITTED", value: data && data.submitted != null ? data.submitted : 0, detail: "Site unik dengan Submitted Date terisi", tone: "green" }),
+    h(PreventiveSummaryCard, { label: "ACHIEVEMENT", value: `${formatNumber(data && data.achievement != null ? data.achievement : 0)}%`, detail: "Submitted dibanding Plan pada filter aktif", tone: "orange" }),
+    h(PreventiveSummaryCard, { label: "BELUM SUBMIT", value: data && data.pending != null ? data.pending : 0, detail: "Site plan yang belum memiliki Submitted Date", tone: "red" })
   );
   const filtersBar = h("div", { className: "preventive-filter-row" },
     h("div", null, h("label", { className: "filter-label mb-1 block" }, "DATE FROM"), h("input", { type: "date", value: filters.dateFrom, onChange: (event) => onFilter("dateFrom", event.target.value), className: "control h-10 w-[155px] px-3 text-[10px] font-semibold" })),
@@ -273,7 +273,7 @@ function PreventiveDashboardCards({ data, file, date, busy, loading, filters, on
         h(ChevronRight, { size: 15, className: "preventive-card-chevron" })
       ),
       h("div", { className: "preventive-card-details" },
-        h("div", { className: "preventive-detail-grid" }, ...details(row).map(([label, value]) => h("div", { key: label }, h("p", { className: "preventive-card-label" }, label), label === "STATUS" ? h("span", { className: `preventive-status mt-1 ${row.actual_date ? "is-done" : "is-pending"}` }, value) : h("p", { className: "mt-1 text-[10px] font-medium leading-4 text-[#42536A]" }, value)))),
+        h("div", { className: "preventive-detail-grid" }, ...details(row).map(([label, value]) => h("div", { key: label }, h("p", { className: "preventive-card-label" }, label), label === "STATUS" ? h("span", { className: `preventive-status mt-1 ${row.submitted_date ? "is-done" : "is-pending"}` }, value) : h("p", { className: "mt-1 text-[10px] font-medium leading-4 text-[#42536A]" }, value)))),
         h("div", { className: "preventive-notes" }, h("p", { className: "preventive-card-label" }, "NOTES"), h("p", { className: "mt-1 text-[10px] leading-5 text-[#42536A]" }, row.notes || "-"))
       )
     );

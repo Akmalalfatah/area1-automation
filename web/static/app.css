@@ -953,14 +953,14 @@ button { cursor: pointer; }
 .preventive-status { display: inline-flex; min-width: 68px; justify-content: center; border: 1px solid; padding: 3px 7px; font-size: 9px; font-weight: 600; }
 .preventive-status.is-done { border-color: #9adbbf; background: #e9f8f1; color: #0a8054; }
 .preventive-status.is-pending { border-color: #f0c1c7; background: #fff1f2; color: #c63e4e; }
-.preventive-info-card { border: 1px solid #cbd5e1; border-left: 4px solid #173e68; background: #fff; box-shadow: 0 1px 1px rgba(23,62,104,.04); }
+.preventive-info-card { box-sizing: border-box; width: 100%; border: 1px solid #cbd5e1; border-left: 4px solid #173e68; background: #fff; box-shadow: none; }
 .preventive-info-card:hover { border-color: #aebdcd; border-left-color: #e27b2b; }
 .preventive-info-card[open] { border-left-color: #e27b2b; box-shadow: 0 2px 7px rgba(23,62,104,.10); }
 .preventive-card-label { font-size: 8px; line-height: 1.2; font-weight: 600; letter-spacing: .08em; color: #8090a2; }
 .preventive-filter-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px; }
 .preventive-filter-search { min-width: 250px; flex: 1; margin-left: auto; }
-.preventive-card-list { margin-top: 16px; max-height: 620px; overflow: auto; border: 1px solid #cbd5e1; background: #f4f7fa; padding: 12px; }
-.preventive-card-list > * + * { margin-top: 8px; }
+.preventive-card-list { margin-top: 16px; max-height: 620px; overflow: auto; border: 1px solid #cbd5e1; background: #fff; padding: 0; }
+.preventive-card-list > * + * { margin-top: 0; border-top: 0; }
 .preventive-card-head { display: grid; width: 100%; grid-template-columns: 1fr 1.6fr 1fr 28px; align-items: center; text-align: left; }
 .preventive-card-head { cursor: pointer; list-style: none; }
 .preventive-card-head::-webkit-details-marker { display: none; }
