@@ -381,7 +381,7 @@ function KpiTable({ dashboard, region, nop, rowGroup, tableRef }) {
       <table className="kpi-table border-collapse text-[10px] text-[#26384F]">
         <thead className="sticky top-0 z-20">
           <tr>
-            <th rowSpan={2} className="sticky left-0 z-40 min-w-[390px] border-b border-r border-[#102C4D] bg-[#1D426E] px-3 py-3 text-center font-semibold text-white">Skor KPI</th>
+            <th rowSpan={2} className="sticky left-0 z-40 min-w-[390px] border-b border-r border-[#102C4D] bg-[#1D426E] px-3 py-3 text-left font-semibold text-white">Skor KPI</th>
             <th rowSpan={2} className="sticky left-[390px] z-40 min-w-[78px] border-b border-r border-[#102C4D] bg-[#1D426E] px-2 py-3 text-center font-semibold text-white">Bobot</th>
             {nopGroups.map(group=><th key={group.name} colSpan={group.items.length} className="min-w-[110px] border-b border-r border-[#102C4D] bg-[#1D426E] px-3 py-3 text-center font-semibold text-white">{group.name}</th>)}
           </tr>
@@ -390,7 +390,7 @@ function KpiTable({ dashboard, region, nop, rowGroup, tableRef }) {
         <tbody>{rows.map(row=>{
           const aggregate=row.type==='aggregate', score=row.type==='score', categoryRow=row.type==='category'
           return <tr key={row.key} className={aggregate?'font-semibold':''}>
-            <td className={`sticky left-0 z-10 border-b border-r border-[#C6D0DC] px-3 py-2 ${score||categoryRow?'bg-[#1D426E] text-center font-semibold text-white':aggregate?'bg-[#E8EDF2]':'bg-white'}`}>{row.label}</td>
+            <td className={`sticky left-0 z-10 border-b border-r border-[#C6D0DC] px-3 py-2 text-left ${score||categoryRow?'bg-[#1D426E] font-semibold text-white':aggregate?'bg-[#E8EDF2]':'bg-white'}`}>{row.label}</td>
             <td className={`kpi-numeric-cell sticky left-[390px] z-10 border-b border-r border-[#C6D0DC] px-2 py-2 text-center ${score||categoryRow?'bg-[#1D426E] text-white':aggregate?'bg-[#E8EDF2]':'bg-white'}`}>{row.key==='kpi_score'?'100%':formatWeight(row.weight)}</td>
             {nops.map(n=>{
               const raw=n.values[row.key]
