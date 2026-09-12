@@ -640,7 +640,10 @@ class App extends React.Component {
       const config=await getConfig()
       const prompt=localStorage.getItem(PROMPT_KEY)||config.default_prompt
       this.setState({config,prompt,promptDraft:prompt})
-      await this.loadHistory()
+      // Riwayat disimpan di database, sedangkan RUN_KEY hanya tersimpan di
+      // browser uploader. Ambil riwayat publik agar browser/perangkat baru
+      // tetap langsung menampilkan KPI terakhir.
+      const historyItems=await this.loadHistory()
       const saved=localStorage.getItem(RUN_KEY)
       if(saved){
         try{
@@ -653,14 +656,36 @@ class App extends React.Component {
           }
         }catch(e){localStorage.removeItem(RUN_KEY)}
       }
+      const latest=historyItems[0]
+      if(latest){
+        const run={
+          id:latest.run_id,
+          upload:latest.history?.upload||{filename:latest.filename||'',date:latest.date_end},
+          processed:true,
+          report:null,
+          prompt:'',
+          history:true
+        }
+        const dashboard=await getDashboard(run.id,this.state.region,this.state.nop)
+        localStorage.setItem(RUN_KEY,run.id)
+        this.setState({run,dashboard},()=>this.requestReport(run,this.state.region,this.state.nop,prompt))
+        return
+      }
       const run=await createRun()
       localStorage.setItem(RUN_KEY,run.id)
       this.setState({run})
     }catch(e){this.setState({pageError:e.message})}
   }
   loadHistory=async(filters=this.state.historyFilters)=>{
-    try{const history=await getHistory(filters);this.setState({historyItems:history.items||[],selectedHistory:[]})}
-    catch(e){this.setState({historyItems:[]})}
+    try{
+      const history=await getHistory(filters)
+      const items=history.items||[]
+      this.setState({historyItems:items,selectedHistory:[]})
+      return items
+    }catch(e){
+      this.setState({historyItems:[]})
+      return []
+    }
   }
   requestReport=async(run=this.state.run,region=this.state.region,nop=this.state.nop,prompt=this.state.prompt)=>{
     if(!run||!run.processed||!prompt)return

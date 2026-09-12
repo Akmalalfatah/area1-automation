@@ -533,9 +533,12 @@ class App extends React.Component {
     __publicField(this, "loadHistory", async (filters = this.state.historyFilters) => {
       try {
         const history = await getHistory(filters);
-        this.setState({ historyItems: history.items || [], selectedHistory: [] });
+        const items = history.items || [];
+        this.setState({ historyItems: items, selectedHistory: [] });
+        return items;
       } catch (e) {
         this.setState({ historyItems: [] });
+        return [];
       }
     });
     __publicField(this, "requestReport", async (run = this.state.run, region = this.state.region, nop = this.state.nop, prompt = this.state.prompt) => {
@@ -695,7 +698,7 @@ class App extends React.Component {
       const config = await getConfig();
       const prompt = localStorage.getItem(PROMPT_KEY) || config.default_prompt;
       this.setState({ config, prompt, promptDraft: prompt });
-      await this.loadHistory();
+      const historyItems = await this.loadHistory();
       const saved = localStorage.getItem(RUN_KEY);
       if (saved) {
         try {
@@ -709,6 +712,21 @@ class App extends React.Component {
         } catch (e) {
           localStorage.removeItem(RUN_KEY);
         }
+      }
+      const latest = historyItems[0];
+      if (latest) {
+        const run2 = {
+          id: latest.run_id,
+          upload: (latest.history == null ? void 0 : latest.history.upload) || { filename: latest.filename || "", date: latest.date_end },
+          processed: true,
+          report: null,
+          prompt: "",
+          history: true
+        };
+        const dashboard = await getDashboard(run2.id, this.state.region, this.state.nop);
+        localStorage.setItem(RUN_KEY, run2.id);
+        this.setState({ run: run2, dashboard }, () => this.requestReport(run2, this.state.region, this.state.nop, prompt));
+        return;
       }
       const run = await createRun();
       localStorage.setItem(RUN_KEY, run.id);
