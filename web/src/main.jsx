@@ -102,6 +102,12 @@ const getPreventiveDashboard = (filters = {}, maintenanceType = '') => {
   if(filters.nop)params.set('nop',filters.nop)
   if(filters.siteId)params.set('site_id',filters.siteId)
   if(filters.search)params.set('search',filters.search)
+  if(filters.status)params.set('status',filters.status)
+  if(filters.pic)params.set('pic',filters.pic)
+  if(filters.interval)params.set('interval',filters.interval)
+  if(filters.typePower)params.set('type_power',filters.typePower)
+  if(filters.scopeItem)params.set('scope_item',filters.scopeItem)
+  if(filters.scheduleState)params.set('schedule_state',filters.scheduleState)
   if(maintenanceType)params.set('maintenance_type',maintenanceType)
   return api(`/api/preventive/dashboard${params.size?`?${params}`:''}`)
 }
@@ -233,6 +239,18 @@ function PreventiveSummaryCard({label,value,detail,tone}){
   return <div className="corporate-panel min-h-[130px] border-t-[7px] p-4" style={{borderTopColor:colors[tone]||colors.navy}}><p className="text-[10px] font-semibold tracking-[.05em] text-[#607086]">{label}</p><p className="mt-4 text-[26px] font-semibold leading-none text-[#243A55]">{value}</p><p className="mt-3 text-[10px] text-slate-400">{detail}</p></div>
 }
 
+function RoutineMaintenanceFilters({data,filters,onFilter,type}){
+  const isGenset=type==='genset'
+  return <div className="preventive-filter-row">
+    <div><label className="filter-label mb-1 block">SCHEDULE FROM</label><input type="date" value={filters.dateFrom} onChange={e=>onFilter('dateFrom',e.target.value)} className="control h-10 w-[155px] px-3 text-[10px] font-semibold"/></div>
+    <div><label className="filter-label mb-1 block">SCHEDULE TO</label><input type="date" value={filters.dateTo} onChange={e=>onFilter('dateTo',e.target.value)} className="control h-10 w-[155px] px-3 text-[10px] font-semibold"/></div>
+    <div><label className="filter-label mb-1 block">NOP</label><select value={filters.nop} onChange={e=>onFilter('nop',e.target.value)} className="control h-10 w-[170px] px-3 text-[10px] font-semibold"><option value="">All NOP</option>{(data?.nop_options||[]).map(x=><option key={x} value={x}>{compactNop(x)}</option>)}</select></div>
+    <div><label className="filter-label mb-1 block">STATUS PM</label><select value={filters.status} onChange={e=>onFilter('status',e.target.value)} className="control h-10 w-[150px] px-3 text-[10px] font-semibold"><option value="">All Status</option>{(data?.status_options||[]).map(x=><option key={x} value={x}>{x}</option>)}</select></div>
+    <div><label className="filter-label mb-1 block">PIC</label><select value={filters.pic} onChange={e=>onFilter('pic',e.target.value)} className="control h-10 w-[160px] px-3 text-[10px] font-semibold"><option value="">All PIC</option>{(data?.pic_options||[]).map(x=><option key={x} value={x}>{x}</option>)}</select></div>
+    {isGenset?<><div><label className="filter-label mb-1 block">TYPE POWER</label><select value={filters.typePower} onChange={e=>onFilter('typePower',e.target.value)} className="control h-10 w-[180px] px-3 text-[10px] font-semibold"><option value="">All Type Power</option>{(data?.type_power_options||[]).map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label className="filter-label mb-1 block">SCOPE ITEM</label><select value={filters.scopeItem} onChange={e=>onFilter('scopeItem',e.target.value)} className="control h-10 w-[210px] px-3 text-[10px] font-semibold"><option value="">All Scope Item</option>{(data?.scope_item_options||[]).map(x=><option key={x} value={x}>{x}</option>)}</select></div></>:<><div><label className="filter-label mb-1 block">INTERVAL</label><select value={filters.interval} onChange={e=>onFilter('interval',e.target.value)} className="control h-10 w-[130px] px-3 text-[10px] font-semibold"><option value="">All Interval</option>{(data?.interval_options||[]).map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label className="filter-label mb-1 block">SCHEDULE STATE</label><select value={filters.scheduleState} onChange={e=>onFilter('scheduleState',e.target.value)} className="control h-10 w-[170px] px-3 text-[10px] font-semibold"><option value="">All Schedule</option><option value="overdue">Terlambat</option><option value="upcoming">Belum Jatuh Tempo</option><option value="submitted">Submitted</option></select></div></>}
+  </div>
+}
+
 function PreventiveDashboard({data,file,date,busy,loading,filters,onFile,onDate,onUpload,onFilter,maintenanceType='',showUpload=true}){
   const rows=data?.rows||[]
   const visibleRows=rows.slice(0,100)
@@ -254,13 +272,13 @@ function PreventiveDashboard({data,file,date,busy,loading,filters,onFile,onDate,
     {showUpload&&<PreventiveUploadPanel file={file} date={date} busy={busy} latest={data?.latest_upload} onFile={onFile} onDate={onDate} onUpload={onUpload}/>} 
     <div className="grid grid-cols-4 gap-4"><PreventiveSummaryCard label="PLAN SITE" value={data?.plan??0} detail={`${shortDate(filters.dateFrom)} sampai ${shortDate(filters.dateTo)}`} tone="navy"/><PreventiveSummaryCard label="SUBMITTED" value={data?.submitted??0} detail="Site unik dengan Submitted Date terisi" tone="green"/><PreventiveSummaryCard label="ACHIEVEMENT" value={`${formatNumber(data?.achievement??0)}%`} detail="Submitted dibanding Plan pada filter aktif" tone="orange"/><PreventiveSummaryCard label="BELUM SUBMIT" value={data?.pending??0} detail="Site plan yang belum memiliki Submitted Date" tone="red"/></div>
     <section className="corporate-panel p-5">
-      <div className="preventive-filter-row">
+      {maintenanceType?<RoutineMaintenanceFilters data={data} filters={filters} onFilter={onFilter} type={maintenanceType}/>:<div className="preventive-filter-row">
         <div><label className="filter-label mb-1 block">DATE FROM</label><input type="date" value={filters.dateFrom} onChange={e=>onFilter('dateFrom',e.target.value)} className="control h-10 w-[155px] px-3 text-[10px] font-semibold"/></div>
         <div><label className="filter-label mb-1 block">DATE TO</label><input type="date" value={filters.dateTo} onChange={e=>onFilter('dateTo',e.target.value)} className="control h-10 w-[155px] px-3 text-[10px] font-semibold"/></div>
         <div><label className="filter-label mb-1 block">NOP</label><select value={filters.nop} onChange={e=>onFilter('nop',e.target.value)} className="control h-10 w-[180px] px-3 text-[10px] font-semibold"><option value="">All NOP</option>{(data?.nop_options||[]).map(item=><option key={item} value={item}>{compactNop(item)}</option>)}</select></div>
         <div><label className="filter-label mb-1 block">SITE ID</label><select value={filters.siteId} onChange={e=>onFilter('siteId',e.target.value)} className="control h-10 w-[170px] px-3 text-[10px] font-semibold"><option value="">All Site ID</option>{(data?.site_options||[]).map(item=><option key={item} value={item}>{item}</option>)}</select></div>
         <div className="preventive-filter-search"><label className="filter-label mb-1 block text-right">SEARCH</label><input type="search" value={filters.search} onChange={e=>onFilter('search',e.target.value)} placeholder="Cari Site ID, Site Name, NOP, atau Notes" className="control h-10 w-full px-3 text-[10px]"/></div>
-      </div>
+      </div>}
       <div className="mt-4 flex items-center justify-between"><div><h2 className="section-title">{isGenset?'PM GENSET — GENERAL INFORMATION':isSite?'PM SITE — GENERAL INFORMATION':'GENERAL INFORMATION'}</h2><p className="mt-1 text-[10px] text-slate-400">Schedule {data?.period_start?shortDate(data.period_start):'-'} sampai {data?.period_end?shortDate(data.period_end):'-'} · Menampilkan {Math.min(rows.length,100)} dari {rows.length} site</p></div>{loading&&<RefreshCw size={15} className="animate-spin text-[#173E68]"/>}</div>
       <div className="kpi-scrollbar preventive-card-list">{visibleRows.length?visibleRows.map((row,index)=>{const key=`${row.site_id}-${row.schedule_date}-${row.ticket_no}-${index}`;return <details key={key} className="preventive-info-card"><summary className="preventive-card-head"><div className="preventive-card-section"><p className="preventive-card-label">SITE ID</p><p className="mt-1 text-[11px] font-semibold text-[#29496C]">{row.site_id}</p></div><div className="preventive-card-section with-divider"><p className="preventive-card-label">SITE NAME</p><p className="mt-1 truncate text-[11px] font-semibold text-[#34465C]">{row.site_name}</p></div><div className="preventive-card-section with-divider"><p className="preventive-card-label">NOP</p><p className="mt-1 text-[11px] font-semibold text-[#34465C]">{compactNop(row.nop)}</p></div><ChevronRight size={15} className="preventive-card-chevron"/></summary><div className="preventive-card-details"><div className="preventive-detail-grid">{detailFields(row).map(([label,value])=><div key={label}><p className="preventive-card-label">{label.toUpperCase()}</p>{label==='Status'?<span className={`preventive-status mt-1 ${row.submitted_date?'is-done':'is-pending'}`}>{value}</span>:<p className="mt-1 text-[10px] font-medium leading-4 text-[#42536A]">{value}</p>}</div>)}</div><div className="preventive-notes"><p className="preventive-card-label">NOTES</p><p className="mt-1 text-[10px] leading-5 text-[#42536A]">{row.notes||'-'}</p></div></div></details>}):<div className="flex h-[180px] items-center justify-center text-[10px] text-slate-400">Belum ada data preventive pada rentang tanggal dan filter ini.</div>}</div>
     </section>
@@ -589,7 +607,7 @@ async function copyText(text) {
 class App extends React.Component {
   constructor(props){
     super(props)
-    this.state={config:null,run:null,dashboard:null,activePage:'ekpi',preventiveOpen:false,preventiveData:null,preventiveScope:'',preventiveFile:null,preventiveDate:'',preventiveBusy:false,preventiveLoading:false,preventiveFilters:{dateFrom:firstDayOfCurrentMonth(),dateTo:todayIso(),nop:'',siteId:'',search:''},region:'',nop:'',rowGroup:'',historyFilters:{day:'',month:'',year:''},historyItems:[],rangeStart:'',rangeEnd:'',rangeDashboard:null,rangeLoading:false,draftFile:null,draftDate:'',busyUpload:false,pageError:'',prompt:'',promptDraft:'',reportText:'',reportError:'',reportLoading:false,tableImageLoading:false,shareLoading:false,showPrompt:false,notice:''}
+    this.state={config:null,run:null,dashboard:null,activePage:'ekpi',preventiveOpen:false,preventiveData:null,preventiveScope:'',preventiveFile:null,preventiveDate:'',preventiveBusy:false,preventiveLoading:false,preventiveFilters:{dateFrom:firstDayOfCurrentMonth(),dateTo:todayIso(),nop:'',siteId:'',search:'',status:'',pic:'',interval:'',typePower:'',scopeItem:'',scheduleState:''},region:'',nop:'',rowGroup:'',historyFilters:{day:'',month:'',year:''},historyItems:[],rangeStart:'',rangeEnd:'',rangeDashboard:null,rangeLoading:false,draftFile:null,draftDate:'',busyUpload:false,pageError:'',prompt:'',promptDraft:'',reportText:'',reportError:'',reportLoading:false,tableImageLoading:false,shareLoading:false,showPrompt:false,notice:''}
     this.requestId=0
     this.preventiveRequestId=0
     this.preventiveSearchTimer=null
@@ -628,7 +646,7 @@ class App extends React.Component {
     this.setState({preventiveBusy:true,pageError:'',notice:''})
     try{
       const result=await uploadPreventive(preventiveFile,preventiveDate)
-      const nextFilters={...preventiveFilters,dateFrom:result.date_start||preventiveFilters.dateFrom,dateTo:result.date_end||preventiveFilters.dateTo,nop:'',siteId:'',search:''}
+      const nextFilters={...preventiveFilters,dateFrom:result.date_start||preventiveFilters.dateFrom,dateTo:result.date_end||preventiveFilters.dateTo,nop:'',siteId:'',search:'',status:'',pic:'',interval:'',typePower:'',scopeItem:'',scheduleState:''}
       this.setState({preventiveFilters:nextFilters})
       await this.refreshPreventive(nextFilters,this.state.preventiveScope)
       this.setState({preventiveFile:null,preventiveDate:'',notice:result.replaced_upload_count?'Data preventive pada tanggal upload yang sama berhasil diganti dengan file terbaru.':`${result.row_count} baris preventive berhasil diunggah.`})

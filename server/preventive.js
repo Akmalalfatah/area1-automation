@@ -30,15 +30,26 @@ export async function parsePreventiveWorkbook(buffer,filename){
 
 function dateBounds(dateFrom,dateTo){const now=new Date(),today=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`,start=dateFrom||`${today.slice(0,7)}-01`,end=dateTo||today;if(!/^\d{4}-\d{2}-\d{2}$/.test(start)||!/^\d{4}-\d{2}-\d{2}$/.test(end))throw new Error('Format tanggal harus YYYY-MM-DD.');if(start>end)throw new Error('Date From tidak boleh lebih besar dari Date To.');return{start,end}}
 
-export function buildPreventiveDashboard(source,dateFrom,dateTo,nop,siteId,search,maintenanceType=''){
+export function buildPreventiveDashboard(source,dateFrom,dateTo,nop,siteId,search,maintenanceType='',status='',pic='',interval='',typePower='',scopeItem='',scheduleState=''){
   const bounds=dateBounds(dateFrom,dateTo),dedupe={}
   for(const row of source)if(row.schedule_date>=bounds.start&&row.schedule_date<=bounds.end)dedupe[`${String(row.site_id).toLowerCase()}|${row.schedule_date}`]=row
   const isRequestedType=row=>!maintenanceType||(maintenanceType==='genset'&&(row.maintenance_kind==='genset'||String(row.scope_item_name||'').toLowerCase().includes('genset')))||(maintenanceType==='site'&&row.maintenance_kind==='site')
   const eligible=Object.values(dedupe).filter(isRequestedType),sort=(a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}),nopOptions=[...new Set(eligible.map(x=>x.nop||'Belum ditentukan'))].sort(sort)
   let filtered=eligible.filter(row=>!nop||row.nop===nop),siteOptions=[...new Set(filtered.map(x=>x.site_id).filter(Boolean))].sort(sort)
-  if(siteId)filtered=filtered.filter(row=>row.site_id===siteId);const q=String(search||'').trim().toLowerCase();if(q)filtered=filtered.filter(row=>['site_id','site_name','nop','notes'].map(k=>row[k]||'').join(' ').toLowerCase().includes(q))
+  if(siteId)filtered=filtered.filter(row=>row.site_id===siteId)
+  if(status)filtered=filtered.filter(row=>row.status===status)
+  if(pic)filtered=filtered.filter(row=>row.pic===pic)
+  if(interval)filtered=filtered.filter(row=>row.interval===interval)
+  if(typePower)filtered=filtered.filter(row=>row.type_power===typePower)
+  if(scopeItem)filtered=filtered.filter(row=>row.scope_item_name===scopeItem)
+  const today=new Date(),todayIso=`${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`
+  if(scheduleState==='submitted')filtered=filtered.filter(row=>row.submitted_date)
+  if(scheduleState==='overdue')filtered=filtered.filter(row=>!row.submitted_date&&row.schedule_date<todayIso)
+  if(scheduleState==='upcoming')filtered=filtered.filter(row=>!row.submitted_date&&row.schedule_date>=todayIso)
+  const q=String(search||'').trim().toLowerCase();if(q)filtered=filtered.filter(row=>['site_id','site_name','nop','notes','ticket_no'].map(k=>row[k]||'').join(' ').toLowerCase().includes(q))
   const unique={};for(const row of [...filtered].sort((a,b)=>(a.schedule_date||'').localeCompare(b.schedule_date||'')||(a.submitted_date||'').localeCompare(b.submitted_date||''))){const key=String(row.site_id).toLowerCase();if(!unique[key]||row.submitted_date||!unique[key].submitted_date)unique[key]=row}
   const rows=Object.values(unique).sort((a,b)=>sort(`${a.nop}|${a.site_id}`,`${b.nop}|${b.site_id}`)),planIds=new Set(filtered.map(x=>String(x.site_id).toLowerCase())),submittedIds=new Set(filtered.filter(x=>x.submitted_date).map(x=>String(x.site_id).toLowerCase()))
   const nopSummary=[...new Set(filtered.map(x=>x.nop||'Belum ditentukan'))].sort(sort).map(name=>{const group=filtered.filter(x=>(x.nop||'Belum ditentukan')===name),plan=new Set(group.map(x=>String(x.site_id).toLowerCase())).size,submitted=new Set(group.filter(x=>x.submitted_date).map(x=>String(x.site_id).toLowerCase())).size;return{nop:name,plan,submitted,achievement:plan?Math.round(submitted/plan*10000)/100:0}})
-  return{period_start:bounds.start,period_end:bounds.end,plan:planIds.size,submitted:submittedIds.size,achievement:planIds.size?Math.round(submittedIds.size/planIds.size*10000)/100:0,pending:Math.max(planIds.size-submittedIds.size,0),nop_options:nopOptions,site_options:siteOptions,nop_summary:nopSummary,rows}
+  const optionFor=field=>[...new Set(eligible.map(row=>row[field]).filter(Boolean))].sort(sort)
+  return{period_start:bounds.start,period_end:bounds.end,plan:planIds.size,submitted:submittedIds.size,achievement:planIds.size?Math.round(submittedIds.size/planIds.size*10000)/100:0,pending:Math.max(planIds.size-submittedIds.size,0),nop_options:nopOptions,site_options:siteOptions,status_options:optionFor('status'),pic_options:optionFor('pic'),interval_options:optionFor('interval'),type_power_options:optionFor('type_power'),scope_item_options:optionFor('scope_item_name'),nop_summary:nopSummary,rows}
 }
