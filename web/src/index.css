@@ -66,11 +66,11 @@ button { cursor: pointer; }
 .preventive-card-section.with-divider { border-left: 1px solid #d8e0ea; }
 .preventive-card-chevron { color: #6b7e93; transition: transform .18s ease; }
 .preventive-info-card[open] .preventive-card-chevron { transform: rotate(90deg); }
-.preventive-card-details { border-top: 1px solid #c9d3df; background: #fff; padding: 16px; }
+.preventive-card-details { min-width: 0; border-top: 1px solid #c9d3df; background: #fff; padding: 16px; }
 .preventive-detail-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); column-gap: 24px; row-gap: 16px; }
 .preventive-detail-grid p { overflow-wrap: anywhere; }
-.preventive-notes { margin-top: 16px; border-top: 1px solid #e2e8f0; padding-top: 12px; }
-.preventive-notes p:last-child { white-space: pre-wrap; overflow-wrap: anywhere; }
+.preventive-notes { min-width: 0; margin-top: 16px; border-top: 1px solid #e2e8f0; padding-top: 12px; }
+.preventive-notes p:last-child { max-width: 100%; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
 
 @media (max-width: 1100px) {
   .sidebar-shell { width: 220px; }

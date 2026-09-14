@@ -95,13 +95,14 @@ async function uploadKpi(id, file, date) {
   form.append('upload_date', date)
   return api(`/api/runs/${id}/upload`, { method: 'POST', body: form })
 }
-const getPreventiveDashboard = (filters = {}) => {
+const getPreventiveDashboard = (filters = {}, maintenanceType = '') => {
   const params = new URLSearchParams()
   if(filters.dateFrom)params.set('date_from',filters.dateFrom)
   if(filters.dateTo)params.set('date_to',filters.dateTo)
   if(filters.nop)params.set('nop',filters.nop)
   if(filters.siteId)params.set('site_id',filters.siteId)
   if(filters.search)params.set('search',filters.search)
+  if(maintenanceType)params.set('maintenance_type',maintenanceType)
   return api(`/api/preventive/dashboard${params.size?`?${params}`:''}`)
 }
 async function uploadPreventive(file,date){
@@ -232,17 +233,25 @@ function PreventiveSummaryCard({label,value,detail,tone}){
   return <div className="corporate-panel min-h-[130px] border-t-[7px] p-4" style={{borderTopColor:colors[tone]||colors.navy}}><p className="text-[10px] font-semibold tracking-[.05em] text-[#607086]">{label}</p><p className="mt-4 text-[26px] font-semibold leading-none text-[#243A55]">{value}</p><p className="mt-3 text-[10px] text-slate-400">{detail}</p></div>
 }
 
-function PreventiveDashboard({data,file,date,busy,loading,filters,onFile,onDate,onUpload,onFilter}){
+function PreventiveDashboard({data,file,date,busy,loading,filters,onFile,onDate,onUpload,onFilter,maintenanceType='',showUpload=true}){
   const rows=data?.rows||[]
   const visibleRows=rows.slice(0,100)
-  const detailFields=row=>[
+  const isGenset=maintenanceType==='genset'
+  const isSite=maintenanceType==='site'
+  const detailFields=row=>isGenset?[
+    ['Schedule Date',shortDate(row.schedule_date)],['Submitted Date',shortDate(row.submitted_date)],['Status',row.status||'-'],
+    ['Ticket No',row.ticket_no||'-'],['Scope Item',row.scope_item_name||'-'],['Type Power',row.type_power||'-'],['Interval',row.interval||'-'],['PIC',row.pic||'-'],['Diff Days',row.diff_days||'-']
+  ]:isSite?[
+    ['Schedule Date',shortDate(row.schedule_date)],['Submitted Date',shortDate(row.submitted_date)],['Status',row.status||'-'],
+    ['Interval',row.interval||'-'],['Diff Days',row.diff_days||'-'],['PIC',row.pic||'-'],['Ticket No',row.ticket_no||'-'],['Scope Item',row.scope_item_name||'-']
+  ]:[
     ['Schedule Date',shortDate(row.schedule_date)],['Submitted Date',shortDate(row.submitted_date)],['Status',row.status||'-'],
     ['Ticket No',row.ticket_no||'-'],['Regional',row.regional||'-'],['Cluster',row.cluster||'-'],['PIC',row.pic||'-'],
     ['Class Site',row.class_site||'-'],['Type Site',row.type_site||'-'],['Interval',row.interval||'-'],['Last Maintenance',shortDate(row.submitted_date)],
     ['Diff Days',row.diff_days||'-'],['Area',row.area||'-'],['Created Date',shortDate(row.created_date)]
   ]
   return <div className="space-y-4">
-    <PreventiveUploadPanel file={file} date={date} busy={busy} latest={data?.latest_upload} onFile={onFile} onDate={onDate} onUpload={onUpload}/>
+    {showUpload&&<PreventiveUploadPanel file={file} date={date} busy={busy} latest={data?.latest_upload} onFile={onFile} onDate={onDate} onUpload={onUpload}/>} 
     <div className="grid grid-cols-4 gap-4"><PreventiveSummaryCard label="PLAN SITE" value={data?.plan??0} detail={`${shortDate(filters.dateFrom)} sampai ${shortDate(filters.dateTo)}`} tone="navy"/><PreventiveSummaryCard label="SUBMITTED" value={data?.submitted??0} detail="Site unik dengan Submitted Date terisi" tone="green"/><PreventiveSummaryCard label="ACHIEVEMENT" value={`${formatNumber(data?.achievement??0)}%`} detail="Submitted dibanding Plan pada filter aktif" tone="orange"/><PreventiveSummaryCard label="BELUM SUBMIT" value={data?.pending??0} detail="Site plan yang belum memiliki Submitted Date" tone="red"/></div>
     <section className="corporate-panel p-5">
       <div className="preventive-filter-row">
@@ -252,7 +261,7 @@ function PreventiveDashboard({data,file,date,busy,loading,filters,onFile,onDate,
         <div><label className="filter-label mb-1 block">SITE ID</label><select value={filters.siteId} onChange={e=>onFilter('siteId',e.target.value)} className="control h-10 w-[170px] px-3 text-[10px] font-semibold"><option value="">All Site ID</option>{(data?.site_options||[]).map(item=><option key={item} value={item}>{item}</option>)}</select></div>
         <div className="preventive-filter-search"><label className="filter-label mb-1 block text-right">SEARCH</label><input type="search" value={filters.search} onChange={e=>onFilter('search',e.target.value)} placeholder="Cari Site ID, Site Name, NOP, atau Notes" className="control h-10 w-full px-3 text-[10px]"/></div>
       </div>
-      <div className="mt-4 flex items-center justify-between"><div><h2 className="section-title">GENERAL INFORMATION</h2><p className="mt-1 text-[10px] text-slate-400">Schedule {data?.period_start?shortDate(data.period_start):'-'} sampai {data?.period_end?shortDate(data.period_end):'-'} · Menampilkan {Math.min(rows.length,100)} dari {rows.length} site</p></div>{loading&&<RefreshCw size={15} className="animate-spin text-[#173E68]"/>}</div>
+      <div className="mt-4 flex items-center justify-between"><div><h2 className="section-title">{isGenset?'PM GENSET — GENERAL INFORMATION':isSite?'PM SITE — GENERAL INFORMATION':'GENERAL INFORMATION'}</h2><p className="mt-1 text-[10px] text-slate-400">Schedule {data?.period_start?shortDate(data.period_start):'-'} sampai {data?.period_end?shortDate(data.period_end):'-'} · Menampilkan {Math.min(rows.length,100)} dari {rows.length} site</p></div>{loading&&<RefreshCw size={15} className="animate-spin text-[#173E68]"/>}</div>
       <div className="kpi-scrollbar preventive-card-list">{visibleRows.length?visibleRows.map((row,index)=>{const key=`${row.site_id}-${row.schedule_date}-${row.ticket_no}-${index}`;return <details key={key} className="preventive-info-card"><summary className="preventive-card-head"><div className="preventive-card-section"><p className="preventive-card-label">SITE ID</p><p className="mt-1 text-[11px] font-semibold text-[#29496C]">{row.site_id}</p></div><div className="preventive-card-section with-divider"><p className="preventive-card-label">SITE NAME</p><p className="mt-1 truncate text-[11px] font-semibold text-[#34465C]">{row.site_name}</p></div><div className="preventive-card-section with-divider"><p className="preventive-card-label">NOP</p><p className="mt-1 text-[11px] font-semibold text-[#34465C]">{compactNop(row.nop)}</p></div><ChevronRight size={15} className="preventive-card-chevron"/></summary><div className="preventive-card-details"><div className="preventive-detail-grid">{detailFields(row).map(([label,value])=><div key={label}><p className="preventive-card-label">{label.toUpperCase()}</p>{label==='Status'?<span className={`preventive-status mt-1 ${row.submitted_date?'is-done':'is-pending'}`}>{value}</span>:<p className="mt-1 text-[10px] font-medium leading-4 text-[#42536A]">{value}</p>}</div>)}</div><div className="preventive-notes"><p className="preventive-card-label">NOTES</p><p className="mt-1 text-[10px] leading-5 text-[#42536A]">{row.notes||'-'}</p></div></div></details>}):<div className="flex h-[180px] items-center justify-center text-[10px] text-slate-400">Belum ada data preventive pada rentang tanggal dan filter ini.</div>}</div>
     </section>
   </div>
@@ -580,7 +589,7 @@ async function copyText(text) {
 class App extends React.Component {
   constructor(props){
     super(props)
-    this.state={config:null,run:null,dashboard:null,activePage:'ekpi',preventiveOpen:false,preventiveData:null,preventiveFile:null,preventiveDate:'',preventiveBusy:false,preventiveLoading:false,preventiveFilters:{dateFrom:firstDayOfCurrentMonth(),dateTo:todayIso(),nop:'',siteId:'',search:''},region:'',nop:'',rowGroup:'',historyFilters:{day:'',month:'',year:''},historyItems:[],rangeStart:'',rangeEnd:'',rangeDashboard:null,rangeLoading:false,draftFile:null,draftDate:'',busyUpload:false,pageError:'',prompt:'',promptDraft:'',reportText:'',reportError:'',reportLoading:false,tableImageLoading:false,shareLoading:false,showPrompt:false,notice:''}
+    this.state={config:null,run:null,dashboard:null,activePage:'ekpi',preventiveOpen:false,preventiveData:null,preventiveScope:'',preventiveFile:null,preventiveDate:'',preventiveBusy:false,preventiveLoading:false,preventiveFilters:{dateFrom:firstDayOfCurrentMonth(),dateTo:todayIso(),nop:'',siteId:'',search:''},region:'',nop:'',rowGroup:'',historyFilters:{day:'',month:'',year:''},historyItems:[],rangeStart:'',rangeEnd:'',rangeDashboard:null,rangeLoading:false,draftFile:null,draftDate:'',busyUpload:false,pageError:'',prompt:'',promptDraft:'',reportText:'',reportError:'',reportLoading:false,tableImageLoading:false,shareLoading:false,showPrompt:false,notice:''}
     this.requestId=0
     this.preventiveRequestId=0
     this.preventiveSearchTimer=null
@@ -591,24 +600,24 @@ class App extends React.Component {
   openPage=async(page)=>{
     const isPreventive=page.startsWith('preventive')
     this.setState({activePage:page,preventiveOpen:isPreventive||this.state.preventiveOpen,pageError:'',notice:''})
-    if(page==='preventive-dashboard')await this.refreshPreventive()
+    if(page==='preventive-dashboard'||page==='preventive-genset'||page==='preventive-site')await this.refreshPreventive(this.state.preventiveFilters,page==='preventive-genset'?'genset':page==='preventive-site'?'site':'')
   }
   togglePreventive=()=>{
     const open=!this.state.preventiveOpen
     this.setState({preventiveOpen:open})
     if(open&&!this.state.activePage.startsWith('preventive'))this.openPage('preventive-dashboard')
   }
-  refreshPreventive=async(filters=this.state.preventiveFilters)=>{
+  refreshPreventive=async(filters=this.state.preventiveFilters,scope=this.state.preventiveScope)=>{
     const id=++this.preventiveRequestId
     this.setState({preventiveLoading:true,pageError:''})
     try{
       let activeFilters=filters
-      let preventiveData=await getPreventiveDashboard(activeFilters)
+      let preventiveData=await getPreventiveDashboard(activeFilters,scope)
       if(!this.state.preventiveData&&preventiveData.plan===0&&preventiveData.latest_upload?.date_start){
         activeFilters={...activeFilters,dateFrom:preventiveData.latest_upload.date_start,dateTo:preventiveData.latest_upload.date_end||preventiveData.latest_upload.date_start}
-        preventiveData=await getPreventiveDashboard(activeFilters)
+        preventiveData=await getPreventiveDashboard(activeFilters,scope)
       }
-      if(id===this.preventiveRequestId)this.setState({preventiveData,preventiveFilters:activeFilters})
+      if(id===this.preventiveRequestId)this.setState({preventiveData,preventiveFilters:activeFilters,preventiveScope:scope})
     }
     catch(e){if(id===this.preventiveRequestId)this.setState({pageError:e.message})}
     finally{if(id===this.preventiveRequestId)this.setState({preventiveLoading:false})}
@@ -621,7 +630,7 @@ class App extends React.Component {
       const result=await uploadPreventive(preventiveFile,preventiveDate)
       const nextFilters={...preventiveFilters,dateFrom:result.date_start||preventiveFilters.dateFrom,dateTo:result.date_end||preventiveFilters.dateTo,nop:'',siteId:'',search:''}
       this.setState({preventiveFilters:nextFilters})
-      await this.refreshPreventive(nextFilters)
+      await this.refreshPreventive(nextFilters,this.state.preventiveScope)
       this.setState({preventiveFile:null,preventiveDate:'',notice:result.replaced_upload_count?'Data preventive pada tanggal upload yang sama berhasil diganti dengan file terbaru.':`${result.row_count} baris preventive berhasil diunggah.`})
     }catch(e){this.setState({pageError:e.message})}
     finally{this.setState({preventiveBusy:false})}
@@ -633,7 +642,7 @@ class App extends React.Component {
     if(field==='dateTo'&&value<filters.dateFrom)filters.dateFrom=value
     this.setState({preventiveFilters:filters})
     if(this.preventiveSearchTimer)window.clearTimeout(this.preventiveSearchTimer)
-    this.preventiveSearchTimer=window.setTimeout(()=>this.refreshPreventive(filters),field==='search'?300:0)
+    this.preventiveSearchTimer=window.setTimeout(()=>this.refreshPreventive(filters,this.state.preventiveScope),field==='search'?300:0)
   }
   async componentDidMount(){
     try{
@@ -805,8 +814,8 @@ class App extends React.Component {
           {s.reportError&&<div className="border border-amber-200 bg-amber-50 px-4 py-3 text-[10px] text-amber-800">AI Report: {s.reportError}</div>}
         </div>}
         {s.activePage==='preventive-dashboard'&&<PreventiveDashboard data={s.preventiveData} file={s.preventiveFile} date={s.preventiveDate} busy={s.preventiveBusy} loading={s.preventiveLoading} filters={s.preventiveFilters} onFile={file=>this.setState({preventiveFile:file})} onDate={value=>this.setState({preventiveDate:value})} onUpload={this.handlePreventiveUpload} onFilter={this.changePreventiveFilter}/>} 
-        {s.activePage==='preventive-genset'&&<PreventivePlaceholder title="PM Genset"/>}
-        {s.activePage==='preventive-site'&&<PreventivePlaceholder title="PM Site"/>}
+        {s.activePage==='preventive-genset'&&<PreventiveDashboard data={s.preventiveData} file={s.preventiveFile} date={s.preventiveDate} busy={s.preventiveBusy} loading={s.preventiveLoading} filters={s.preventiveFilters} onFile={file=>this.setState({preventiveFile:file})} onDate={value=>this.setState({preventiveDate:value})} onUpload={this.handlePreventiveUpload} onFilter={this.changePreventiveFilter} maintenanceType="genset" showUpload={false}/>} 
+        {s.activePage==='preventive-site'&&<PreventiveDashboard data={s.preventiveData} file={s.preventiveFile} date={s.preventiveDate} busy={s.preventiveBusy} loading={s.preventiveLoading} filters={s.preventiveFilters} onFile={file=>this.setState({preventiveFile:file})} onDate={value=>this.setState({preventiveDate:value})} onUpload={this.handlePreventiveUpload} onFilter={this.changePreventiveFilter} maintenanceType="site" showUpload={false}/>} 
       </main>
       {s.showPrompt&&<PromptModal draft={s.promptDraft} setDraft={value=>this.setState({promptDraft:value})} onClose={()=>this.setState({showPrompt:false})} onSave={this.savePrompt}/>} 
     </div>
