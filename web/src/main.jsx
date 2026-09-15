@@ -241,13 +241,17 @@ function PreventiveSummaryCard({label,value,detail,tone}){
 
 function RoutineMaintenanceFilters({data,filters,onFilter,type}){
   const isGenset=type==='genset'
-  return <div className="preventive-filter-row">
+  return <div className="space-y-3 border-b border-slate-200 pb-4">
+    <div className="preventive-filter-row">
     <div><label className="filter-label mb-1 block">DATE FROM</label><input type="date" value={filters.dateFrom} onChange={e=>onFilter('dateFrom',e.target.value)} className="control h-10 w-[155px] px-3 text-[10px] font-semibold"/></div>
     <div><label className="filter-label mb-1 block">DATE TO</label><input type="date" value={filters.dateTo} onChange={e=>onFilter('dateTo',e.target.value)} className="control h-10 w-[155px] px-3 text-[10px] font-semibold"/></div>
+    </div>
+    <div className="preventive-filter-row border-b-0 pb-0">
     <div><label className="filter-label mb-1 block">NOP</label><select value={filters.nop} onChange={e=>onFilter('nop',e.target.value)} className="control h-10 w-[170px] px-3 text-[10px] font-semibold"><option value="">All NOP</option>{(data?.nop_options||[]).map(x=><option key={x} value={x}>{compactNop(x)}</option>)}</select></div>
     <div><label className="filter-label mb-1 block">STATUS PM</label><select value={filters.status} onChange={e=>onFilter('status',e.target.value)} className="control h-10 w-[150px] px-3 text-[10px] font-semibold"><option value="">All Status</option>{(data?.status_options||[]).map(x=><option key={x} value={x}>{x}</option>)}</select></div>
     <div><label className="filter-label mb-1 block">PIC</label><select value={filters.pic} onChange={e=>onFilter('pic',e.target.value)} className="control h-10 w-[160px] px-3 text-[10px] font-semibold"><option value="">All PIC</option>{(data?.pic_options||[]).map(x=><option key={x} value={x}>{x}</option>)}</select></div>
     {isGenset?<><div><label className="filter-label mb-1 block">TYPE POWER</label><select value={filters.typePower} onChange={e=>onFilter('typePower',e.target.value)} className="control h-10 w-[180px] px-3 text-[10px] font-semibold"><option value="">All Type Power</option>{(data?.type_power_options||[]).map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label className="filter-label mb-1 block">SCOPE ITEM</label><select value={filters.scopeItem} onChange={e=>onFilter('scopeItem',e.target.value)} className="control h-10 w-[210px] px-3 text-[10px] font-semibold"><option value="">All Scope Item</option>{(data?.scope_item_options||[]).map(x=><option key={x} value={x}>{x}</option>)}</select></div></>:<><div><label className="filter-label mb-1 block">INTERVAL</label><select value={filters.interval} onChange={e=>onFilter('interval',e.target.value)} className="control h-10 w-[130px] px-3 text-[10px] font-semibold"><option value="">All Interval</option>{(data?.interval_options||[]).map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label className="filter-label mb-1 block">SCHEDULE STATE</label><select value={filters.scheduleState} onChange={e=>onFilter('scheduleState',e.target.value)} className="control h-10 w-[170px] px-3 text-[10px] font-semibold"><option value="">All Schedule</option><option value="overdue">Terlambat</option><option value="upcoming">Belum Jatuh Tempo</option><option value="submitted">Submitted</option></select></div></>}
+    </div>
   </div>
 }
 
