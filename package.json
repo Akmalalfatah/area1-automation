@@ -9,7 +9,9 @@
     "dev": "node --watch server.cjs",
     "build:web": "node -e \"console.log('Using bundled web/static assets for deployment.')\"",
     "build:web:local": "npm --prefix web run build",
-    "check": "node --check server/index.js && node --check server/services.js && node --check server/db.js"
+    "check": "node --check server/index.js && node --check server/services.js && node --check server/db.js && node --check server/preventive.js && node --check server/pm-site.js && node --check server/pm-genset.js",
+    "test:pm-genset": "node --test test/pm-genset.test.mjs",
+    "test:pm-site": "node --test test/pm-site.test.mjs"
   },
   "engines": {
     "node": ">=20"

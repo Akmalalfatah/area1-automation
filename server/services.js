@@ -103,6 +103,71 @@ export async function uploadAndProcess(runsDir,id,file,uploadDate){
   await Promise.all(replaced.map(old=>fs.rm(runDir(runsDir,old),{recursive:true,force:true})));await saveState(runsDir,state);return state
 }
 
+export const MTTR_TARGETS={CRITICAL:4,MAJOR:8,MINOR:10,LOW:13}
+export const MTTR_TARGETS_B2={CRITICAL:2,MAJOR:4,MINOR:15,LOW:48,'VERY LOW':96}
+export const MTTR_TARGETS_BY_COMPONENT={
+  B_1:MTTR_TARGETS,
+  'B_2.1':{CRITICAL:2,MAJOR:4,MINOR:15},
+  'B_2.2':{CRITICAL:2,LOW:48},
+  'B_2.3':{MAJOR:4,MINOR:15},
+  B_3:{MINOR:15,LOW:48,'VERY LOW':96}
+}
+const percentileInc=(values,p)=>{
+  const sorted=[...values].sort((a,b)=>a-b)
+  if(!sorted.length)return null
+  const index=(sorted.length-1)*p,lower=Math.floor(index),upper=Math.ceil(index)
+  return sorted[lower]+(sorted[upper]-sorted[lower])*(index-lower)
+}
+const ticketNeedForTarget=(items,target)=>{
+  const ordered=[...items].sort((a,b)=>b.mttr_hours-a.mttr_hours),current=percentileInc(ordered.map(item=>item.mttr_hours),.9)
+  if(current<=target)return {needed:0,simulated:current,candidates:[]}
+  const projected=count=>percentileInc(ordered.map((item,index)=>index<count?Math.min(item.mttr_hours,target):item.mttr_hours),.9)
+  let low=0,high=ordered.length
+  while(low+1<high){const middle=Math.floor((low+high)/2);if(projected(middle)<=target)high=middle;else low=middle}
+  return {needed:high,simulated:projected(high),candidates:ordered.slice(0,high).map(item=>({...item,target,gap:Math.max(0,item.mttr_hours-target)}))}
+}
+
+export function buildMttrMetrics(valuesBySeverity,targets=MTTR_TARGETS){
+  return Object.entries(targets).map(([severity,target])=>{
+    const items=(valuesBySeverity?.[severity]||[]).map((value,index)=>typeof value==='object'?{...value,mttr_hours:Number(value.mttr_hours)}:{mttr_hours:Number(value),source_row:index+1}).filter(item=>Number.isFinite(item.mttr_hours)&&item.mttr_hours>=0)
+    const mttr=items.map(item=>item.mttr_hours)
+    const label=severity.split(' ').map(part=>part[0]+part.slice(1).toLowerCase()).join(' ')
+    if(!mttr.length)return {severity:label,target,achievement:null,currentP90:null,gap:null,status:'Tidak Ada Data',tickets:0,totalTickets:0,needed:null,ticketNeeded:null,simulated:null,projectedP90:null,candidates:[],candidateTickets:[]}
+    const achievement=percentileInc(mttr,.9),boosting=ticketNeedForTarget(items,target),status=achievement<=target?'Target Tercapai':'Perlu Ditingkatkan'
+    return {severity:label,target,achievement,currentP90:achievement,gap:achievement-target,status,tickets:mttr.length,totalTickets:mttr.length,needed:boosting.needed,ticketNeeded:boosting.needed,simulated:boosting.simulated,projectedP90:boosting.simulated,candidates:boosting.candidates,candidateTickets:boosting.candidates}
+  })
+}
+
+export async function parseTicketMttrSummary(buffer,nop){
+  const workbook=await workbookFrom(buffer),sheet=workbook.getWorksheet('Ticket List')||workbook.worksheets.find(item=>/ticket\s*list/i.test(item.name))
+  if(!sheet)throw new ValidationError('File Ticket Summary harus memiliki sheet Ticket List.')
+  const matrix=sheetMatrix(sheet),headers=Object.fromEntries((matrix[0]||[]).map((value,index)=>[String(value??'').trim().toLowerCase(),index]))
+  if(headers.severity===undefined||headers.mttr===undefined)throw new ValidationError('Ticket List harus memiliki kolom Severity dan MTTR.')
+  const values=Object.fromEntries(Object.keys(MTTR_TARGETS).map(key=>[key,[]]))
+  for(const row of matrix.slice(1)){
+    const severity=String(row[headers.severity]??'').trim().toUpperCase(),mttr=Number(row[headers.mttr])
+    if(severity in values&&Number.isFinite(mttr)&&mttr>=0)values[severity].push(mttr)
+  }
+  const missing=Object.entries(values).filter(([,items])=>!items.length).map(([severity])=>severity)
+  if(missing.length)throw new ValidationError(`Ticket List belum memiliki data MTTR untuk severity: ${missing.join(', ')}.`)
+  const metrics=buildMttrMetrics(values)
+  return {nop,metrics,source_rows:matrix.length-1}
+}
+
+export async function uploadTicketMttrSummary(runsDir,id,file,nop){
+  const canonical=NOP_ORDER.find(item=>normalizeNop(item)===normalizeNop(nop))
+  if(!canonical)throw new ValidationError('NOP Ticket Summary tidak sesuai dengan daftar NOP KPI.')
+  const state=await loadState(runsDir,id)
+  if(!state.upload)throw new ValidationError('Upload KPIData_SONL1 terlebih dahulu sebelum menambahkan Ticket Summary.')
+  const dataset=await loadDataset(runsDir,id),summary=await parseTicketMttrSummary(file.buffer,canonical)
+  dataset.ticket_summaries={...(dataset.ticket_summaries||{}),[canonical]:{...summary,filename:file.originalname,uploaded_at:new Date().toISOString()}}
+  state.ticket_uploads={...(state.ticket_uploads||{}),[canonical]:{filename:file.originalname,date:dataset.date,row_count:summary.source_rows}}
+  await fs.writeFile(path.join(runDir(runsDir,id),'dataset.json'),JSON.stringify(dataset,null,2))
+  await saveHistory(id,dataset,state.upload)
+  await saveState(runsDir,state)
+  return {nop:canonical,filename:file.originalname,row_count:summary.source_rows,metrics:summary.metrics}
+}
+
 export async function processRun(runsDir,id){const state=await loadState(runsDir,id);if(!state.upload)throw new ValidationError('Upload satu file KPI terlebih dahulu.');const buffer=await fs.readFile(path.join(runDir(runsDir,id),'kpi.xlsx'));const dataset=buildDataset(await extractDailyFile(buffer),state.upload.date,state.upload.filename);await fs.writeFile(path.join(runDir(runsDir,id),'dataset.json'),JSON.stringify(dataset,null,2));state.processed=true;state.report=null;await saveHistory(id,dataset,state.upload);await saveState(runsDir,state);return dataset}
 export async function loadDataset(runsDir,id){try{return JSON.parse(await fs.readFile(path.join(runDir(runsDir,id),'dataset.json'),'utf8'))}catch(error){const history=await loadHistoryDataset(id);if(history)return history;if(error.code==='ENOENT')return processRun(runsDir,id);throw error}}
 
@@ -124,11 +189,33 @@ export async function dashboardPayload(runsDir,id,region,nop,categoryFilter){con
 
 const roundAi=value=>Array.isArray(value)?value.map(roundAi):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).map(([k,v])=>[k,roundAi(v)])):typeof value==='number'?Math.round(value*100)/100:value
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms))
+const localNumber=value=>Number.isFinite(Number(value))?Number(value).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2}):'-'
+const localDelta=value=>Number.isFinite(Number(value))?`${Number(value)>0?'+':''}${localNumber(value)}`:'-'
+function generateLocalReport(analysis){
+  const clean=value=>String(value||'').replace(/^NOP\s+/i,'')
+  const filter=[analysis.filter?.region,analysis.filter?.nop&&`NOP ${clean(analysis.filter.nop)}`,analysis.filter?.category&&`Kategori ${analysis.filter.category}`].filter(Boolean).join(' · ')||'Semua Regional · Semua NOP · Semua Kategori'
+  const ranking=items=>(items||[]).slice(0,5).map((item,index)=>`${index+1}. ${clean(item.nop||item.component)}: ${localNumber(item.start)} → ${localNumber(item.end)} *(${localDelta(item.delta)})*`).join('\n')||'-'
+  const componentNop=item=>{const value=String(item.nop||'').trim();return value?/^NOP\s+/i.test(value)?value:`NOP ${value}`:'NOP tidak tersedia'}
+  const components=items=>(items||[]).slice(0,5).map((item,index)=>`${index+1}. ${componentNop(item)} - ${item.component}: ${localNumber(item.start)} → ${localNumber(item.end)} *(${localDelta(item.delta)})*`).join('\n')||'-'
+  if(!analysis.comparison_available){
+    const snapshot=(analysis.current_nops||[]).map((item,index)=>`${index+1}. ${clean(item.nop)}: *${localNumber(item.score)}* · ${item.category||'-'}`).join('\n')||'-'
+    return `📅 *KPI PERFORMANCE ${analysis.date}*\nFilter: ${filter}\nRata-rata KPI: *${localNumber(analysis.current_average)}*\nJumlah NOP: ${analysis.nop_count}\n\n📊 *KPI SNAPSHOT*\n${snapshot}`
+  }
+  if(analysis.mode==='nop'){
+    const item=(analysis.top_nops||[])[0]||{}
+    return `📊 *PERFORMANCE NOP ${clean(item.nop||analysis.filter?.nop)}*\nPeriode KPI: ${analysis.date}\nBaseline: ${analysis.previous_date}\nKPI Score: ${localNumber(item.start)} → ${localNumber(item.end)}\nPerubahan: ${localDelta(item.delta)}\nKategori: ${item.start_category||'-'} → ${item.end_category||'-'}\n\n━━━━━━━━━━━━━━━━━\n📈 *TOP 5 BEST Kenaikan di POINT KPI*\n${components(analysis.top_components)}\n\n━━━━━━━━━━━━━━━━━\n📉 *TOP 5 WORST Penurunan di POINT KPI*\n${components(analysis.worst_components)}`
+  }
+  return `📅 *KPI PERFORMANCE ${analysis.previous_date} - ${analysis.date}*\nFilter: ${filter}\nRata-rata KPI: *${localNumber(analysis.current_average)}*\n\n🏆 *TOP 5 NOP - KENAIKAN TERBAIK*\n\n${ranking(analysis.top_nops)}\n\n⚠️ *TOP 5 NOP - PERLU PERHATIAN*\n\n${ranking(analysis.attention_nops)}\n\n━━━━━━━━━━━━━━━━━\n📈 *TOP 5 BEST Kenaikan di POINT KPI*\n${components(analysis.top_components)}\n\n━━━━━━━━━━━━━━━━━\n📉 *TOP 5 WORST Penurunan di POINT KPI*\n${components(analysis.worst_components)}`
+}
 export async function generateReport(prompt,analysis){
-  const key=process.env.GEMINI_API_KEY;if(!key)throw new Error('GEMINI_API_KEY belum dikonfigurasi di server/.env.')
-  const models=[process.env.GEMINI_MODEL||'gemini-2.5-flash-lite',process.env.GEMINI_FALLBACK_MODEL||'gemini-2.5-flash'].filter((x,i,a)=>x&&a.indexOf(x)===i), errors=[]
-  const reportGuard='\n\nATURAN SISTEM TETAP: KPI Score adalah ringkasan per NOP dan tidak boleh dicantumkan dalam ranking komponen TOP 5 BEST maupun TOP 5 WORST. Gunakan hanya top_components dan worst_components yang dikirim sistem.'
+  const primaryKey=process.env.GEMINI_API_KEY||'',fallbackKey=process.env.GEMINI_FALLBACK_API_KEY||primaryKey
+  if(!primaryKey&&!fallbackKey)return generateLocalReport(analysis)
+  const providers=[
+    {model:process.env.GEMINI_MODEL||'gemini-3.5-flash-lite',key:primaryKey||fallbackKey},
+    {model:process.env.GEMINI_FALLBACK_MODEL||'gemini-3.5-flash',key:fallbackKey||primaryKey}
+  ].filter((item,index,items)=>item.model&&item.key&&items.findIndex(other=>other.model===item.model&&other.key===item.key)===index),errors=[]
+  const reportGuard='\n\nATURAN SISTEM TETAP: KPI Score adalah ringkasan per NOP dan tidak boleh dicantumkan dalam ranking komponen TOP 5 BEST maupun TOP 5 WORST. Gunakan hanya top_components dan worst_components yang dikirim sistem. Setiap item ranking komponen wajib menggunakan persis format: NOP [nama NOP] - [nama komponen]: [start] → [end] *([delta])*. Contoh: NOP BUKITTINGGI - Restoration Impact Service Incident Alarm: 36,60 → 36,40 *(-0,20)*.'
   const body={systemInstruction:{parts:[{text:`${prompt}${reportGuard}`}]},contents:[{role:'user',parts:[{text:`Berikut DATA TERSTRUKTUR hasil kalkulasi sistem. Gunakan angka dan ranking ini apa adanya.\n\n${JSON.stringify(roundAi(analysis),null,2)}`}]}]}
-  for(const model of models)for(let attempt=0;attempt<3;attempt++){try{const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(45000)});const data=await response.json();if(!response.ok)throw new Error(`Gemini API error (${response.status}) pada ${model}: ${data.error?.message||response.statusText}`);const text=data.candidates?.flatMap(x=>x.content?.parts||[]).map(x=>x.text).filter(Boolean).join('\n').trim();if(!text)throw new Error('Gemini API tidak mengembalikan output text.');return text}catch(error){errors.push(error.message);if(attempt<2)await sleep(1000*2**attempt+Math.random()*500)}}
-  throw new Error(`Semua model Gemini gagal menghasilkan report. ${errors.join(' | ')}`)
+  for(const {model,key} of providers)for(let attempt=0;attempt<3;attempt++){try{const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(45000)});const data=await response.json();if(!response.ok)throw new Error(`Gemini API error (${response.status}) pada ${model}: ${data.error?.message||response.statusText}`);const text=data.candidates?.flatMap(x=>x.content?.parts||[]).map(x=>x.text).filter(Boolean).join('\n').trim();if(!text)throw new Error('Gemini API tidak mengembalikan output text.');return text}catch(error){errors.push(error.message);if(attempt<2)await sleep(1000*2**attempt+Math.random()*500)}}
+  return generateLocalReport(analysis)
 }

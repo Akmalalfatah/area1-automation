@@ -6,10 +6,13 @@
   "scripts": {
     "build": "npm run build:js && npm run build:css",
     "build:js": "node build_js.cjs",
-    "build:css": "node build_css.cjs"
+    "build:css": "node build_css.cjs && node build_pm_css.cjs"
   },
   "devDependencies": {
     "esbuild": "^0.24.0",
     "tailwindcss": "4.1.10"
+  },
+  "dependencies": {
+    "kpi-a1-automation": "file:.."
   }
 }

@@ -1,0 +1,16 @@
+const fs = require('node:fs')
+const path = require('node:path')
+const { compile } = require('tailwindcss')
+const root = __dirname
+const source = ['pm-site.jsx','pm-genset.jsx'].map(file=>fs.readFileSync(path.join(root, 'src', file), 'utf8')).join('\n')
+const candidates = new Set()
+for (const match of source.matchAll(/className="([^"]+)"/g)) for (const token of match[1].split(/\s+/)) candidates.add(token)
+const tailwindRoot = path.dirname(require.resolve('tailwindcss/package.json'))
+const theme = fs.readFileSync(path.join(tailwindRoot, 'theme.css'), 'utf8')
+;(async () => {
+  const compiler = await compile(theme + '\n@tailwind utilities;')
+  const custom = fs.readFileSync(path.join(root, 'src', 'pm-site.css'), 'utf8').replace('@import "tailwindcss";', '')
+  fs.writeFileSync(path.join(root, 'static', 'pm-site.css'), compiler.build([...candidates]) + '\n' + custom)
+  fs.copyFileSync(path.join(root, 'src', 'pm-genset.css'),path.join(root, 'static', 'pm-genset.css'))
+  console.log('Tailwind CSS v4: PM Site styling built; original app.css retained.')
+})().catch(error => { console.error(error); process.exitCode = 1 })

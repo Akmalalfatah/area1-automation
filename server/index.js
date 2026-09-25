@@ -1,25 +1,47 @@
+import {enrichDashboardReview} from './dashboard-review.js'
+import {enrichWorkConditions} from './work-condition.js'
+import {freshnessTypes,buildFreshness} from './data-freshness.js'
 import express from 'express'
 import multer from 'multer'
 import fs from 'node:fs/promises'
-import {BOOK1_START_COLUMNS, NOP_ORDER, REGION_NOPS, ROW_DEFINITIONS} from './constants.js'
+import {BOOK1_START_COLUMNS, DEFAULT_REPORT_PROMPT, NOP_ORDER, REGION_NOPS, ROW_DEFINITIONS} from './constants.js'
 import {RUNS_DIR, SERVER_DIR, TEMPLATE_PATH, WEB_DIR} from './config.js'
 import {databaseEnabled, deleteHistory, initDb, latestPreventiveUpload, listHistory, loadPreviousHistoryDataset, loadPreventiveRows, savePreventiveUpload} from './db.js'
-import {buildAnalysis, createRun, dashboardPayload, generateReport, loadDataset, loadState, processRun, saveState, uploadAndProcess, ValidationError} from './services.js'
+import {buildAnalysis, buildMttrMetrics, createRun, dashboardPayload, generateReport, loadDataset, loadState, MTTR_TARGETS_BY_COMPONENT, processRun, saveState, uploadAndProcess, uploadTicketMttrSummary, ValidationError} from './services.js'
 import {buildPreventiveDashboard, parsePreventiveWorkbook} from './preventive.js'
 import {patchTemplate} from './export-xlsx.js'
+import {siteData,listSites,analyzeSite,parseSiteSource,saveSiteSource,saveEvaluation} from './pm-site.js'
+import {workOrderKey} from './preventive.js'
+import {gensetData,analyzeGenset,saveGensetEvaluation,enrichGensetSource} from './pm-genset.js'
+import {preventiveUploadHistory,applicationUploadHistory} from './db.js'
+import {buildKpiB13Summaries,parseKpiB13} from './kpi-b13.js'
 
 const app=express(), upload=multer({storage:multer.memoryStorage(),limits:{fileSize:25*1024*1024}})
 app.use(express.json({limit:'1mb'}))
 app.use('/static',express.static(`${WEB_DIR}/static`))
 app.get('/',(_req,res)=>res.sendFile(`${WEB_DIR}/index.html`))
 app.get('/api/health',(_req,res)=>res.json({status:'ok',runtime:'node'}))
-app.get('/api/config',(_req,res)=>res.json({regions:REGION_NOPS,default_prompt:'',database_enabled:databaseEnabled}))
+app.get('/api/config',(_req,res)=>res.json({regions:REGION_NOPS,default_prompt:DEFAULT_REPORT_PROMPT,database_enabled:databaseEnabled}))
 
 app.post('/api/runs',asyncHandler(async(_req,res)=>res.json(await createRun(RUNS_DIR))))
 app.get('/api/runs/:id',asyncHandler(async(req,res)=>{try{res.json(await loadState(RUNS_DIR,req.params.id))}catch(error){const dataset=await loadDataset(RUNS_DIR,req.params.id).catch(()=>null);if(!dataset)throw error;res.json({id:req.params.id,upload:null,processed:true,report:null,prompt:'',history:true})}}))
 app.post('/api/runs/:id/upload',upload.single('file'),asyncHandler(async(req,res)=>{assertXlsx(req.file);assertDate(req.body.upload_date);res.json(await uploadAndProcess(RUNS_DIR,req.params.id,req.file,req.body.upload_date))}))
+app.post('/api/runs/:id/ticket-summary',upload.single('file'),asyncHandler(async(req,res)=>{assertXlsx(req.file);if(!String(req.body.nop||'').trim())throw new HttpError(422,'Pilih NOP untuk Ticket Summary.');res.json(await uploadTicketMttrSummary(RUNS_DIR,req.params.id,req.file,req.body.nop))}))
 app.post('/api/runs/:id/process',asyncHandler(async(req,res)=>{const dataset=await processRun(RUNS_DIR,req.params.id);res.json({ok:true,date:dataset.date})}))
-app.get('/api/runs/:id/dashboard',asyncHandler(async(req,res)=>res.json(await dashboardPayload(RUNS_DIR,req.params.id,req.query.region||null,req.query.nop||null,req.query.category||null))))
+app.get('/api/runs/:id/dashboard',asyncHandler(async(req,res)=>{
+  const payload=await dashboardPayload(RUNS_DIR,req.params.id,req.query.region||null,req.query.nop||null,req.query.category||null)
+  const derived=deriveTicketMttrByNop(await siteData(),payload.dataset.nops.map(item=>item.name),payload.dataset.date)
+  payload.dataset.ticket_summaries={...(payload.dataset.ticket_summaries||{}),...derived}
+  res.json(payload)
+}))
+app.get('/api/runs/:id/mttr-boosting',asyncHandler(async(req,res)=>{
+  const dataset=await loadDataset(RUNS_DIR,req.params.id),data=await siteData(),month=String(req.query.month||dataset.date.slice(5,7)).padStart(2,'0'),year=String(req.query.year||dataset.date.slice(0,4)),date=`${year}-${month}-01`
+  const selected=dataset.nops.filter(item=>(!req.query.region||item.region===req.query.region)&&(!req.query.nop||item.name===req.query.nop)),names=selected.map(item=>item.name)
+  const b13Rows=combinedKpiB13Rows(data),swfmSummaries=deriveTicketMttrByNop(data,names,date),kpiSummaries=buildKpiB13Summaries(b13Rows,names,date)
+  const ticket_summaries=mergeTicketSummaries(names,swfmSummaries,kpiSummaries,date)
+  const available_periods=[...new Set([...(data.swfm||[]).map(row=>String(row.occurred_at||'').slice(0,7)),...b13Rows.map(row=>row.period)].filter(value=>/^\d{4}-\d{2}$/.test(value)))].sort().reverse()
+  res.json({period:`${year}-${month}`,available_periods,ticket_summaries,source:'KPIData B.1-B.3 dengan fallback Ticket SWFM'})
+}))
 
 app.post('/api/runs/:id/report',asyncHandler(async(req,res)=>{
   const {prompt,region=null,nop=null,category=null}=req.body||{};if(!String(prompt||'').trim())throw new HttpError(422,'Prompt wajib diisi.')
@@ -29,10 +51,22 @@ app.post('/api/runs/:id/report',asyncHandler(async(req,res)=>{
 }))
 
 app.get('/api/history',asyncHandler(async(req,res)=>res.json({items:await listHistory(req.query)})))
+app.get('/api/uploads',asyncHandler(async(req,res)=>res.json({items:await applicationUploadHistory(req.query.page)})))
+app.get('/api/master-site/upload',asyncHandler(async(_req,res)=>{const data=await siteData();res.json({latest_upload:(data.sources||[]).find(source=>source.source_kind==='master')||null})}))
+app.get('/api/data-freshness',asyncHandler(async(_req,res)=>{const pairs=await Promise.all(freshnessTypes.map(async([key])=>[key,(await applicationUploadHistory(key))[0]||null]));const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jakarta',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());res.json({today,items:buildFreshness(Object.fromEntries(pairs),today)})}))
 app.delete('/api/history',asyncHandler(async(req,res)=>{const ids=[...new Set((req.body?.run_ids||[]).filter(Boolean))];if(!ids.length)throw new HttpError(400,'Pilih minimal satu KPI history.');const deleted=await deleteHistory(ids);await Promise.all(ids.map(id=>fs.rm(`${RUNS_DIR}/${id}`,{recursive:true,force:true})));res.json({deleted})}))
 
-app.post('/api/preventive/upload',upload.single('file'),asyncHandler(async(req,res)=>{assertXlsx(req.file);assertDate(req.body.upload_date);const dataset=await parsePreventiveWorkbook(req.file.buffer,req.file.originalname),uploadId=crypto.randomUUID(),replaced=await savePreventiveUpload(uploadId,req.body.upload_date,req.file.originalname,dataset);res.json({upload_id:uploadId,upload_date:req.body.upload_date,filename:req.file.originalname,row_count:dataset.row_count,data_month:dataset.data_month,date_start:dataset.date_start,date_end:dataset.date_end,replaced_upload_count:replaced})}))
-app.get('/api/preventive/dashboard',asyncHandler(async(req,res)=>{const payload=buildPreventiveDashboard(await loadPreventiveRows(),req.query.date_from,req.query.date_to,req.query.nop,req.query.site_id,req.query.search,req.query.maintenance_type,req.query.status,req.query.pic,req.query.interval,req.query.type_power,req.query.scope_item,req.query.schedule_state);payload.latest_upload=await latestPreventiveUpload();res.json(payload)}))
+app.post('/api/preventive/upload',upload.single('file'),asyncHandler(async(req,res)=>{assertXlsx(req.file);assertDate(req.body.upload_date);const dataset=await parsePreventiveWorkbook(req.file.buffer,req.file.originalname);const page=req.body.upload_page||dataset.maintenance_kind;if(!['dashboard','genset','site'].includes(page))throw new HttpError(422,'Halaman upload tidak valid.');if(page!=='dashboard'&&page!==dataset.maintenance_kind)throw new HttpError(422,'Jenis file tidak sesuai halaman PM.');dataset.upload_page=page;const uploadId=crypto.randomUUID(),replaced=await savePreventiveUpload(uploadId,req.body.upload_date,req.file.originalname,dataset);res.json({upload_id:uploadId,upload_date:req.body.upload_date,filename:req.file.originalname,row_count:dataset.row_count,data_month:dataset.data_month,date_start:dataset.date_start,date_end:dataset.date_end,replaced_upload_count:replaced})}))
+app.get('/api/preventive/uploads',asyncHandler(async(req,res)=>res.json({items:await preventiveUploadHistory(req.query.page||'dashboard')})))
+app.get('/api/preventive/dashboard',asyncHandler(async(req,res)=>{const payload=buildPreventiveDashboard(await loadPreventiveRows(),req.query.date_from,req.query.date_to,req.query.nop,req.query.site_id,req.query.search,req.query.maintenance_type,req.query.status,req.query.pic,req.query.interval,req.query.type_power,req.query.scope_item,req.query.schedule_state);const source=await siteData();payload.rows=enrichWorkConditions(enrichDashboardReview(payload.rows,source),source);payload.latest_upload=(await preventiveUploadHistory(req.query.maintenance_type||'dashboard',true))[0]||null;res.json(payload)}))
+
+app.get('/api/pm-genset/detail',asyncHandler(async(req,res)=>{const data=await gensetData(),pm=data.pm?.findLast(row=>row.maintenance_kind==='genset'&&workOrderKey(row)===req.query.id);if(!pm)throw new HttpError(404,'Pekerjaan PM Genset tidak ditemukan.');res.json(analyzeGenset(pm,data,req.query.window_days?{windowDays:Number(req.query.window_days)}:{}))}))
+app.put('/api/pm-genset/evaluation',asyncHandler(async(req,res)=>{const data=await gensetData(),pm=data.pm?.findLast(row=>row.maintenance_kind==='genset'&&workOrderKey(row)===req.body.id);if(!pm)throw new HttpError(404,'Pekerjaan PM Genset tidak ditemukan.');res.json(await saveGensetEvaluation(pm,req.body))}))
+
+app.get('/api/pm-site',asyncHandler(async(req,res)=>res.json(listSites(await siteData(),req.query))))
+app.post('/api/pm-site/sources/:kind',upload.single('file'),asyncHandler(async(req,res)=>{assertXlsx(req.file);assertDate(req.body.upload_date);const kinds=['master','ggr','inap','swfm','kpi_b13_r01','kpi_b13_r02','kpi_b13_r10'];if(!kinds.includes(req.params.kind))throw new HttpError(422,'Jenis sumber upload tidak valid.');const regionByKind={kpi_b13_r01:'R01_Sumbagut',kpi_b13_r02:'R02_Sumbagsel',kpi_b13_r10:'R10_Sumbagteng'},region=regionByKind[req.params.kind];const dataset=region?await parseKpiB13(req.file.buffer,region):await enrichGensetSource(req.file.buffer,req.params.kind,await parseSiteSource(req.file.buffer,req.params.kind));res.json(await saveSiteSource(req.params.kind,req.file.originalname,req.body.upload_date,dataset))}))
+app.get('/api/pm-site/detail',asyncHandler(async(req,res)=>{const data=await siteData(),pm=data.pm?.find(row=>row.maintenance_kind==='site'&&workOrderKey(row)===req.query.id);if(!pm)throw new HttpError(404,'Pekerjaan PM Site tidak ditemukan.');res.json(analyzeSite(pm,data))}))
+app.put('/api/pm-site/evaluation',asyncHandler(async(req,res)=>{const data=await siteData(),pm=data.pm?.find(row=>row.maintenance_kind==='site'&&workOrderKey(row)===req.body.id);if(!pm)throw new HttpError(404,'Pekerjaan PM Site tidak ditemukan.');res.json(await saveEvaluation(pm,req.body))}))
 
 app.get('/api/runs/:id/export.xlsx',asyncHandler(async(req,res)=>{
   const dataset=await loadDataset(RUNS_DIR,req.params.id),selected=dataset.nops.filter(item=>(!req.query.region||item.region===req.query.region)&&(!req.query.nop||item.name===req.query.nop)&&(!req.query.category||item.values.category===req.query.category)),names=new Set(selected.map(x=>x.name))
@@ -46,12 +80,81 @@ app.get('/api/runs/:id/export.xlsx',asyncHandler(async(req,res)=>{
 class HttpError extends Error{constructor(status,message){super(message);this.status=status}}
 function assertXlsx(file){if(!file||!file.originalname?.toLowerCase().endsWith('.xlsx'))throw new HttpError(400,'File harus berformat .xlsx')}
 function assertDate(value){if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value||''))||Number.isNaN(Date.parse(`${value}T00:00:00Z`)))throw new HttpError(400,'Tanggal upload tidak valid.')}
-function asyncHandler(fn){return(req,res,next)=>Promise.resolve(fn(req,res,next)).catch(next)}
+function asyncHandler(fn){return(req,res,next)=>databaseReady.then(()=>fn(req,res,next)).catch(next)}
 function numberToColumn(number){let result='';while(number){number--;result=String.fromCharCode(65+number%26)+result;number=Math.floor(number/26)}return result}
+export function deriveTicketMttrByNop(data,nopNames,date){
+  const canonical=new Map(nopNames.map(name=>[normalizeNopKey(name),name])),siteNop=new Map((data.master||[]).map(row=>[String(row.site_id||'').trim().toUpperCase(),row.nop]))
+  const period=String(date||'').slice(0,7)
+  const componentKeys=['B_1','B_2.1','B_2.2','B_2.3','B_3']
+  const blank=()=>Object.fromEntries(componentKeys.map(component=>[component,Object.fromEntries(Object.keys(MTTR_TARGETS_BY_COMPONENT[component]).map(severity=>[severity,[]]))]))
+  const buckets=new Map(),seen=new Set()
+  for(const row of data.swfm||[]){
+    const excluded=String(row.excluded||'').trim().toUpperCase();if(excluded!=='NO')continue
+    if(period&&String(row.occurred_at||'').slice(0,7)!==period)continue
+    const ticket=String(row.ticket_no||'').trim(),site=String(row.site_id||'').trim().toUpperCase(),identity=ticket.toUpperCase();if(!ticket||seen.has(identity))continue
+    const nop=canonical.get(normalizeNopKey(row.nop||siteNop.get(site)));if(!nop)continue
+    const severity=normalizeTicketSeverity(row.severity);if(!severity)continue
+    const start=Date.parse(row.occurred_at||''),end=Date.parse(row.site_cleared_at||row.closed_at||'')
+    let minutes=Number.isFinite(start)&&Number.isFinite(end)&&end>=start?(end-start)/60000:NaN
+    if(!Number.isFinite(minutes)||minutes<0)minutes=row.duration_minutes===null||row.duration_minutes===undefined||row.duration_minutes===''?NaN:Number(row.duration_minutes)
+    if(!Number.isFinite(minutes)||minutes<0)continue
+    seen.add(identity)
+    if(!buckets.has(nop))buckets.set(nop,blank())
+    const item={mttr_hours:minutes/60,ticket_number:ticket,inap_no:String(row.parent_ticket||'').trim(),site:row.site_id||'',site_name:row.site_name||'',nop,severity,fault_level:row.fault_level||'',root_cause_category:row.rc_category||'',root_cause_1:row.rc1||'',root_cause_2:row.rc2||'',pic:row.pic||'',source_row:row.source_row}
+    for(const component of ticketComponents(row)){const bucket=buckets.get(nop)[component][severity];if(bucket)bucket.push(item)}
+  }
+  return Object.fromEntries([...buckets].map(([nop,components])=>{
+    const componentMetrics=Object.fromEntries(componentKeys.map(component=>[component,buildMttrMetrics(components[component],MTTR_TARGETS_BY_COMPONENT[component])]))
+    const metrics=componentMetrics.B_1
+    const source_rows=Object.values(components).flatMap(Object.values).reduce((sum,items)=>sum+items.length,0)
+    return [nop,{nop,metrics,components:componentMetrics,source:'Ticket SWFM',source_rows,period}]
+  }))
+}
+function mergeTicketSummaries(nopNames,swfmSummaries,kpiSummaries,date){
+  const result={},period=String(date||'').slice(0,7)
+  for(const nop of nopNames){
+    const swfm=swfmSummaries[nop],kpi=kpiSummaries[nop]
+    if(!swfm&&!kpi)continue
+    const components={}
+    for(const [code,targets] of Object.entries(MTTR_TARGETS_BY_COMPONENT)){
+      const swfmBySeverity=new Map((swfm?.components?.[code]||[]).map(item=>[String(item.severity).toUpperCase(),item]))
+      const kpiBySeverity=new Map((kpi?.components?.[code]||[]).map(item=>[String(item.severity).toUpperCase(),item]))
+      components[code]=Object.keys(targets).map(severity=>{
+        const fromKpi=kpiBySeverity.get(severity),fromSwfm=swfmBySeverity.get(severity)
+        return Number(fromKpi?.tickets)>0?fromKpi:fromSwfm||fromKpi||buildMttrMetrics({[severity]:[]},{[severity]:targets[severity]})[0]
+      })
+    }
+    const source_rows=Object.values(components).flat().reduce((sum,item)=>sum+Number(item.tickets||0),0)
+    result[nop]={nop,components,metrics:components.B_1,source:kpi?'KPIData B.1-B.3 + Ticket SWFM fallback':'Ticket SWFM',source_rows,period}
+  }
+  return result
+}
+function normalizeNopKey(value){return String(value||'').toUpperCase().replace(/^NOP\s+/,'').replace(/[^A-Z0-9]/g,'')}
+function combinedKpiB13Rows(data){
+  const sources=['kpi_b13_r01','kpi_b13_r02','kpi_b13_r10','kpi_b13'],seen=new Set(),rows=[]
+  for(const source of sources)for(const row of data[source]||[]){const identity=[row.nop,row.component,row.severity,row.ticket_number,row.source_row,row.period].join('|');if(seen.has(identity))continue;seen.add(identity);rows.push(row)}
+  return rows
+}
+function normalizeTicketSeverity(value){
+  const severity=String(value||'').trim().toUpperCase().replace(/[\s_-]+/g,' ')
+  if(severity==='HIGH')return 'MAJOR'
+  if(severity==='MEDIUM')return 'MINOR'
+  return ['CRITICAL','MAJOR','MINOR','LOW','VERY LOW'].includes(severity)?severity:null
+}
+export function ticketComponents(row){
+  const type=String(row.ticket_type||'').trim().toUpperCase(),fault=String(row.fault_level||'').trim().toUpperCase().replace(/\s+/g,' ')
+  if(type.includes('INCIDENT'))return ['B_1']
+  if(!type.includes('EVENT'))return []
+  if(fault.includes('ENVA'))return ['B_2.1']
+  if(fault.includes('CONTROLLER')&&/\bP[12]\b/.test(fault))return ['B_2.2']
+  if(/\bP2\b|\bP3\b/.test(fault)||['L2 CONFIGURATION','L2 LICENSE','VANDALISM'].includes(fault))return ['B_3']
+  if(/\bP1\b/.test(fault))return ['B_2.3']
+  return []
+}
 app.use((error,_req,res,_next)=>{console.error(error);const status=error.status||(error instanceof ValidationError?422:/belum dikonfigurasi|Database|Gemini|connect|fetch/i.test(error.message)?503:500);res.status(status).json({detail:error.message||'Terjadi kesalahan pada server.'})})
 
-void fs.mkdir(RUNS_DIR,{recursive:true})
+const databaseReady=fs.mkdir(RUNS_DIR,{recursive:true})
   .then(()=>initDb(SERVER_DIR))
-  .catch(error=>console.warn(`Database startup dilewati: ${error.message}`))
+databaseReady.catch(error=>console.warn(`Database startup gagal: ${error.message}`))
 
 export default app

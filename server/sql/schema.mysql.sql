@@ -18,6 +18,48 @@ CREATE TABLE IF NOT EXISTS kpi_history (
   KEY idx_kpi_history_year_month_day (year, month, day)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS pm_site_sources (
+  source_kind VARCHAR(16) NOT NULL PRIMARY KEY,
+  filename VARCHAR(512) NOT NULL,
+  upload_date DATE NOT NULL,
+  dataset JSON NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pm_site_evaluations (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  site_id VARCHAR(128) NOT NULL,
+  pm_ticket_no VARCHAR(128) NOT NULL,
+  evaluation_status VARCHAR(64) NOT NULL DEFAULT 'Belum ditinjau',
+  priority VARCHAR(16) NOT NULL DEFAULT 'Rendah',
+  evaluator_pic VARCHAR(255) NOT NULL DEFAULT '',
+  conclusion TEXT NOT NULL,
+  follow_up_action TEXT NOT NULL,
+  target_date DATE NULL,
+  verification_note TEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_pm_site_evaluation (site_id,pm_ticket_no)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pm_site_source_rows (
+  source_kind VARCHAR(16) NOT NULL,
+  row_no INT UNSIGNED NOT NULL,
+  payload JSON NOT NULL,
+  PRIMARY KEY (source_kind,row_no)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS application_upload_history (
+  history_order BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE,
+  upload_id VARCHAR(64) NOT NULL PRIMARY KEY,
+  page VARCHAR(16) NOT NULL,
+  filename VARCHAR(512) NOT NULL,
+  upload_date DATE NOT NULL,
+  row_count INT NOT NULL DEFAULT 0,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_application_upload_page (page,updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS preventive_uploads (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   upload_id VARCHAR(64) NOT NULL,
