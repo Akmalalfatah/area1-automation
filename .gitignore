@@ -3,9 +3,5 @@ node_modules/
 server/.env
 data/runs/*
 !data/runs/.gitkeep
+server/node_modules/
 
-server/.env
-
-server/.env
-
-server/.env
