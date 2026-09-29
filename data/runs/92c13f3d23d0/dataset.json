@@ -1,0 +1,565 @@
+{
+  "date": "2026-09-28",
+  "file": "KPIData_SONL1_20269 (2).xlsx",
+  "regions": {
+    "R01_Sumbagut": [
+      "NOP BANDA ACEH",
+      "NOP BINJAI",
+      "NOP MEDAN",
+      "NOP PADANG SIDEMPUAN",
+      "NOP PEMATANG SIANTAR",
+      "NOP RANTAU PRAPAT"
+    ],
+    "R02_Sumbagsel": [
+      "NOP BENGKULU",
+      "NOP JAMBI",
+      "NOP LAMPUNG",
+      "NOP PALEMBANG",
+      "NOP PANGKAL PINANG"
+    ],
+    "R10_Sumbagteng": [
+      "NOP BATAM",
+      "NOP BUKITTINGGI",
+      "NOP DUMAI",
+      "NOP PADANG",
+      "NOP PEKANBARU"
+    ]
+  },
+  "rows": [
+    {
+      "key": "kpi_score",
+      "label": "KPI Score",
+      "weight": 100,
+      "type": "score",
+      "book1_row": 4
+    },
+    {
+      "key": "category",
+      "label": "Kategori KPI",
+      "weight": null,
+      "type": "category",
+      "book1_row": 5
+    },
+    {
+      "key": "A",
+      "label": "A. Availability Site NE Base Aggregate Cell",
+      "weight": null,
+      "type": "aggregate",
+      "book1_row": 6
+    },
+    {
+      "key": "A_1",
+      "label": "Availability Site NE Base Aggregate Cell, Class Diamond per NOP",
+      "weight": 1,
+      "type": "component",
+      "book1_row": 7
+    },
+    {
+      "key": "A_2",
+      "label": "Availability Site NE 98 Base Aggregate Cell, Class Platinum per NOP",
+      "weight": 5,
+      "type": "component",
+      "book1_row": 8
+    },
+    {
+      "key": "A_3",
+      "label": "Availability Site NE 30 Base Aggregate Cell, Class Gold per NOP",
+      "weight": 23,
+      "type": "component",
+      "book1_row": 9
+    },
+    {
+      "key": "A_4",
+      "label": "Availability Site NE Base Aggregate Cell, Class Silver per NOP",
+      "weight": 14,
+      "type": "component",
+      "book1_row": 10
+    },
+    {
+      "key": "A_5",
+      "label": "Availability Site NE 95 Base Aggregate Cell, Class Bronze per NOP",
+      "weight": 7,
+      "type": "component",
+      "book1_row": 11
+    },
+    {
+      "key": "A_6",
+      "label": "Percentage Site Achieved Target Availability per NOP",
+      "weight": 50,
+      "type": "component",
+      "book1_row": 12
+    },
+    {
+      "key": "B",
+      "label": "B. Ticketing Activity & Alarm Handling",
+      "weight": null,
+      "type": "aggregate",
+      "book1_row": 13
+    },
+    {
+      "key": "B_1",
+      "label": "Restoration Impact Service Incident Alarm",
+      "weight": 42,
+      "type": "component",
+      "book1_row": 14
+    },
+    {
+      "key": "B_2.1",
+      "label": "Restoration Potential Impact Service Non Incident Alarm Enva",
+      "weight": 8.5,
+      "type": "component",
+      "book1_row": 15
+    },
+    {
+      "key": "B_2.2",
+      "label": "Restoration Impact Service Non Incident Alarm Controller",
+      "weight": 1,
+      "type": "component",
+      "book1_row": 16
+    },
+    {
+      "key": "B_2.3",
+      "label": "Restoration Impact Service Non Incident Alarm Impact Service Alarm",
+      "weight": 20,
+      "type": "component",
+      "book1_row": 17
+    },
+    {
+      "key": "B_3",
+      "label": "Restoration Impact Service Degraded Service (P2 & P3) & Others alarm",
+      "weight": 13.5,
+      "type": "component",
+      "book1_row": 18
+    },
+    {
+      "key": "B_4.1",
+      "label": "Closing Ticket Supporting Pengembalian, Kehilangan dan Kerusakan Sparepart SPMS",
+      "weight": 3.75,
+      "type": "component",
+      "book1_row": 19
+    },
+    {
+      "key": "B_4.2",
+      "label": "Closing Ticket Supporting Others Non Alarm",
+      "weight": 3.75,
+      "type": "component",
+      "book1_row": 20
+    },
+    {
+      "key": "B_5.1",
+      "label": "WO Variable Activity Power & Non Power High Impact L1",
+      "weight": 3.75,
+      "type": "component",
+      "book1_row": 21
+    },
+    {
+      "key": "B_5.2",
+      "label": "WO Variable Activity Power & Non Power Low Impact L1",
+      "weight": 3.75,
+      "type": "component",
+      "book1_row": 22
+    }
+  ],
+  "nops": [
+    {
+      "name": "NOP BANDA ACEH",
+      "region": "R01_Sumbagut",
+      "values": {
+        "A": 81.5194,
+        "A_1": 0.9999,
+        "A_2": 4.9551,
+        "A_3": 23,
+        "A_4": 13.8747,
+        "A_5": 6.8499,
+        "A_6": 31.8398,
+        "B": 65.5875,
+        "B_1": 31.5,
+        "B_2.1": 7.725,
+        "B_2.2": 0.7875,
+        "B_2.3": 6.15,
+        "B_3": 8.175,
+        "B_4.1": 0,
+        "B_4.2": 3.75,
+        "B_5.1": 3.75,
+        "B_5.2": 3.75,
+        "kpi_score": 71.16366500000001,
+        "category": "K"
+      }
+    },
+    {
+      "name": "NOP BINJAI",
+      "region": "R01_Sumbagut",
+      "values": {
+        "A": 80.382,
+        "A_1": 0.9278,
+        "A_2": 4.8848,
+        "A_3": 22.4118,
+        "A_4": 13.742,
+        "A_5": 6.8204,
+        "A_6": 31.5952,
+        "B": 78.72500000000001,
+        "B_1": 34.2,
+        "B_2.1": 8.075,
+        "B_2.2": 1,
+        "B_2.3": 9.15,
+        "B_3": 11.3,
+        "B_4.1": 3.75,
+        "B_4.2": 3.75,
+        "B_5.1": 3.75,
+        "B_5.2": 3.75,
+        "kpi_score": 79.30495,
+        "category": "K"
+      }
+    },
+    {
+      "name": "NOP MEDAN",
+      "region": "R01_Sumbagut",
+      "values": {
+        "A": 81.3725,
+        "A_1": 0.9865,
+        "A_2": 4.9465,
+        "A_3": 22.6661,
+        "A_4": 13.7343,
+        "A_5": 6.8582,
+        "A_6": 32.1809,
+        "B": 72.9375,
+        "B_1": 27.7,
+        "B_2.1": 7.05,
+        "B_2.2": 1,
+        "B_2.3": 14,
+        "B_3": 9.375,
+        "B_4.1": 2.8125,
+        "B_4.2": 3.5,
+        "B_5.1": 3.75,
+        "B_5.2": 3.75,
+        "kpi_score": 75.88975,
+        "category": "K"
+      }
+    },
+    {
+      "name": "NOP PADANG SIDEMPUAN",
+      "region": "R01_Sumbagut",
+      "values": {
+        "A": 79.07130000000001,
+        "A_1": 0.9792,
+        "A_2": 4.9394,
+        "A_3": 22.5831,
+        "A_4": 13.9004,
+        "A_5": 6.8768,
+        "A_6": 29.7924,
+        "B": 86.6875,
+        "B_1": 36.3,
+        "B_2.1": 8.05,
+        "B_2.2": 0.8875,
+        "B_2.3": 14.875,
+        "B_3": 11.575,
+        "B_4.1": 3.75,
+        "B_4.2": 3.75,
+        "B_5.1": 3.75,
+        "B_5.2": 3.75,
+        "kpi_score": 84.02183000000001,
+        "category": "C"
+      }
+    },
+    {
+      "name": "NOP PEMATANG SIANTAR",
+      "region": "R01_Sumbagut",
+      "values": {
+        "A": 81.211,
+        "A_1": 1,
+        "A_2": 4.9237,
+        "A_3": 22.8407,
+        "A_4": 13.9297,
+        "A_5": 6.6819,
+        "A_6": 31.835,
+        "B": 76.6375,
+        "B_1": 33.2,
+        "B_2.1": 8.05,
+        "B_2.2": 0.9625,
+        "B_2.3": 14.6,
+        "B_3": 8.575,
+        "B_4.1": 0,
+        "B_4.2": 3.75,
+        "B_5.1": 3.75,
+        "B_5.2": 3.75,
+        "kpi_score": 78.238225,
+        "category": "K"
+      }
+    },
+    {
+      "name": "NOP RANTAU PRAPAT",
+      "region": "R01_Sumbagut",
+      "values": {
+        "A": 75.08260000000001,
+        "A_1": 0,
+        "A_2": 5.0055,
+        "A_3": 22.0023,
+        "A_4": 13.7711,
+        "A_5": 6.9656,
+        "A_6": 27.3381,
+        "B": 79.975,
+        "B_1": 32.9,
+        "B_2.1": 8.075,
+        "B_2.2": 0.15,
+        "B_2.3": 13.65,
+        "B_3": 10.2,
+        "B_4.1": 3.75,
+        "B_4.2": 3.75,
+        "B_5.1": 3.75,
+        "B_5.2": 3.75,
+        "kpi_score": 78.26266000000001,
+        "category": "K"
+      }
+    },
+    {
+      "name": "NOP BENGKULU",
+      "region": "R02_Sumbagsel",
+      "values": {
+        "A": 82.6209,
+        "A_1": 0,
+        "A_2": 5.25,
+        "A_3": 23.2453,
+        "A_4": 14.2428,
+        "A_5": 7.2064,
+        "A_6": 32.6764,
+        "B": 89.175,
+        "B_1": 34.8,
+        "B_2.1": 7.775,
+        "B_2.2": 0,
+        "B_2.3": 19.2,
+        "B_3": 12.4,
+        "B_4.1": 3.75,
+        "B_4.2": 3.75,
+        "B_5.1": 3.75,
+        "B_5.2": 3.75,
+        "kpi_score": 86.88106499999999,
+        "category": "B"
+      }
+    },
+    {
+      "name": "NOP JAMBI",
+      "region": "R02_Sumbagsel",
+      "values": {
+        "A": 84.62180000000001,
+        "A_1": 0,
+        "A_2": 5.2198,
+        "A_3": 23.2335,
+        "A_4": 14.25,
+        "A_5": 7.25,
+        "A_6": 34.6685,
+        "B": 86.74289999999999,
+        "B_1": 36.1,
+        "B_2.1": 7.7,
+        "B_2.2": 0,
+        "B_2.3": 17.7,
+        "B_3": 11.85,
+        "B_4.1": 2.1429,
+        "B_4.2": 3.75,
+        "B_5.1": 3.75,
+        "B_5.2": 3.75,
+        "kpi_score": 86.000515,
+        "category": "B"
+      }
+    },
+    {
+      "name": "NOP LAMPUNG",
+      "region": "R02_Sumbagsel",
+      "values": {
+        "A": 91.7538,
+        "A_1": 0,
+        "A_2": 5.25,
+        "A_3": 23.25,
+        "A_4": 14.25,
+        "A_5": 7.25,
+        "A_6": 41.7538,
+        "B": 86.0036,
+        "B_1": 37.8,
+        "B_2.1": 6,
+        "B_2.2": 1,
+        "B_2.3": 19.325,
+        "B_3": 7.95,
+        "B_4.1": 2.6786,
+        "B_4.2": 3.75,
+        "B_5.1": 3.75,
+        "B_5.2": 3.75,
+        "kpi_score": 88.01617,
+        "category": "B"
+      }
+    },
+    {
+      "name": "NOP PALEMBANG",
+      "region": "R02_Sumbagsel",
+      "values": {
+        "A": 80.681,
+        "A_1": 1,
+        "A_2": 4.9446,
+        "A_3": 22.8207,
+        "A_4": 13.8455,
+        "A_5": 6.9929,
+        "A_6": 31.0773,
+        "B": 89.0427,
+        "B_1": 35.5,
+        "B_2.1": 7.775,
+        "B_2.2": 1,
+        "B_2.3": 18.375,
+        "B_3": 11.85,
+        "B_4.1": 3.2927,
+        "B_4.2": 3.75,
+        "B_5.1": 3.75,
+        "B_5.2": 3.75,
+        "kpi_score": 86.116105,
+        "category": "B"
+      }
+    },
+    {
+      "name": "NOP PANGKAL PINANG",
+      "region": "R02_Sumbagsel",
+      "values": {
+        "A": 96.1318,
+        "A_1": 0,
+        "A_2": 5.25,
+        "A_3": 23.25,
+        "A_4": 14.25,
+        "A_5": 7.25,
+        "A_6": 46.1318,
+        "B": 86.2,
+        "B_1": 36.1,
+        "B_2.1": 8.075,
+        "B_2.2": 0,
+        "B_2.3": 18.6,
+        "B_3": 8.425,
+        "B_4.1": 3.75,
+        "B_4.2": 3.75,
+        "B_5.1": 3.75,
+        "B_5.2": 3.75,
+        "kpi_score": 89.67613,
+        "category": "B"
+      }
+    },
+    {
+      "name": "NOP BATAM",
+      "region": "R10_Sumbagteng",
+      "values": {
+        "A": 88.8056,
+        "A_1": 0.9978,
+        "A_2": 4.9343,
+        "A_3": 22.4519,
+        "A_4": 13.9252,
+        "A_5": 6.9643,
+        "A_6": 39.5321,
+        "B": 83.675,
+        "B_1": 36.3,
+        "B_2.1": 7.7,
+        "B_2.2": 1,
+        "B_2.3": 13.475,
+        "B_3": 10.2,
+        "B_4.1": 3.75,
+        "B_4.2": 3.75,
+        "B_5.1": 3.75,
+        "B_5.2": 3.75,
+        "kpi_score": 85.47071,
+        "category": "B"
+      }
+    },
+    {
+      "name": "NOP BUKITTINGGI",
+      "region": "R10_Sumbagteng",
+      "values": {
+        "A": 90.59989999999999,
+        "A_1": 0,
+        "A_2": 5.2468,
+        "A_3": 23.25,
+        "A_4": 14.25,
+        "A_5": 7.25,
+        "A_6": 40.6031,
+        "B": 84.625,
+        "B_1": 36.4,
+        "B_2.1": 8.225,
+        "B_2.2": 1,
+        "B_2.3": 14.2,
+        "B_3": 11.3,
+        "B_4.1": 2.25,
+        "B_4.2": 3.75,
+        "B_5.1": 3.75,
+        "B_5.2": 3.75,
+        "kpi_score": 86.71621499999999,
+        "category": "B"
+      }
+    },
+    {
+      "name": "NOP DUMAI",
+      "region": "R10_Sumbagteng",
+      "values": {
+        "A": 82.6039,
+        "A_1": 0,
+        "A_2": 5.1933,
+        "A_3": 23.1008,
+        "A_4": 14.25,
+        "A_5": 7.1861,
+        "A_6": 32.8737,
+        "B": 82.5355,
+        "B_1": 37.3,
+        "B_2.1": 8.05,
+        "B_2.2": 0,
+        "B_2.3": 14.575,
+        "B_3": 10.75,
+        "B_4.1": 0.75,
+        "B_4.2": 3.6105,
+        "B_5.1": 3.75,
+        "B_5.2": 3.75,
+        "kpi_score": 82.55944,
+        "category": "C"
+      }
+    },
+    {
+      "name": "NOP PADANG",
+      "region": "R10_Sumbagteng",
+      "values": {
+        "A": 92.65,
+        "A_1": 0,
+        "A_2": 5.25,
+        "A_3": 23.25,
+        "A_4": 14.25,
+        "A_5": 7.25,
+        "A_6": 42.65,
+        "B": 84.5865,
+        "B_1": 33.9,
+        "B_2.1": 8.175,
+        "B_2.2": 0.9,
+        "B_2.3": 16.15,
+        "B_3": 10.75,
+        "B_4.1": 3.4615,
+        "B_4.2": 3.75,
+        "B_5.1": 3.75,
+        "B_5.2": 3.75,
+        "kpi_score": 87.408725,
+        "category": "B"
+      }
+    },
+    {
+      "name": "NOP PEKANBARU",
+      "region": "R10_Sumbagteng",
+      "values": {
+        "A": 85.34029999999998,
+        "A_1": 0.9773,
+        "A_2": 4.9702,
+        "A_3": 22.8478,
+        "A_4": 13.9743,
+        "A_5": 6.9034,
+        "A_6": 35.6673,
+        "B": 82.09110000000001,
+        "B_1": 34.6,
+        "B_2.1": 8,
+        "B_2.2": 1,
+        "B_2.3": 13.925,
+        "B_3": 11.575,
+        "B_4.1": 2.6786,
+        "B_4.2": 2.8125,
+        "B_5.1": 3.75,
+        "B_5.2": 3.75,
+        "kpi_score": 83.22832,
+        "category": "C"
+      }
+    }
+  ]
+}

@@ -1,5 +1,1 @@
-#!/usr/bin/env bash
-set -e
-cd "$(dirname "$0")"
-[ -d node_modules ] || npm install
-npm start
+[{"upload_id":"8901c496cb67","page":"ekpi","filename":"KPIData_SONL1_20269 (12).xlsx","upload_date":"2026-09-22","row_count":16,"updated_at":"2026-09-22T03:27:14.847Z"},{"upload_id":"e199bc4fd168","page":"ekpi","filename":"KPIData_SONL1_20269 (13).xlsx","upload_date":"2026-09-22","row_count":16,"updated_at":"2026-09-22T09:23:56.694Z"}]

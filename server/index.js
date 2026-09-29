@@ -3,6 +3,7 @@ import {enrichWorkConditions} from './work-condition.js'
 import {freshnessTypes,buildFreshness} from './data-freshness.js'
 import express from 'express'
 import multer from 'multer'
+import ExcelJS from 'exceljs'
 import fs from 'node:fs/promises'
 import {BOOK1_START_COLUMNS, DEFAULT_REPORT_PROMPT, NOP_ORDER, REGION_NOPS, ROW_DEFINITIONS} from './constants.js'
 import {RUNS_DIR, SERVER_DIR, TEMPLATE_PATH, WEB_DIR} from './config.js'
@@ -37,8 +38,8 @@ app.get('/api/runs/:id/dashboard',asyncHandler(async(req,res)=>{
 app.get('/api/runs/:id/mttr-boosting',asyncHandler(async(req,res)=>{
   const dataset=await loadDataset(RUNS_DIR,req.params.id),data=await siteData(),month=String(req.query.month||dataset.date.slice(5,7)).padStart(2,'0'),year=String(req.query.year||dataset.date.slice(0,4)),date=`${year}-${month}-01`
   const selected=dataset.nops.filter(item=>(!req.query.region||item.region===req.query.region)&&(!req.query.nop||item.name===req.query.nop)),names=selected.map(item=>item.name)
-  const b13Rows=combinedKpiB13Rows(data),swfmSummaries=deriveTicketMttrByNop(data,names,date),kpiSummaries=buildKpiB13Summaries(b13Rows,names,date)
-  const ticket_summaries=mergeTicketSummaries(names,swfmSummaries,kpiSummaries,date)
+  const b13Rows=combinedKpiB13Rows(data)
+  const ticket_summaries=mergeTicketSources(data,b13Rows,names,date)
   const available_periods=[...new Set([...(data.swfm||[]).map(row=>String(row.occurred_at||'').slice(0,7)),...b13Rows.map(row=>row.period)].filter(value=>/^\d{4}-\d{2}$/.test(value)))].sort().reverse()
   res.json({period:`${year}-${month}`,available_periods,ticket_summaries,source:'KPIData B.1-B.3 dengan fallback Ticket SWFM'})
 }))
@@ -77,6 +78,15 @@ app.get('/api/runs/:id/export.xlsx',asyncHandler(async(req,res)=>{
   const filter=String(req.query.nop||req.query.region||req.query.category||'all-nop').toLowerCase().replace(/_/g,' ').trim().replace(/\s+/g,'-'),filename=`kpi-${dataset.date}-${filter}.xlsx`,buffer=await patchTemplate({templatePath:TEMPLATE_PATH,values,strings,dates,hiddenColumns:hidden,regionHeaders:headers});res.set({'content-type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','content-disposition':`attachment; filename="${filename}"`});res.send(buffer)
 }))
 
+app.get('/api/runs/:id/mttr-boosting/export.xlsx',asyncHandler(async(req,res)=>{
+  const dataset=await loadDataset(RUNS_DIR,req.params.id),data=await siteData(),month=String(req.query.month||dataset.date.slice(5,7)).padStart(2,'0'),year=String(req.query.year||dataset.date.slice(0,4)),date=`${year}-${month}-01`
+  const selected=dataset.nops.filter(item=>(!req.query.region||item.region===req.query.region)&&(!req.query.nop||item.name===req.query.nop)),names=selected.map(item=>item.name)
+  const b13Rows=combinedKpiB13Rows(data),summaries=mergeTicketSources(data,b13Rows,names,date)
+  const workbook=buildBoostingWorkbook(dataset,selected,summaries,{period:`${year}-${month}`,region:req.query.region||'',nop:req.query.nop||''}),buffer=await workbook.xlsx.writeBuffer()
+  const scope=String(req.query.nop||req.query.region||'semua-nop').replace(/[^A-Za-z0-9_-]+/g,'-')
+  res.set({'content-type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','content-disposition':`attachment; filename="Peningkatan-KPI-B-${year}-${month}-${scope}.xlsx"`});res.send(Buffer.from(buffer))
+}))
+
 class HttpError extends Error{constructor(status,message){super(message);this.status=status}}
 function assertXlsx(file){if(!file||!file.originalname?.toLowerCase().endsWith('.xlsx'))throw new HttpError(400,'File harus berformat .xlsx')}
 function assertDate(value){if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value||''))||Number.isNaN(Date.parse(`${value}T00:00:00Z`)))throw new HttpError(400,'Tanggal upload tidak valid.')}
@@ -110,22 +120,43 @@ export function deriveTicketMttrByNop(data,nopNames,date){
     return [nop,{nop,metrics,components:componentMetrics,source:'Ticket SWFM',source_rows,period}]
   }))
 }
-function mergeTicketSummaries(nopNames,swfmSummaries,kpiSummaries,date){
-  const result={},period=String(date||'').slice(0,7)
+function mergeTicketSources(data,b13Rows,nopNames,date){
+  const period=String(date||'').slice(0,7),allowed=new Set(nopNames),siteNop=new Map((data.master||[]).map(row=>[String(row.site_id||'').trim().toUpperCase(),row.nop]))
+  const componentKeys=Object.keys(MTTR_TARGETS_BY_COMPONENT),buckets=new Map(),aliases=new Map()
+  const blank=()=>Object.fromEntries(componentKeys.map(code=>[code,Object.fromEntries(Object.keys(MTTR_TARGETS_BY_COMPONENT[code]).map(severity=>[severity,[]]))]))
+  const ensure=nop=>{if(!buckets.has(nop))buckets.set(nop,blank());return buckets.get(nop)}
+  const aliasKey=(nop,component,severity)=>`${nop}|${component}|${severity}`
+  const add=(nop,component,severity,item,ids=[])=>{
+    if(!allowed.has(nop)||!MTTR_TARGETS_BY_COMPONENT[component]?.[severity])return
+    const key=aliasKey(nop,component,severity),known=aliases.get(key)||new Set(),normalized=ids.map(value=>String(value||'').trim().toUpperCase()).filter(Boolean)
+    if(normalized.some(id=>known.has(id)))return
+    normalized.forEach(id=>known.add(id));aliases.set(key,known);ensure(nop)[component][severity].push(item)
+  }
+  // KPIData B.1-B.3 menjadi sumber pertama. Ticket SWFM menambah ticket yang belum ada.
+  for(const row of b13Rows||[]){
+    if(!allowed.has(row.nop)||(period&&row.period!==period))continue
+    const severity=normalizeTicketSeverity(row.severity),mttr=Number(row.mttr_hours);if(!severity||!Number.isFinite(mttr)||mttr<0)continue
+    add(row.nop,row.component,severity,{...row,mttr_hours:mttr},[row.ticket_number,row.inap_no,row.wo_ticket_no])
+  }
+  const canonical=new Map(nopNames.map(name=>[normalizeNopKey(name),name]))
+  for(const row of data.swfm||[]){
+    if(String(row.excluded||'').trim().toUpperCase()!=='NO')continue
+    if(period&&String(row.occurred_at||'').slice(0,7)!==period)continue
+    const site=String(row.site_id||'').trim().toUpperCase(),nop=canonical.get(normalizeNopKey(row.nop||siteNop.get(site)));if(!nop)continue
+    const severity=normalizeTicketSeverity(row.severity);if(!severity)continue
+    const start=Date.parse(row.occurred_at||''),end=Date.parse(row.site_cleared_at||row.closed_at||'')
+    let minutes=Number.isFinite(start)&&Number.isFinite(end)&&end>=start?(end-start)/60000:NaN
+    if(!Number.isFinite(minutes)||minutes<0)minutes=row.duration_minutes===null||row.duration_minutes===undefined||row.duration_minutes===''?NaN:Number(row.duration_minutes)
+    if(!Number.isFinite(minutes)||minutes<0)continue
+    const item={mttr_hours:minutes/60,ticket_number:String(row.ticket_no||'').trim(),inap_no:String(row.parent_ticket||'').trim(),site:row.site_id||'',site_name:row.site_name||'',nop,severity,fault_level:row.fault_level||'',root_cause_category:row.rc_category||'',root_cause_1:row.rc1||'',root_cause_2:row.rc2||'',pic:row.pic||'',source_row:row.source_row}
+    for(const component of ticketComponents(row))add(nop,component,severity,item,[row.ticket_no,row.parent_ticket])
+  }
+  const result={}
   for(const nop of nopNames){
-    const swfm=swfmSummaries[nop],kpi=kpiSummaries[nop]
-    if(!swfm&&!kpi)continue
-    const components={}
-    for(const [code,targets] of Object.entries(MTTR_TARGETS_BY_COMPONENT)){
-      const swfmBySeverity=new Map((swfm?.components?.[code]||[]).map(item=>[String(item.severity).toUpperCase(),item]))
-      const kpiBySeverity=new Map((kpi?.components?.[code]||[]).map(item=>[String(item.severity).toUpperCase(),item]))
-      components[code]=Object.keys(targets).map(severity=>{
-        const fromKpi=kpiBySeverity.get(severity),fromSwfm=swfmBySeverity.get(severity)
-        return Number(fromKpi?.tickets)>0?fromKpi:fromSwfm||fromKpi||buildMttrMetrics({[severity]:[]},{[severity]:targets[severity]})[0]
-      })
-    }
+    const values=buckets.get(nop);if(!values)continue
+    const components=Object.fromEntries(componentKeys.map(code=>[code,buildMttrMetrics(values[code],MTTR_TARGETS_BY_COMPONENT[code])]))
     const source_rows=Object.values(components).flat().reduce((sum,item)=>sum+Number(item.tickets||0),0)
-    result[nop]={nop,components,metrics:components.B_1,source:kpi?'KPIData B.1-B.3 + Ticket SWFM fallback':'Ticket SWFM',source_rows,period}
+    if(source_rows)result[nop]={nop,components,metrics:components.B_1,source:'KPIData B.1-B.3 + Ticket SWFM',source_rows,period}
   }
   return result
 }
@@ -135,6 +166,36 @@ function combinedKpiB13Rows(data){
   for(const source of sources)for(const row of data[source]||[]){const identity=[row.nop,row.component,row.severity,row.ticket_number,row.source_row,row.period].join('|');if(seen.has(identity))continue;seen.add(identity);rows.push(row)}
   return rows
 }
+function buildBoostingWorkbook(dataset,selected,summaries,filter){
+  const labels={B_1:'Restoration Impact Service Incident Alarm','B_2.1':'Restoration Potential Impact Service Non Incident Alarm Enva','B_2.2':'Restoration Impact Service Non Incident Alarm Controller','B_2.3':'Restoration Impact Service Non Incident Alarm Impact Service Alarm',B_3:'Restoration Impact Service Degraded Service (P2 & P3) & Others Alarm'}
+  const weights=Object.fromEntries((dataset.rows||[]).map(row=>[row.key,Number(row.weight)||0])),book=new ExcelJS.Workbook(),summary=book.addWorksheet('Ringkasan Capture',{views:[{state:'frozen',ySplit:5}]}),sheet=book.addWorksheet('Detail MTTR',{views:[{state:'frozen',ySplit:5}]})
+  summary.pageSetup={orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:.25,right:.25,top:.4,bottom:.4,header:.15,footer:.15}}
+  summary.mergeCells('A1:H1');summary.getCell('A1').value='RINGKASAN PENINGKATAN KPI B.1 - B.3';summary.getCell('A1').font={name:'Arial',size:16,bold:true,color:{argb:'FFFFFFFF'}};summary.getCell('A1').fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF173E68'}};summary.getCell('A1').alignment={horizontal:'center',vertical:'middle'};summary.getRow(1).height=30
+  summary.mergeCells('A2:H2');summary.getCell('A2').value=`Periode ${filter.period} | Regional ${filter.region||'Semua Regional'} | NOP ${filter.nop||'Semua NOP'}`;summary.getCell('A2').font={name:'Arial',size:10,bold:true,color:{argb:'FF42536A'}};summary.getCell('A2').alignment={horizontal:'center'}
+  summary.mergeCells('A3:H3');summary.getCell('A3').value='Ticket menuju 100% adalah total estimasi ticket prioritas agar seluruh severity yang terdeteksi mencapai target MTTR P90. Hasil ini mendukung pencapaian bobot maksimal, tetapi bukan konversi langsung ticket menjadi poin.';summary.getCell('A3').font={name:'Arial',size:9,italic:true,color:{argb:'FF64758A'}};summary.getCell('A3').alignment={wrapText:true,vertical:'middle'};summary.getRow(3).height=31
+  summary.addRow([]);const summaryHeader=summary.addRow(['Regional','NOP','Point B','Nama Point KPI','Point Saat Ini','Bobot Maksimal (100%)','Ticket Menuju 100%','Penjelasan'])
+  summaryHeader.height=31;summaryHeader.eachCell(cell=>{cell.font={name:'Arial',size:9,bold:true,color:{argb:'FFFFFFFF'}};cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF294D78'}};cell.alignment={horizontal:'center',vertical:'middle',wrapText:true};cell.border={top:{style:'thin',color:{argb:'FF102C4D'}},left:{style:'thin',color:{argb:'FF102C4D'}},bottom:{style:'thin',color:{argb:'FF102C4D'}},right:{style:'thin',color:{argb:'FF102C4D'}}}})
+  sheet.pageSetup={orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:.25,right:.25,top:.4,bottom:.4,header:.15,footer:.15}}
+  sheet.mergeCells('A1:L1');sheet.getCell('A1').value='EVALUASI KPI TICKETING ACTIVITY & ALARM HANDLING B.1 - B.3';sheet.getCell('A1').font={name:'Arial',size:16,bold:true,color:{argb:'FFFFFFFF'}};sheet.getCell('A1').fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF173E68'}};sheet.getCell('A1').alignment={horizontal:'center',vertical:'middle'};sheet.getRow(1).height=30
+  sheet.mergeCells('A2:L2');sheet.getCell('A2').value=`Periode ${filter.period} | Regional ${filter.region||'Semua Regional'} | NOP ${filter.nop||'Semua NOP'}`;sheet.getCell('A2').font={name:'Arial',size:10,bold:true,color:{argb:'FF42536A'}};sheet.getCell('A2').alignment={horizontal:'center'}
+  sheet.mergeCells('A3:L3');sheet.getCell('A3').value='Ticket menuju 100% adalah estimasi ticket prioritas yang perlu diperbaiki agar MTTR P90 mencapai target severity. Nilai ini mendukung pencapaian bobot maksimal komponen, tetapi bukan konversi langsung satu ticket menjadi satu poin.';sheet.getCell('A3').font={name:'Arial',size:9,italic:true,color:{argb:'FF64758A'}};sheet.getCell('A3').alignment={wrapText:true,vertical:'middle'};sheet.getRow(3).height=31
+  const headers=['Regional','NOP','Point B','Nama Point KPI','Bobot Maksimal','Point Saat Ini','Gap ke 100%','Severity','MTTR P90 Saat Ini','Target MTTR P90','Ticket Menuju 100%','Penjelasan']
+  sheet.addRow([]);const header=sheet.addRow(headers);header.height=31
+  header.eachCell(cell=>{cell.font={name:'Arial',size:9,bold:true,color:{argb:'FFFFFFFF'}};cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF294D78'}};cell.alignment={horizontal:'center',vertical:'middle',wrapText:true};cell.border={top:{style:'thin',color:{argb:'FF102C4D'}},left:{style:'thin',color:{argb:'FF102C4D'}},bottom:{style:'thin',color:{argb:'FF102C4D'}},right:{style:'thin',color:{argb:'FF102C4D'}}}})
+  for(const item of selected)for(const code of Object.keys(MTTR_TARGETS_BY_COMPONENT)){
+    const metrics=summaries[item.name]?.components?.[code]||[],weight=weights[code]||0,current=Number(item.values?.[code]),gap=Number.isFinite(current)?Math.max(0,weight-current):null
+    const detected=metrics.filter(metric=>Number(metric.tickets)>0),totalNeeded=detected.reduce((sum,metric)=>sum+(Number(metric.needed)||0),0),needDetail=detected.filter(metric=>Number(metric.needed)>0).map(metric=>`${metric.severity}: ${metric.needed} ticket`).join('; '),summaryExplanation=!detected.length?'Belum ada ticket yang terdeteksi pada periode ini.':totalNeeded?`Prioritas per severity: ${needDetail}. Target operasionalnya adalah MTTR P90 setiap severity mencapai batas yang ditetapkan.`:'Seluruh severity yang terdeteksi sudah mencapai target MTTR P90; tidak membutuhkan ticket tambahan.'
+    summary.addRow([item.region,item.name,code.replace('_','.'),labels[code],Number.isFinite(current)?current:null,weight,totalNeeded,summaryExplanation])
+    for(const metric of metrics){const tickets=Number(metric.tickets)||0,needed=tickets?Number(metric.needed)||0:null,currentP90=Number(metric.achievement),target=Number(metric.target),projected=Number(metric.simulated);const explanation=!tickets?'Tidak ada ticket terdeteksi untuk severity dan periode ini.':needed===0?`MTTR P90 ${formatExportNumber(currentP90)} jam sudah memenuhi target ${formatExportNumber(target)} jam; tidak membutuhkan ticket tambahan.`:`Prioritaskan ${needed} ticket dengan MTTR tertinggi. Estimasi P90 turun dari ${formatExportNumber(currentP90)} menjadi ${formatExportNumber(projected)} jam untuk mencapai target ${formatExportNumber(target)} jam.`;sheet.addRow([item.region,item.name,code.replace('_','.'),labels[code],weight,Number.isFinite(current)?current:null,gap,metric.severity,Number.isFinite(currentP90)?currentP90:null,target,needed,explanation])}
+  }
+  summary.columns=[{width:18},{width:23},{width:10},{width:52},{width:16},{width:19},{width:20},{width:72}];summary.autoFilter={from:{row:5,column:1},to:{row:5,column:8}}
+  for(let row=6;row<=summary.rowCount;row++){const record=summary.getRow(row);record.height=36;record.eachCell((cell,column)=>{cell.font={name:'Arial',size:9,bold:[1,2,3,5,7].includes(column)};cell.alignment={vertical:'middle',horizontal:[5,6,7].includes(column)?'center':'left',wrapText:[4,8].includes(column)};cell.border={bottom:{style:'thin',color:{argb:'FFD7DFE8'}},right:{style:'thin',color:{argb:'FFD7DFE8'}}};if(row%2===0)cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF5F8FB'}}});for(const column of [5,6])record.getCell(column).numFmt='0.00'}
+  sheet.columns=[{width:18},{width:23},{width:10},{width:54},{width:16},{width:15},{width:15},{width:13},{width:19},{width:18},{width:20},{width:72}]
+  sheet.autoFilter={from:{row:5,column:1},to:{row:5,column:12}}
+  for(let row=6;row<=sheet.rowCount;row++){const record=sheet.getRow(row);record.height=34;record.eachCell((cell,column)=>{cell.font={name:'Arial',size:9,bold:[1,2,3,6,11].includes(column)};cell.alignment={vertical:'middle',horizontal:[5,6,7,9,10,11].includes(column)?'center':'left',wrapText:[4,12].includes(column)};cell.border={bottom:{style:'thin',color:{argb:'FFD7DFE8'}},right:{style:'thin',color:{argb:'FFD7DFE8'}}};if(row%2===0)cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF5F8FB'}}});for(const column of [5,6,7,9,10])record.getCell(column).numFmt='0.00'}
+  return book
+}
+function formatExportNumber(value){return Number.isFinite(Number(value))?Number(value).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2}):'-'}
 function normalizeTicketSeverity(value){
   const severity=String(value||'').trim().toUpperCase().replace(/[\s_-]+/g,' ')
   if(severity==='HIGH')return 'MAJOR'
