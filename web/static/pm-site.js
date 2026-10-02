@@ -1,5 +1,6 @@
 (function() {
   const R = window.React;
+  window.PMAttentionCharts = window.PMAttentionCharts || (() => null);
   const statuses = ["Belum ditinjau", "Perlu konfirmasi NOP", "Sedang ditindaklanjuti", "Menunggu verifikasi", "Selesai"];
   const emptyEvaluation = { evaluation_status: "Belum ditinjau", priority: "Rendah", evaluator_pic: "", target_date: "", conclusion: "", follow_up_action: "", verification_note: "" };
   const display = (value) => value === null || value === void 0 || value === "" ? "Belum tersedia" : String(value);

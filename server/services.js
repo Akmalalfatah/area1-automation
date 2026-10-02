@@ -112,18 +112,35 @@ export const MTTR_TARGETS_BY_COMPONENT={
   'B_2.3':{MAJOR:4,MINOR:15},
   B_3:{MINOR:15,LOW:48,'VERY LOW':96}
 }
-const percentileInc=(values,p)=>{
+// Sama dengan Excel PERCENTILE.INC: posisi=(n-1)*p, lalu interpolasi linear.
+export const percentileInc=(values,p)=>{
   const sorted=[...values].sort((a,b)=>a-b)
   if(!sorted.length)return null
   const index=(sorted.length-1)*p,lower=Math.floor(index),upper=Math.ceil(index)
   return sorted[lower]+(sorted[upper]-sorted[lower])*(index-lower)
 }
-const ticketNeedForTarget=(items,target)=>{
-  const ordered=[...items].sort((a,b)=>b.mttr_hours-a.mttr_hours),current=percentileInc(ordered.map(item=>item.mttr_hours),.9)
+// Simulasi tidak pernah mengubah MTTR ticket aktual. Setiap iterasi hanya
+// menambahkan satu ticket baru berdurasi 1 jam hingga P90 minimum mencapai target.
+export const ticketNeedForTarget=(items,target)=>{
+  const actual=items.map(item=>Number(item.mttr_hours)).filter(value=>Number.isFinite(value)&&value>=0)
+  const current=percentileInc(actual,.9)
   if(current<=target)return {needed:0,simulated:current,candidates:[]}
-  const projected=count=>percentileInc([...ordered.map(item=>item.mttr_hours),...Array(count).fill(1)],.9)
-  let needed=0,simulated=current
-  while(simulated>target){needed+=1;simulated=projected(needed)}
+  // Hasilnya identik dengan P90(actual + Array(count).fill(1)), tetapi tidak
+  // membuat/menyortir array baru setiap satu ticket. Ini penting untuk MTTR
+  // ekstrem agar halaman tetap responsif; ticket simulasi tetap bernilai 1 jam.
+  const sorted=[...actual].sort((a,b)=>a-b)
+  const firstOne=sorted.findIndex(value=>value>=1)
+  const oneIndex=firstOne<0?sorted.length:firstOne
+  const projected=count=>{
+    const length=sorted.length+count,index=(length-1)*.9,lower=Math.floor(index),upper=Math.ceil(index)
+    const valueAt=rank=>rank>=oneIndex&&rank<oneIndex+count?1:sorted[rank-(rank>=oneIndex+count?count:0)]
+    return valueAt(lower)+(valueAt(upper)-valueAt(lower))*(index-lower)
+  }
+  let high=1
+  while(projected(high)>target)high*=2
+  let low=0
+  while(low+1<high){const middle=Math.floor((low+high)/2);if(projected(middle)<=target)high=middle;else low=middle}
+  const needed=high,simulated=projected(needed)
   return {needed,simulated,candidates:Array.from({length:needed},(_,index)=>({source_row:index+1,mttr_hours:1,target,gap:0}))}
 }
 
@@ -207,24 +224,6 @@ function generateLocalReport(analysis){
   }
   return `📅 *KPI PERFORMANCE ${analysis.previous_date} - ${analysis.date}*\nFilter: ${filter}\nRata-rata KPI: *${localNumber(analysis.current_average)}*\n\n🏆 *TOP 5 NOP - KENAIKAN TERBAIK*\n\n${ranking(analysis.top_nops)}\n\n⚠️ *TOP 5 NOP - PERLU PERHATIAN*\n\n${ranking(analysis.attention_nops)}\n\n━━━━━━━━━━━━━━━━━\n📈 *TOP 5 BEST Kenaikan di POINT KPI*\n${components(analysis.top_components)}\n\n━━━━━━━━━━━━━━━━━\n📉 *TOP 5 WORST Penurunan di POINT KPI*\n${components(analysis.worst_components)}`
 }
-const localNumber=value=>Number.isFinite(Number(value))?Number(value).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2}):'-'
-const localDelta=value=>Number.isFinite(Number(value))?`${Number(value)>0?'+':''}${localNumber(value)}`:'-'
-function generateLocalReport(analysis){
-  const clean=value=>String(value||'').replace(/^NOP\s+/i,'')
-  const filter=[analysis.filter?.region,analysis.filter?.nop&&`NOP ${clean(analysis.filter.nop)}`,analysis.filter?.category&&`Kategori ${analysis.filter.category}`].filter(Boolean).join(' · ')||'Semua Regional · Semua NOP · Semua Kategori'
-  const ranking=items=>(items||[]).slice(0,5).map((item,index)=>`${index+1}. ${clean(item.nop||item.component)}: ${localNumber(item.start)} → ${localNumber(item.end)} *(${localDelta(item.delta)})*`).join('\n')||'-'
-  const componentNop=item=>{const value=String(item.nop||'').trim();return value?/^NOP\s+/i.test(value)?value:`NOP ${value}`:'NOP tidak tersedia'}
-  const components=items=>(items||[]).slice(0,5).map((item,index)=>`${index+1}. ${componentNop(item)} - ${item.component}: ${localNumber(item.start)} → ${localNumber(item.end)} *(${localDelta(item.delta)})*`).join('\n')||'-'
-  if(!analysis.comparison_available){
-    const snapshot=(analysis.current_nops||[]).map((item,index)=>`${index+1}. ${clean(item.nop)}: *${localNumber(item.score)}* · ${item.category||'-'}`).join('\n')||'-'
-    return `📅 *KPI PERFORMANCE ${analysis.date}*\nFilter: ${filter}\nRata-rata KPI: *${localNumber(analysis.current_average)}*\nJumlah NOP: ${analysis.nop_count}\n\n📊 *KPI SNAPSHOT*\n${snapshot}`
-  }
-  if(analysis.mode==='nop'){
-    const item=(analysis.top_nops||[])[0]||{}
-    return `📊 *PERFORMANCE NOP ${clean(item.nop||analysis.filter?.nop)}*\nPeriode KPI: ${analysis.date}\nBaseline: ${analysis.previous_date}\nKPI Score: ${localNumber(item.start)} → ${localNumber(item.end)}\nPerubahan: ${localDelta(item.delta)}\nKategori: ${item.start_category||'-'} → ${item.end_category||'-'}\n\n━━━━━━━━━━━━━━━━━\n📈 *TOP 5 BEST Kenaikan di POINT KPI*\n${components(analysis.top_components)}\n\n━━━━━━━━━━━━━━━━━\n📉 *TOP 5 WORST Penurunan di POINT KPI*\n${components(analysis.worst_components)}`
-  }
-  return `📅 *KPI PERFORMANCE ${analysis.previous_date} - ${analysis.date}*\nFilter: ${filter}\nRata-rata KPI: *${localNumber(analysis.current_average)}*\n\n🏆 *TOP 5 NOP - KENAIKAN TERBAIK*\n\n${ranking(analysis.top_nops)}\n\n⚠️ *TOP 5 NOP - PERLU PERHATIAN*\n\n${ranking(analysis.attention_nops)}\n\n━━━━━━━━━━━━━━━━━\n📈 *TOP 5 BEST Kenaikan di POINT KPI*\n${components(analysis.top_components)}\n\n━━━━━━━━━━━━━━━━━\n📉 *TOP 5 WORST Penurunan di POINT KPI*\n${components(analysis.worst_components)}`
-}
 export async function generateReport(prompt,analysis){
   const primaryKey=process.env.GEMINI_API_KEY||'',fallbackKey=process.env.GEMINI_FALLBACK_API_KEY||primaryKey
   if(!primaryKey&&!fallbackKey)return generateLocalReport(analysis)
@@ -233,16 +232,7 @@ export async function generateReport(prompt,analysis){
     {model:process.env.GEMINI_FALLBACK_MODEL||'gemini-3.5-flash',key:fallbackKey||primaryKey}
   ].filter((item,index,items)=>item.model&&item.key&&items.findIndex(other=>other.model===item.model&&other.key===item.key)===index),errors=[]
   const reportGuard='\n\nATURAN SISTEM TETAP: KPI Score adalah ringkasan per NOP dan tidak boleh dicantumkan dalam ranking komponen TOP 5 BEST maupun TOP 5 WORST. Gunakan hanya top_components dan worst_components yang dikirim sistem. Setiap item ranking komponen wajib menggunakan persis format: NOP [nama NOP] - [nama komponen]: [start] → [end] *([delta])*. Contoh: NOP BUKITTINGGI - Restoration Impact Service Incident Alarm: 36,60 → 36,40 *(-0,20)*.'
-  const primaryKey=process.env.GEMINI_API_KEY||'',fallbackKey=process.env.GEMINI_FALLBACK_API_KEY||primaryKey
-  if(!primaryKey&&!fallbackKey)return generateLocalReport(analysis)
-  const providers=[
-    {model:process.env.GEMINI_MODEL||'gemini-3.5-flash-lite',key:primaryKey||fallbackKey},
-    {model:process.env.GEMINI_FALLBACK_MODEL||'gemini-3.5-flash',key:fallbackKey||primaryKey}
-  ].filter((item,index,items)=>item.model&&item.key&&items.findIndex(other=>other.model===item.model&&other.key===item.key)===index),errors=[]
-  const reportGuard='\n\nATURAN SISTEM TETAP: KPI Score adalah ringkasan per NOP dan tidak boleh dicantumkan dalam ranking komponen TOP 5 BEST maupun TOP 5 WORST. Gunakan hanya top_components dan worst_components yang dikirim sistem. Setiap item ranking komponen wajib menggunakan persis format: NOP [nama NOP] - [nama komponen]: [start] → [end] *([delta])*. Contoh: NOP BUKITTINGGI - Restoration Impact Service Incident Alarm: 36,60 → 36,40 *(-0,20)*.'
   const body={systemInstruction:{parts:[{text:`${prompt}${reportGuard}`}]},contents:[{role:'user',parts:[{text:`Berikut DATA TERSTRUKTUR hasil kalkulasi sistem. Gunakan angka dan ranking ini apa adanya.\n\n${JSON.stringify(roundAi(analysis),null,2)}`}]}]}
-  for(const {model,key} of providers)for(let attempt=0;attempt<3;attempt++){try{const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(45000)});const data=await response.json();if(!response.ok)throw new Error(`Gemini API error (${response.status}) pada ${model}: ${data.error?.message||response.statusText}`);const text=data.candidates?.flatMap(x=>x.content?.parts||[]).map(x=>x.text).filter(Boolean).join('\n').trim();if(!text)throw new Error('Gemini API tidak mengembalikan output text.');return text}catch(error){errors.push(error.message);if(attempt<2)await sleep(1000*2**attempt+Math.random()*500)}}
-  return generateLocalReport(analysis)
   for(const {model,key} of providers)for(let attempt=0;attempt<3;attempt++){try{const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(45000)});const data=await response.json();if(!response.ok)throw new Error(`Gemini API error (${response.status}) pada ${model}: ${data.error?.message||response.statusText}`);const text=data.candidates?.flatMap(x=>x.content?.parts||[]).map(x=>x.text).filter(Boolean).join('\n').trim();if(!text)throw new Error('Gemini API tidak mengembalikan output text.');return text}catch(error){errors.push(error.message);if(attempt<2)await sleep(1000*2**attempt+Math.random()*500)}}
   return generateLocalReport(analysis)
 }
