@@ -173,3 +173,11 @@ button { cursor: pointer; }
 .kpi-improvement-export-actions button{display:flex;height:36px;align-items:center;justify-content:center;gap:7px;padding:0 12px;font-size:10px;font-weight:600;white-space:nowrap}
 @media(max-width:1180px){.kpi-improvement-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
 >>>>>>> f3cdac9 (add the fixes in peningkatan kpi)
+.kpi-improvement-filters{display:flex;flex-direction:column;align-items:stretch;gap:14px}
+.kpi-improvement-filter-date-row,.kpi-improvement-filter-secondary-row{display:grid!important;align-items:end;gap:16px}
+.kpi-improvement-filter-date-row{grid-template-columns:repeat(2,minmax(220px,320px));justify-content:start}
+.kpi-improvement-filter-secondary-row{grid-template-columns:minmax(220px,320px) minmax(220px,320px) max-content;justify-content:start}
+.kpi-improvement-filter-date-row>div,.kpi-improvement-filter-secondary-row>div{display:grid;gap:4px}
+.kpi-improvement-export-actions{align-self:end}
+.kpi-export-all-button,.kpi-nop-export-button{display:inline-flex;min-height:32px;align-items:center;gap:5px;padding:0 10px!important;font-size:10px!important;font-weight:600;line-height:1.2}
+@media(max-width:760px){.kpi-improvement-filter-date-row,.kpi-improvement-filter-secondary-row{grid-template-columns:1fr}.kpi-improvement-export-actions{align-self:stretch}.kpi-export-all-button{justify-content:center}}
