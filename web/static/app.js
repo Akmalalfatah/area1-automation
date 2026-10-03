@@ -998,7 +998,13 @@ KpiWorkspace = class KpiWorkspace extends React.Component {
       selected.forEach((item) => { const previous = byDate.get(item.date_end); if (!previous || String(item.updated_at || "") >= String(previous.updated_at || "")) byDate.set(item.date_end, item); });
       const matches = [...byDate.values()].sort((a, b) => String(a.date_end).localeCompare(String(b.date_end)));
       if (!matches.length) { this.setState({ filterError: "Tidak ada file Closing bulan sebelumnya pada rentang tanggal ini." }); return; }
-      const labels = matches.map((item) => { const closingDate = new Date(`${item.date_end}T00:00:00Z`); closingDate.setUTCMonth(closingDate.getUTCMonth() - 1); const month = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" }).format(closingDate); return `${month}+${Number(String(item.date_end).slice(8, 10))}`; });
+      const labels = matches.map((item) => {
+        if (periodType === "current") return excelDateLabel(item.date_end);
+        const closingDate = new Date(`${item.date_end}T00:00:00Z`);
+        closingDate.setUTCMonth(closingDate.getUTCMonth() - 1);
+        const month = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" }).format(closingDate);
+        return `${month}+${Number(String(item.date_end).slice(8, 10))}`;
+      });
       const dashboards = await Promise.all(matches.map((item) => getDashboard(item.run_id, region, nop)));
       this.setState({ filteredDashboard: mergeRangeDashboards(dashboards, matches.map((item) => item.date_end), labels) });
     } catch (error) { this.setState({ filteredDashboard: null, filterError: `Filter KPI gagal: ${error.message}` }); } finally { this.setState({ filterLoading: false }); }
