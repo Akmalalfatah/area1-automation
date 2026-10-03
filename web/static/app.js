@@ -108,10 +108,11 @@ const generateReport = (id, prompt, region = "", nop = "") => api(`/api/runs/${i
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ prompt, region: region || null, nop: nop || null })
 });
-async function uploadKpi(id, file, date) {
+async function uploadKpi(id, file, date, reportingType = "current") {
   const form = new FormData();
   form.append("file", file);
   form.append("upload_date", date);
+  form.append("reporting_type", reportingType);
   return api(`/api/runs/${id}/upload`, { method: "POST", body: form });
 }
 const getPreventiveDashboard = (filters = {}, maintenanceType = "") => {
@@ -355,7 +356,7 @@ class MasterSiteUploadSection extends React.Component {
       this.setState({ busy: true, error: "", message: "" });
       try {
         let result;
-        if (kind === "ekpi") result = await this.props.onUploadKpi(draft.file, draft.date);
+        if (kind === "ekpi") result = await this.props.onUploadKpi(draft.file, draft.date, draft.reportingType || "current");
         else if (["dashboard", "genset", "site"].includes(kind)) result = await this.props.onUploadPreventive(kind, draft.file, draft.date);
         else {
           const form = new FormData();
@@ -415,6 +416,7 @@ class MasterSiteUploadSection extends React.Component {
           "div",
           { id: "source-upload-panel", role: "tabpanel", "aria-labelledby": "source-tab-" + s.kind },
           h("div", { className: "source-current" }, h("strong", null, (latest == null ? void 0 : latest.filename) || "Belum ada file " + label + " tersimpan"), h("span", null, "Terakhir upload: " + formatDate(latest == null ? void 0 : latest.upload_date))),
+          s.kind === "ekpi" && h("div", { className: "source-upload-period" }, h("label", null, "JENIS PERIODE KPI"), h("select", { className: "control", "aria-label": "Jenis periode KPI", value: draft.reportingType || "current", disabled: s.busy, onChange: (event) => this.setDraft({ reportingType: event.target.value }) }, h("option", { value: "current" }, "Bulan berjalan"), h("option", { value: "closing_previous_month" }, "Closing bulan sebelumnya (H+1 s.d. H+5)")), h("p", { className: "source-upload-note" }, "Pada H+1 sampai H+5, file Closing bulan sebelumnya dapat disimpan bersamaan dengan file Bulan berjalan pada tanggal yang sama.")),
           h("div", { className: "source-upload-form" }, h("label", { className: "source-file-picker" }, h("span", null, "Choose File"), h("span", { title: ((_b = draft.file) == null ? void 0 : _b.name) || "" }, ((_c = draft.file) == null ? void 0 : _c.name) || "Pilih file " + label + " (.xlsx)"), h("input", { key: s.kind + "-" + Boolean(draft.file), type: "file", accept: ".xlsx", "aria-label": "File upload " + label, onChange: (event) => {
             var _a2;
             const file = ((_a2 = event.target.files) == null ? void 0 : _a2[0]) || null;
@@ -962,6 +964,39 @@ KpiWorkspace = class KpiWorkspace extends React.Component {
       React.createElement("p", { className: "mt-2 text-[10px] text-slate-400" }, rangeLoading ? "Memuat data pada rentang tanggal..." : rangeStart && rangeEnd ? "Menampilkan semua upload pada rentang yang dipilih." : nop ? `Analisis card akan dibuka untuk ${compactNop(nop)}.` : "Analisis card akan menampilkan seluruh NOP sesuai filter Regional dan NOP.")), React.createElement("div", { className: "mt-5" }, React.createElement(KpiTable, { tableRef, dashboard, region, nop, rowGroup })));
   }
 };
+// KPI Table dapat membedakan file Closing dan Bulan berjalan pada tanggal upload yang sama.
+excelDateLabel = function(value) {
+  if (!value) return "-";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return String(value);
+  const date = new Date(`${value}T00:00:00`), month = new Intl.DateTimeFormat("en-US", { month: "short" }).format(date);
+  return `${month}-${String(date.getDate()).padStart(2, "0")}`;
+};
+mergeRangeDashboards = function(dashboards, dates, labels) {
+  const latest = dashboards[dashboards.length - 1]; if (!latest) return null;
+  const nops = dashboards.flatMap((dashboard, dashboardIndex) => dashboard.dataset.nops.map((item, itemIndex) => ({ ...item, date: (labels || [])[dashboardIndex] || (dates || [])[dashboardIndex] || dashboard.dataset.date, entryKey: `${(labels || [])[dashboardIndex] || (dates || [])[dashboardIndex] || dashboard.dataset.date}-${item.name}-${dashboardIndex}-${itemIndex}` })));
+  return { ...latest, dataset: { ...latest.dataset, nops } };
+};
+KpiWorkspace = class KpiWorkspace extends React.Component {
+  constructor(props) { super(props); this.state = { showImprovement: new URLSearchParams(window.location.search).get("view") === "improvement", periodType: "closing_previous_month", filteredDashboard: null, filterLoading: false }; }
+  componentDidMount() { this.resetFromSidebar = () => this.setState({ showImprovement: false }); window.addEventListener("app:navigate", this.resetFromSidebar); this.loadPeriod(); }
+  componentDidUpdate(previousProps, previousState) { if (previousProps.rangeStart !== this.props.rangeStart || previousProps.rangeEnd !== this.props.rangeEnd || previousProps.region !== this.props.region || previousProps.nop !== this.props.nop || previousState.periodType !== this.state.periodType) this.loadPeriod(); }
+  componentWillUnmount() { window.removeEventListener("app:navigate", this.resetFromSidebar); }
+  async loadPeriod() {
+    const { rangeStart, rangeEnd, region, nop } = this.props, periodType = this.state.periodType;
+    if (!rangeStart || !rangeEnd || rangeStart > rangeEnd) { if (this.state.filteredDashboard) this.setState({ filteredDashboard: null }); return; }
+    this.setState({ filterLoading: true });
+    try {
+      const history = await getHistory(), matches = (history.items || []).filter((item) => { const upload = item.history && item.history.upload || {}, type = upload.reporting_type || "current"; return item.date_end >= rangeStart && item.date_end <= rangeEnd && type === periodType; }).sort((a, b) => String(a.date_end).localeCompare(String(b.date_end)) || String(a.run_id).localeCompare(String(b.run_id)));
+      const dashboards = await Promise.all(matches.map((item) => getDashboard(item.run_id, region, nop)), labels = matches.map((item) => { const upload = item.history && item.history.upload || {}; return upload.reporting_period && upload.reporting_period.label || excelDateLabel(item.date_end); }));
+      this.setState({ filteredDashboard: mergeRangeDashboards(dashboards, matches.map((item) => item.date_end), labels) });
+    } catch (error) { this.setState({ filteredDashboard: null }); } finally { this.setState({ filterLoading: false }); }
+  }
+  render() {
+    const { config, region, nop, rowGroup, onRegion, onNop, onRowGroup, rangeStart, rangeEnd, rangeLoading, onRangeDate, onClearRange, tableRef, runId, onTicketUploaded } = this.props, dashboard = this.state.filteredDashboard || this.props.dashboard, showImprovement = this.state.showImprovement, hasNop = dashboard.dataset.nops.length > 0, closing = kpiClosingPeriodInfo();
+    if (showImprovement) return React.createElement(KpiDetailBoundary, null, React.createElement(NopKpiImprovement, { config, region, nop, dashboard, rangeStart, rangeEnd, onRegion, onNop, runId, onTicketUploaded, onBack: () => this.setState({ showImprovement: false }) }));
+    return React.createElement("section", { className: "corporate-panel min-w-0 p-5" }, React.createElement(FilterBar, { config, region, nop, rowGroup, onRegion, onNop, onRowGroup }), React.createElement("div", { className: "mt-4 border-b border-slate-200 pb-4" }, React.createElement("div", { className: "flex items-end gap-3" }, React.createElement("div", null, React.createElement("label", { className: "filter-label mb-1 block" }, "DATE FROM"), React.createElement("input", { type: "date", value: rangeStart, onChange: (e) => onRangeDate("rangeStart", e.target.value), className: "control h-9 w-[135px] px-3 text-[10px] font-semibold" })), React.createElement("div", null, React.createElement("label", { className: "filter-label mb-1 block" }, "DATE TO"), React.createElement("input", { type: "date", value: rangeEnd, onChange: (e) => onRangeDate("rangeEnd", e.target.value), className: "control h-9 w-[135px] px-3 text-[10px] font-semibold" })), React.createElement("div", null, React.createElement("label", { className: "filter-label mb-1 block" }, "PERIODE DATA"), React.createElement("select", { value: this.state.periodType, onChange: (e) => this.setState({ periodType: e.target.value }), className: "control h-9 w-[210px] px-3 text-[10px] font-semibold" }, React.createElement("option", { value: "closing_previous_month" }, "Closing bulan sebelumnya"), React.createElement("option", { value: "current" }, "Bulan berjalan"))), React.createElement("button", { onClick: onClearRange, disabled: !rangeStart && !rangeEnd, className: "btn-secondary h-9 whitespace-nowrap px-3 text-[10px] font-semibold disabled:opacity-40" }, "Reset date"), React.createElement("div", null, React.createElement("label", { className: "filter-label mb-1 block" }, "ANALISIS"), React.createElement("button", { type: "button", disabled: !hasNop, onClick: () => hasNop && this.setState({ showImprovement: true }), className: "btn-primary h-9 whitespace-nowrap px-4 text-[10px] font-semibold disabled:cursor-not-allowed disabled:opacity-40" }, "PENINGKATAN KPI"))), closing && React.createElement("div", { className: "kpi-closing-period" }, React.createElement("b", null, `Periode KPI: ${closing.label}`), React.createElement("span", null, closing.detail)), React.createElement("p", { className: "mt-2 text-[10px] text-slate-400" }, this.state.filterLoading || rangeLoading ? "Memuat data KPI Table..." : rangeStart && rangeEnd ? "Pilih Closing bulan sebelumnya untuk melihat label September +2 / +3; pilih Bulan berjalan untuk data Oktober." : "Pilih Date From dan Date To, lalu pilih periode data.")), React.createElement("div", { className: "mt-5" }, React.createElement(KpiTable, { tableRef, dashboard, region, nop, rowGroup })));
+  }
+};
 class KpiCategoryTrend extends React.Component {
   constructor(props) {
     super(props);
@@ -1247,12 +1282,12 @@ class App extends React.Component {
         this.setState({ busyUpload: false });
       }
     });
-    __publicField(this, "handleCentralKpiUpload", async (file, date) => {
+    __publicField(this, "handleCentralKpiUpload", async (file, date, reportingType = "current") => {
       var _a, _b, _c;
       const { run, region, nop, prompt } = this.state;
       const activeRun = run.processed ? await createRun() : run;
       if (run.processed) localStorage.setItem(RUN_KEY, activeRun.id);
-      const nextRun = await uploadKpi(activeRun.id, file, date), dashboard = await getDashboard(nextRun.id, region, nop);
+      const nextRun = await uploadKpi(activeRun.id, file, date, reportingType), dashboard = await getDashboard(nextRun.id, region, nop);
       this.setState({ run: nextRun, dashboard, rangeDashboard: null, notice: "eKPI berhasil diproses dari Data Upload." }, () => this.requestReport(nextRun, region, nop, prompt));
       await this.loadHistory();
       return { row_count: ((_a = nextRun.upload) == null ? void 0 : _a.nop_count) || ((_c = (_b = dashboard.dataset) == null ? void 0 : _b.nops) == null ? void 0 : _c.length) || 0 };
