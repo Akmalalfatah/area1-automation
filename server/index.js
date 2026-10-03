@@ -31,17 +31,17 @@ app.post('/api/runs/:id/ticket-summary',upload.single('file'),asyncHandler(async
 app.post('/api/runs/:id/process',asyncHandler(async(req,res)=>{const dataset=await processRun(RUNS_DIR,req.params.id);res.json({ok:true,date:dataset.date})}))
 app.get('/api/runs/:id/dashboard',asyncHandler(async(req,res)=>{
   const payload=await dashboardPayload(RUNS_DIR,req.params.id,req.query.region||null,req.query.nop||null,req.query.category||null)
-  const derived=deriveTicketMttrByNop(await siteData(),payload.dataset.nops.map(item=>item.name),payload.dataset.date)
+  const derived=deriveTicketMttrByNop(await siteData(),payload.dataset.nops.map(item=>item.name),String(payload.dataset.date||'').slice(0,7))
   payload.dataset.ticket_summaries={...(payload.dataset.ticket_summaries||{}),...derived}
   res.json(payload)
 }))
 app.get('/api/runs/:id/mttr-boosting',asyncHandler(async(req,res)=>{
-  const dataset=await loadDataset(RUNS_DIR,req.params.id),data=await siteData(),{dateFrom,dateTo}=boostingDateBounds(req.query,dataset.date)
+  const dataset=await loadDataset(RUNS_DIR,req.params.id),data=await siteData(),period=boostingPeriod(req.query,dataset.date)
   const selected=dataset.nops.filter(item=>(!req.query.region||item.region===req.query.region)&&(!req.query.nop||item.name===req.query.nop)),names=selected.map(item=>item.name)
-  const b13Rows=combinedKpiB13Rows(data),swfmSummaries=deriveTicketMttrByNop(data,names,dateFrom,dateTo),kpiSummaries=buildKpiB13Summaries(b13Rows,names,dateFrom,dateTo)
-  const ticket_summaries=mergeTicketSummaries(names,swfmSummaries,kpiSummaries,dateFrom,dateTo)
+  const b13Rows=combinedKpiB13Rows(data),swfmSummaries=deriveTicketMttrByNop(data,names,period),kpiSummaries=buildKpiB13Summaries(b13Rows,names,period)
+  const ticket_summaries=mergeTicketSummaries(names,swfmSummaries,kpiSummaries,period)
   const available_periods=[...new Set([...(data.swfm||[]).map(row=>String(row.occurred_at||'').slice(0,7)),...b13Rows.map(row=>row.period)].filter(value=>/^\d{4}-\d{2}$/.test(value)))].sort().reverse()
-  res.json({date_from:dateFrom,date_to:dateTo,available_periods,ticket_summaries:withoutSimulationRows(ticket_summaries),debug:buildBoostingDebug(ticket_summaries),source:'KPIData B.1-B.3 dengan fallback Ticket SWFM'})
+  res.json({period,available_periods,ticket_summaries:withoutSimulationRows(ticket_summaries),debug:buildBoostingDebug(ticket_summaries),source:'KPIData B.1-B.3 dengan fallback Ticket SWFM'})
 }))
 
 app.post('/api/runs/:id/report',asyncHandler(async(req,res)=>{
@@ -79,35 +79,32 @@ app.get('/api/runs/:id/export.xlsx',asyncHandler(async(req,res)=>{
 }))
 
 app.get('/api/runs/:id/mttr-boosting/export.xlsx',asyncHandler(async(req,res)=>{
-  const dataset=await loadDataset(RUNS_DIR,req.params.id),data=await siteData(),{dateFrom,dateTo}=boostingDateBounds(req.query,dataset.date)
+  const dataset=await loadDataset(RUNS_DIR,req.params.id),data=await siteData(),period=boostingPeriod(req.query,dataset.date)
   const selected=dataset.nops.filter(item=>(!req.query.region||item.region===req.query.region)&&(!req.query.nop||item.name===req.query.nop)),names=selected.map(item=>item.name)
-  const b13Rows=combinedKpiB13Rows(data),summaries=mergeTicketSummaries(names,deriveTicketMttrByNop(data,names,dateFrom,dateTo),buildKpiB13Summaries(b13Rows,names,dateFrom,dateTo),dateFrom,dateTo)
-  const workbook=buildBoostingWorkbook(dataset,selected,summaries,{period:`${dateFrom} s.d. ${dateTo}`,region:req.query.region||'',nop:req.query.nop||''}),buffer=await workbook.xlsx.writeBuffer()
+  const b13Rows=combinedKpiB13Rows(data),summaries=mergeTicketSummaries(names,deriveTicketMttrByNop(data,names,period),buildKpiB13Summaries(b13Rows,names,period),period)
+  const workbook=buildBoostingWorkbook(dataset,selected,summaries,{period,region:req.query.region||'',nop:req.query.nop||''}),buffer=await workbook.xlsx.writeBuffer()
   const scope=String(req.query.nop||req.query.region||'semua-nop').replace(/[^A-Za-z0-9_-]+/g,'-')
-  res.set({'content-type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','content-disposition':`attachment; filename="Peningkatan-KPI-B-${dateFrom}-${dateTo}-${scope}.xlsx"`});res.send(Buffer.from(buffer))
+  res.set({'content-type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','content-disposition':`attachment; filename="Peningkatan-KPI-B-${period}-${scope}.xlsx"`});res.send(Buffer.from(buffer))
 }))
 
 class HttpError extends Error{constructor(status,message){super(message);this.status=status}}
 function assertXlsx(file){if(!file||!file.originalname?.toLowerCase().endsWith('.xlsx'))throw new HttpError(400,'File harus berformat .xlsx')}
 function assertDate(value){if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value||''))||Number.isNaN(Date.parse(`${value}T00:00:00Z`)))throw new HttpError(400,'Tanggal upload tidak valid.')}
-function boostingDateBounds(query,fallbackDate){
-  const dateFrom=String(query.date_from||fallbackDate||'').slice(0,10),dateTo=String(query.date_to||dateFrom||'').slice(0,10)
-  try{assertDate(dateFrom);assertDate(dateTo)}catch{throw new HttpError(400,'Date From dan Date To Peningkatan KPI harus berformat YYYY-MM-DD.')}
-  if(dateFrom>dateTo)throw new HttpError(400,'Date From Peningkatan KPI tidak boleh lebih besar dari Date To.')
-  return {dateFrom,dateTo}
+function boostingPeriod(query,fallbackDate){
+  const year=String(query.year||String(fallbackDate||'').slice(0,4)).trim(),month=String(query.month||String(fallbackDate||'').slice(5,7)).trim().padStart(2,'0'),period=`${year}-${month}`
+  if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(period))throw new HttpError(400,'Bulan Peningkatan KPI harus berformat YYYY-MM.')
+  return period
 }
 function asyncHandler(fn){return(req,res,next)=>databaseReady.then(()=>fn(req,res,next)).catch(next)}
 function numberToColumn(number){let result='';while(number){number--;result=String.fromCharCode(65+number%26)+result;number=Math.floor(number/26)}return result}
-export function deriveTicketMttrByNop(data,nopNames,dateFrom,dateTo){
+export function deriveTicketMttrByNop(data,nopNames,period){
   const canonical=new Map(nopNames.map(name=>[normalizeNopKey(name),name])),siteNop=new Map((data.master||[]).map(row=>[String(row.site_id||'').trim().toUpperCase(),row.nop]))
-  const rangeLabel=`${dateFrom||''}${dateTo?` s.d. ${dateTo}`:''}`.trim()
   const componentKeys=['B_1','B_2.1','B_2.2','B_2.3','B_3']
   const blank=()=>Object.fromEntries(componentKeys.map(component=>[component,Object.fromEntries(Object.keys(MTTR_TARGETS_BY_COMPONENT[component]).map(severity=>[severity,[]]))]))
   const buckets=new Map(),seen=new Set()
   for(const row of data.swfm||[]){
     const excluded=String(row.excluded||'').trim().toUpperCase();if(excluded!=='NO')continue
-    const occurredAt=String(row.occurred_at||'').slice(0,10)
-    if((dateFrom&&(!occurredAt||occurredAt<dateFrom))||(dateTo&&(!occurredAt||occurredAt>dateTo)))continue
+    if(String(row.occurred_at||'').slice(0,7)!==period)continue
     const ticket=String(row.ticket_no||'').trim(),site=String(row.site_id||'').trim().toUpperCase(),identity=ticket.toUpperCase();if(!ticket||seen.has(identity))continue
     const nop=canonical.get(normalizeNopKey(row.nop||siteNop.get(site)));if(!nop)continue
     const severity=normalizeTicketSeverity(row.severity);if(!severity)continue
@@ -124,11 +121,11 @@ export function deriveTicketMttrByNop(data,nopNames,dateFrom,dateTo){
     const componentMetrics=Object.fromEntries(componentKeys.map(component=>[component,buildMttrMetrics(components[component],MTTR_TARGETS_BY_COMPONENT[component])]))
     const metrics=componentMetrics.B_1
     const source_rows=Object.values(components).flatMap(Object.values).reduce((sum,items)=>sum+items.length,0)
-    return [nop,{nop,metrics,components:componentMetrics,source:'Ticket SWFM',source_rows,period:rangeLabel}]
+    return [nop,{nop,metrics,components:componentMetrics,source:'Ticket SWFM',source_rows,period}]
   }))
 }
-export function mergeTicketSummaries(nopNames,swfmSummaries,kpiSummaries,dateFrom,dateTo){
-  const result={},period=`${dateFrom||''}${dateTo?` s.d. ${dateTo}`:''}`.trim()
+export function mergeTicketSummaries(nopNames,swfmSummaries,kpiSummaries,period){
+  const result={}
   for(const nop of nopNames){
     const swfm=swfmSummaries[nop],kpi=kpiSummaries[nop]
     if(!swfm&&!kpi)continue

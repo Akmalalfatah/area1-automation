@@ -52,15 +52,13 @@ export async function parseKpiB13(buffer,expectedRegion=null){
   return {rows,row_count:rows.length,issues,sheet:sheet.name,regional:expectedRegion,periods:[...new Set(rows.map(row=>row.period).filter(Boolean))].sort()}
 }
 
-export function buildKpiB13Summaries(rows,nopNames,dateFrom,dateTo){
-  const rangeLabel=`${dateFrom||''}${dateTo?` s.d. ${dateTo}`:''}`.trim()
+export function buildKpiB13Summaries(rows,nopNames,period){
   // Gunakan canonical NOP untuk setiap row maupun filter, bukan string mentah.
   // Ini mencegah "RANTAU  PRAPAT" atau "NOP Rantau Prapat" dianggap NOP lain.
   const aliases=new Map(nopNames.map(nop=>[nopKey(nop),nop])),grouped=new Map()
   for(const row of rows||[]){
     const nop=aliases.get(nopKey(row.nop)),code=normalizeComponent(row.component),level=severity(row.severity)
-    const occurredAt=String(row.occurred_at||'').slice(0,10)
-    if(!nop||!code||!level||(dateFrom&&(!occurredAt||occurredAt<dateFrom))||(dateTo&&(!occurredAt||occurredAt>dateTo)))continue
+    if(!nop||!code||!level||String(row.occurred_at||'').slice(0,7)!==period)continue
     const id=`${nop}|${code}|${level}`
     if(!grouped.has(id))grouped.set(id,[])
     grouped.get(id).push({...row,nop,component:code,severity:level})
@@ -74,7 +72,7 @@ export function buildKpiB13Summaries(rows,nopNames,dateFrom,dateTo){
       components[code]=buildMttrMetrics(values,targets)
     }
     const source_rows=Object.values(components).flat().reduce((sum,item)=>sum+Number(item.tickets||0),0)
-    if(source_rows)summaries[nop]={nop,components,metrics:components.B_1,source:'KPIData B.1-B.3',source_rows,period:rangeLabel}
+    if(source_rows)summaries[nop]={nop,components,metrics:components.B_1,source:'KPIData B.1-B.3',source_rows,period}
   }
   return summaries
 }

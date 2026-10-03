@@ -1880,10 +1880,12 @@ button { cursor: pointer; }
 .kpi-mttr-card header span,.kpi-mttr-values span,.kpi-status-tag,.kpi-focus-subtitle,.kpi-simulation-grid article>span{font-weight:600}
 @media(max-width:1050px){.kpi-nop-improve-head{grid-template-columns:minmax(205px,1.4fr) minmax(150px,1fr) 115px minmax(145px,.8fr) 22px}.kpi-nop-improve-head>.preventive-card-section:first-child{min-width:205px}}
 .kpi-improvement-filters{display:flex;flex-direction:column;align-items:stretch;gap:14px}
-.kpi-improvement-filter-date-row,.kpi-improvement-filter-secondary-row{display:grid!important;align-items:end;gap:16px}
+.kpi-improvement-filter-date-row,.kpi-improvement-filter-secondary-row,.kpi-improvement-filter-monthly-row{display:grid!important;align-items:end;gap:16px}
 .kpi-improvement-filter-date-row{grid-template-columns:repeat(2,minmax(220px,320px));justify-content:start}
 .kpi-improvement-filter-secondary-row{grid-template-columns:minmax(220px,320px) minmax(220px,320px) max-content;justify-content:start}
-.kpi-improvement-filter-date-row>div,.kpi-improvement-filter-secondary-row>div{display:grid;gap:4px}
+.kpi-improvement-filter-monthly-row{grid-template-columns:minmax(200px,280px) minmax(200px,280px) minmax(185px,230px) max-content;justify-content:start}
+.kpi-improvement-filter-date-row>div,.kpi-improvement-filter-secondary-row>div,.kpi-improvement-filter-monthly-row>div{display:grid;gap:4px}
 .kpi-improvement-export-actions{align-self:end}
 .kpi-export-all-button,.kpi-nop-export-button{display:inline-flex;min-height:32px;align-items:center;gap:5px;padding:0 10px!important;font-size:10px!important;font-weight:600;line-height:1.2}
-@media(max-width:760px){.kpi-improvement-filter-date-row,.kpi-improvement-filter-secondary-row{grid-template-columns:1fr}.kpi-improvement-export-actions{align-self:stretch}.kpi-export-all-button{justify-content:center}}
+.kpi-closing-period{display:flex;align-items:center;gap:9px;margin-top:10px;color:#5b6d82;font-size:10px}.kpi-closing-period b{color:#173e68}.kpi-closing-period span{color:#8090a4}
+@media(max-width:760px){.kpi-improvement-filter-date-row,.kpi-improvement-filter-secondary-row,.kpi-improvement-filter-monthly-row{grid-template-columns:1fr}.kpi-improvement-export-actions{align-self:stretch}.kpi-export-all-button{justify-content:center}}
