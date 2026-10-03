@@ -34,11 +34,11 @@ export async function initDb(serverDir){
 
 export async function saveHistory(runId,dataset,upload){
   if(!databaseEnabled){await recordApplicationUpload('ekpi',runId,upload.filename,upload.date,dataset.nops?.length||0);return []}
-  const date=dataset.date,title=`KPI ${new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'numeric',timeZone:'UTC'}).format(new Date(`${date}T00:00:00Z`))}`
+  const date=dataset.date,title=dataset.reporting_period?.type==='closing_previous_month'?`KPI ${dataset.reporting_period.label}`:`KPI ${new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'numeric',timeZone:'UTC'}).format(new Date(`${date}T00:00:00Z`))}`
   const history={run_id:runId,title,date,file:dataset.file||'',upload,nop_count:dataset.nops?.length||0},connection=await getPool().getConnection()
   try{
     await connection.beginTransaction()
-    const [replaced]=await connection.query('SELECT run_id FROM kpi_history WHERE date_end=? AND run_id<>?',[date,runId]),ids=replaced.map(row=>row.run_id)
+    const [sameDay]=await connection.query('SELECT run_id,history FROM kpi_history WHERE date_end=? AND run_id<>?',[date,runId]),ids=sameDay.filter(row=>{const previous=typeof row.history==='string'?JSON.parse(row.history):row.history;return (previous?.upload?.reporting_type||'current')===(upload.reporting_type||'current')}).map(row=>row.run_id)
     if(ids.length)await connection.query('DELETE FROM kpi_history WHERE run_id IN (?)',[ids])
     await connection.query(`INSERT INTO kpi_history (run_id,title,date_start,date_end,year,month,day,dataset,uploads,history)
       VALUES (?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE title=VALUES(title),date_start=VALUES(date_start),date_end=VALUES(date_end),year=VALUES(year),month=VALUES(month),day=VALUES(day),dataset=VALUES(dataset),uploads=VALUES(uploads),history=VALUES(history),updated_at=CURRENT_TIMESTAMP`,[runId,title,date,date,Number(date.slice(0,4)),Number(date.slice(5,7)),Number(date.slice(8,10)),json(dataset),json(upload),json(history)])

@@ -93,12 +93,20 @@ export async function createRun(runsDir){const id=crypto.randomBytes(6).toString
 export async function loadState(runsDir,id){try{return JSON.parse(await fs.readFile(statePath(runsDir,id),'utf8'))}catch(error){if(error.code==='ENOENT')throw new ValidationError('Run tidak ditemukan.');throw error}}
 export async function saveState(runsDir,state){await fs.mkdir(runDir(runsDir,state.id),{recursive:true});await fs.writeFile(statePath(runsDir,state.id),JSON.stringify(state,null,2))}
 
-export async function uploadAndProcess(runsDir,id,file,uploadDate){
+const previousMonthPeriod=date=>{const source=new Date(`${date}T00:00:00Z`),previous=new Date(Date.UTC(source.getUTCFullYear(),source.getUTCMonth()-1,1));return {year:previous.getUTCFullYear(),month:previous.getUTCMonth()+1}}
+const reportingPeriodLabel=(year,month)=>new Intl.DateTimeFormat('id-ID',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(Date.UTC(year,month-1,1)))
+export async function uploadAndProcess(runsDir,id,file,uploadDate,reportingType='current'){
   const state=await loadState(runsDir,id), extracted=await extractDailyFile(file.buffer)
-  if(extracted.period&&(Number(uploadDate.slice(5,7))!==extracted.period.month||Number(uploadDate.slice(0,4))!==extracted.period.year))throw new ValidationError(`Tanggal KPI tidak sesuai periode raw file: ${String(extracted.period.month).padStart(2,'0')}/${extracted.period.year}.`)
+  const type=reportingType==='closing_previous_month'?'closing_previous_month':'current',uploadYear=Number(uploadDate.slice(0,4)),uploadMonth=Number(uploadDate.slice(5,7)),uploadDay=Number(uploadDate.slice(8,10)),previous=previousMonthPeriod(uploadDate)
+  if(type==='closing_previous_month'&&(!Number.isInteger(uploadDay)||uploadDay<1||uploadDay>5))throw new ValidationError('Upload Closing bulan sebelumnya hanya tersedia pada H+1 sampai H+5.')
+  if(extracted.period){
+    const expected=type==='closing_previous_month'?previous:{year:uploadYear,month:uploadMonth}
+    if(extracted.period.month!==expected.month||extracted.period.year!==expected.year)throw new ValidationError(type==='closing_previous_month'?`File Closing harus berperiode ${String(expected.month).padStart(2,'0')}/${expected.year} (bulan sebelumnya).`:`Tanggal KPI tidak sesuai periode raw file: ${String(extracted.period.month).padStart(2,'0')}/${extracted.period.year}.`)
+  }
   await fs.writeFile(path.join(runDir(runsDir,id),'kpi.xlsx'),file.buffer)
-  state.upload={filename:file.originalname,date:uploadDate,valid:true,nop_count:Object.keys(extracted.nops).length};state.processed=false;state.report=null
-  const dataset=buildDataset(extracted,uploadDate,file.originalname);await fs.writeFile(path.join(runDir(runsDir,id),'dataset.json'),JSON.stringify(dataset,null,2));state.processed=true
+  const reporting_period=type==='closing_previous_month'?{type,source_period:`${previous.year}-${String(previous.month).padStart(2,'0')}`,closing_day:uploadDay,label:`${reportingPeriodLabel(previous.year,previous.month)} +${uploadDay}`}:{type:'current',source_period:`${uploadYear}-${String(uploadMonth).padStart(2,'0')}`,closing_day:null,label:reportingPeriodLabel(uploadYear,uploadMonth)}
+  state.upload={filename:file.originalname,date:uploadDate,valid:true,nop_count:Object.keys(extracted.nops).length,reporting_type:type,reporting_period};state.processed=false;state.report=null
+  const dataset={...buildDataset(extracted,uploadDate,file.originalname),reporting_period};await fs.writeFile(path.join(runDir(runsDir,id),'dataset.json'),JSON.stringify(dataset,null,2));state.processed=true
   const replaced=await saveHistory(id,dataset,state.upload);state.replaced_upload_count=replaced.length
   await Promise.all(replaced.map(old=>fs.rm(runDir(runsDir,old),{recursive:true,force:true})));await saveState(runsDir,state);return state
 }
@@ -185,7 +193,7 @@ export async function uploadTicketMttrSummary(runsDir,id,file,nop){
   return {nop:canonical,filename:file.originalname,row_count:summary.source_rows,metrics:summary.metrics}
 }
 
-export async function processRun(runsDir,id){const state=await loadState(runsDir,id);if(!state.upload)throw new ValidationError('Upload satu file KPI terlebih dahulu.');const buffer=await fs.readFile(path.join(runDir(runsDir,id),'kpi.xlsx'));const dataset=buildDataset(await extractDailyFile(buffer),state.upload.date,state.upload.filename);await fs.writeFile(path.join(runDir(runsDir,id),'dataset.json'),JSON.stringify(dataset,null,2));state.processed=true;state.report=null;await saveHistory(id,dataset,state.upload);await saveState(runsDir,state);return dataset}
+export async function processRun(runsDir,id){const state=await loadState(runsDir,id);if(!state.upload)throw new ValidationError('Upload satu file KPI terlebih dahulu.');const buffer=await fs.readFile(path.join(runDir(runsDir,id),'kpi.xlsx'));const dataset={...buildDataset(await extractDailyFile(buffer),state.upload.date,state.upload.filename),reporting_period:state.upload.reporting_period};await fs.writeFile(path.join(runDir(runsDir,id),'dataset.json'),JSON.stringify(dataset,null,2));state.processed=true;state.report=null;await saveHistory(id,dataset,state.upload);await saveState(runsDir,state);return dataset}
 export async function loadDataset(runsDir,id){try{return JSON.parse(await fs.readFile(path.join(runDir(runsDir,id),'dataset.json'),'utf8'))}catch(error){const history=await loadHistoryDataset(id);if(history)return history;if(error.code==='ENOENT')return processRun(runsDir,id);throw error}}
 
 const selectedNops=(dataset,region,nop,categoryFilter)=>dataset.nops.filter(item=>(!region||item.region===region)&&(!nop||item.name===nop)&&(!categoryFilter||item.values.category===categoryFilter))

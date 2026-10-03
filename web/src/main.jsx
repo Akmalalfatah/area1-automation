@@ -98,10 +98,11 @@ const generateReport = (id, prompt, region = "", nop = "") => api(`/api/runs/${i
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ prompt, region: region || null, nop: nop || null })
 });
-async function uploadKpi(id, file, date) {
+async function uploadKpi(id, file, date, reportingType = 'current') {
   const form = new FormData();
   form.append("file", file);
   form.append("upload_date", date);
+  form.append("reporting_type", reportingType);
   return api(`/api/runs/${id}/upload`, { method: "POST", body: form });
 }
 const getPreventiveDashboard = (filters = {}, maintenanceType = "") => {
@@ -287,7 +288,7 @@ class MasterSiteUploadSection extends React.Component {
     const kind=this.state.kind,draft=this.state.drafts[kind]||{};this.setState({busy:true,error:'',message:''});
     try{
       let result;
-      if(kind==='ekpi')result=await this.props.onUploadKpi(draft.file,draft.date);
+      if(kind==='ekpi')result=await this.props.onUploadKpi(draft.file,draft.date,draft.reportingType||'current');
       else if(['dashboard','genset','site'].includes(kind))result=await this.props.onUploadPreventive(kind,draft.file,draft.date);
       else{const form=new FormData();form.append('file',draft.file);form.append('upload_date',draft.date);result=await api('/api/pm-site/sources/'+kind,{method:'POST',body:form});}
       this.setState(current=>({drafts:{...current.drafts,[kind]:{}},message:(result?.row_count?.toLocaleString('id-ID')||'File')+' berhasil disimpan dan data freshness diperbarui.'}));await this.load();this.props.onImported?.();
@@ -303,7 +304,7 @@ class MasterSiteUploadSection extends React.Component {
         s.error&&h('p',{role:'alert',className:'pm-site-error'},s.error)),
       h('section',{className:'corporate-panel source-upload-section','aria-label':'Upload seluruh data'},h('header',null,h('h2',{className:'section-title'},'UPLOAD SELURUH DATA'),h('p',null,'Pilih jenis data, tanggal, dan file Excel. Semua upload aplikasi dilakukan dari halaman ini.')),
         h('div',{className:'source-tabs upload-center-tabs',role:'tablist','aria-label':'Jenis data upload'},...types.map(([key,name])=>h('button',{key,type:'button',role:'tab','aria-selected':key===s.kind,'aria-controls':'source-upload-panel',id:'source-tab-'+key,disabled:s.busy,onClick:()=>this.setState({kind:key,error:'',message:''})},name))),
-        h('div',{id:'source-upload-panel',role:'tabpanel','aria-labelledby':'source-tab-'+s.kind},h('div',{className:'source-current'},h('strong',null,latest?.filename||'Belum ada file '+label+' tersimpan'),h('span',null,'Terakhir upload: '+formatDate(latest?.upload_date))),
+        h('div',{id:'source-upload-panel',role:'tabpanel','aria-labelledby':'source-tab-'+s.kind},h('div',{className:'source-current'},h('strong',null,latest?.filename||'Belum ada file '+label+' tersimpan'),h('span',null,'Terakhir upload: '+formatDate(latest?.upload_date))),s.kind==='ekpi'&&h('div',{className:'source-upload-period'},h('label',null,'JENIS PERIODE KPI'),h('select',{className:'control','aria-label':'Jenis periode KPI',value:draft.reportingType||'current',disabled:s.busy,onChange:event=>this.setDraft({reportingType:event.target.value})},h('option',{value:'current'},'Bulan berjalan'),h('option',{value:'closing_previous_month'},'Closing bulan sebelumnya (H+1 s.d. H+5)')),h('p',{className:'source-upload-note'},'Pada H+1 sampai H+5, file Closing bulan sebelumnya dapat disimpan bersamaan dengan file Bulan berjalan pada tanggal yang sama.')),
           h('div',{className:'source-upload-form'},h('label',{className:'source-file-picker'},h('span',null,'Choose File'),h('span',{title:draft.file?.name||''},draft.file?.name||'Pilih file '+label+' (.xlsx)'),h('input',{key:s.kind+'-'+Boolean(draft.file),type:'file',accept:'.xlsx','aria-label':'File upload '+label,onChange:event=>{const file=event.target.files?.[0]||null;this.setDraft({file,date:file?inferDateFromFilename(file.name):draft.date});}})),h('input',{type:'date',className:'control','aria-label':'Tanggal data upload '+label,value:draft.date||'',disabled:s.busy,onChange:event=>this.setDraft({date:event.target.value})}),h('button',{type:'button',className:'btn-primary',disabled:!draft.file||!draft.date||s.busy,onClick:this.upload},s.busy?'UPLOADING…':'UPLOAD FILE'),h(UploadHistoryButton,{key:s.kind,page:s.kind,label}))),
         s.message&&h('p',{role:'status',className:'source-upload-success'},s.message)),
       this.props.children);
@@ -914,11 +915,11 @@ class App extends React.Component {
         this.setState({ busyUpload: false });
       }
     });
-    __publicField(this, "handleCentralKpiUpload", async (file,date) => {
+    __publicField(this, "handleCentralKpiUpload", async (file,date,reportingType='current') => {
       const {run,region,nop,prompt}=this.state;
       const activeRun=run.processed?await createRun():run;
       if(run.processed)localStorage.setItem(RUN_KEY,activeRun.id);
-      const nextRun=await uploadKpi(activeRun.id,file,date),dashboard=await getDashboard(nextRun.id,region,nop);
+    const nextRun=await uploadKpi(activeRun.id,file,date,reportingType),dashboard=await getDashboard(nextRun.id,region,nop);
       this.setState({run:nextRun,dashboard,rangeDashboard:null,notice:'eKPI berhasil diproses dari Data Upload.'},()=>this.requestReport(nextRun,region,nop,prompt));
       await this.loadHistory();
       return {row_count:nextRun.upload?.nop_count||dashboard.dataset?.nops?.length||0};

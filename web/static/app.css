@@ -1888,4 +1888,5 @@ button { cursor: pointer; }
 .kpi-improvement-export-actions{align-self:end}
 .kpi-export-all-button,.kpi-nop-export-button{display:inline-flex;min-height:32px;align-items:center;gap:5px;padding:0 10px!important;font-size:10px!important;font-weight:600;line-height:1.2}
 .kpi-closing-period{display:flex;align-items:center;gap:9px;margin-top:10px;color:#5b6d82;font-size:10px}.kpi-closing-period b{color:#173e68}.kpi-closing-period span{color:#8090a4}
+.source-upload-period{display:grid;gap:4px}.source-upload-period label{font-size:9px;font-weight:600;letter-spacing:.05em;color:#53657a}.source-upload-period .control{height:36px;min-width:220px;font-size:10px}.source-upload-note{grid-column:1/-1;margin:0;color:#718198;font-size:10px;line-height:1.45}
 @media(max-width:760px){.kpi-improvement-filter-date-row,.kpi-improvement-filter-secondary-row,.kpi-improvement-filter-monthly-row{grid-template-columns:1fr}.kpi-improvement-export-actions{align-self:stretch}.kpi-export-all-button{justify-content:center}}

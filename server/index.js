@@ -26,12 +26,12 @@ app.get('/api/config',(_req,res)=>res.json({regions:REGION_NOPS,default_prompt:D
 
 app.post('/api/runs',asyncHandler(async(_req,res)=>res.json(await createRun(RUNS_DIR))))
 app.get('/api/runs/:id',asyncHandler(async(req,res)=>{try{res.json(await loadState(RUNS_DIR,req.params.id))}catch(error){const dataset=await loadDataset(RUNS_DIR,req.params.id).catch(()=>null);if(!dataset)throw error;res.json({id:req.params.id,upload:null,processed:true,report:null,prompt:'',history:true})}}))
-app.post('/api/runs/:id/upload',upload.single('file'),asyncHandler(async(req,res)=>{assertXlsx(req.file);assertDate(req.body.upload_date);res.json(await uploadAndProcess(RUNS_DIR,req.params.id,req.file,req.body.upload_date))}))
+app.post('/api/runs/:id/upload',upload.single('file'),asyncHandler(async(req,res)=>{assertXlsx(req.file);assertDate(req.body.upload_date);res.json(await uploadAndProcess(RUNS_DIR,req.params.id,req.file,req.body.upload_date,req.body.reporting_type))}))
 app.post('/api/runs/:id/ticket-summary',upload.single('file'),asyncHandler(async(req,res)=>{assertXlsx(req.file);if(!String(req.body.nop||'').trim())throw new HttpError(422,'Pilih NOP untuk Ticket Summary.');res.json(await uploadTicketMttrSummary(RUNS_DIR,req.params.id,req.file,req.body.nop))}))
 app.post('/api/runs/:id/process',asyncHandler(async(req,res)=>{const dataset=await processRun(RUNS_DIR,req.params.id);res.json({ok:true,date:dataset.date})}))
 app.get('/api/runs/:id/dashboard',asyncHandler(async(req,res)=>{
   const payload=await dashboardPayload(RUNS_DIR,req.params.id,req.query.region||null,req.query.nop||null,req.query.category||null)
-  const derived=deriveTicketMttrByNop(await siteData(),payload.dataset.nops.map(item=>item.name),String(payload.dataset.date||'').slice(0,7))
+  const derived=deriveTicketMttrByNop(await siteData(),payload.dataset.nops.map(item=>item.name),payload.dataset.reporting_period?.source_period||String(payload.dataset.date||'').slice(0,7))
   payload.dataset.ticket_summaries={...(payload.dataset.ticket_summaries||{}),...derived}
   res.json(payload)
 }))

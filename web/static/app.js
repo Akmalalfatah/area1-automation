@@ -108,10 +108,11 @@ const generateReport = (id, prompt, region = "", nop = "") => api(`/api/runs/${i
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ prompt, region: region || null, nop: nop || null })
 });
-async function uploadKpi(id, file, date) {
+async function uploadKpi(id, file, date, reportingType = "current") {
   const form = new FormData();
   form.append("file", file);
   form.append("upload_date", date);
+  form.append("reporting_type", reportingType);
   return api(`/api/runs/${id}/upload`, { method: "POST", body: form });
 }
 const getPreventiveDashboard = (filters = {}, maintenanceType = "") => {
@@ -355,7 +356,7 @@ class MasterSiteUploadSection extends React.Component {
       this.setState({ busy: true, error: "", message: "" });
       try {
         let result;
-        if (kind === "ekpi") result = await this.props.onUploadKpi(draft.file, draft.date);
+        if (kind === "ekpi") result = await this.props.onUploadKpi(draft.file, draft.date, draft.reportingType || "current");
         else if (["dashboard", "genset", "site"].includes(kind)) result = await this.props.onUploadPreventive(kind, draft.file, draft.date);
         else {
           const form = new FormData();
@@ -415,6 +416,7 @@ class MasterSiteUploadSection extends React.Component {
           "div",
           { id: "source-upload-panel", role: "tabpanel", "aria-labelledby": "source-tab-" + s.kind },
           h("div", { className: "source-current" }, h("strong", null, (latest == null ? void 0 : latest.filename) || "Belum ada file " + label + " tersimpan"), h("span", null, "Terakhir upload: " + formatDate(latest == null ? void 0 : latest.upload_date))),
+          s.kind === "ekpi" && h("div", { className: "source-upload-period" }, h("label", null, "JENIS PERIODE KPI"), h("select", { className: "control", "aria-label": "Jenis periode KPI", value: draft.reportingType || "current", disabled: s.busy, onChange: (event) => this.setDraft({ reportingType: event.target.value }) }, h("option", { value: "current" }, "Bulan berjalan"), h("option", { value: "closing_previous_month" }, "Closing bulan sebelumnya (H+1 s.d. H+5)")), h("p", { className: "source-upload-note" }, "Pada H+1 sampai H+5, file Closing bulan sebelumnya dapat disimpan bersamaan dengan file Bulan berjalan pada tanggal yang sama.")),
           h("div", { className: "source-upload-form" }, h("label", { className: "source-file-picker" }, h("span", null, "Choose File"), h("span", { title: ((_b = draft.file) == null ? void 0 : _b.name) || "" }, ((_c = draft.file) == null ? void 0 : _c.name) || "Pilih file " + label + " (.xlsx)"), h("input", { key: s.kind + "-" + Boolean(draft.file), type: "file", accept: ".xlsx", "aria-label": "File upload " + label, onChange: (event) => {
             var _a2;
             const file = ((_a2 = event.target.files) == null ? void 0 : _a2[0]) || null;
@@ -1247,12 +1249,12 @@ class App extends React.Component {
         this.setState({ busyUpload: false });
       }
     });
-    __publicField(this, "handleCentralKpiUpload", async (file, date) => {
+    __publicField(this, "handleCentralKpiUpload", async (file, date, reportingType = "current") => {
       var _a, _b, _c;
       const { run, region, nop, prompt } = this.state;
       const activeRun = run.processed ? await createRun() : run;
       if (run.processed) localStorage.setItem(RUN_KEY, activeRun.id);
-      const nextRun = await uploadKpi(activeRun.id, file, date), dashboard = await getDashboard(nextRun.id, region, nop);
+      const nextRun = await uploadKpi(activeRun.id, file, date, reportingType), dashboard = await getDashboard(nextRun.id, region, nop);
       this.setState({ run: nextRun, dashboard, rangeDashboard: null, notice: "eKPI berhasil diproses dari Data Upload." }, () => this.requestReport(nextRun, region, nop, prompt));
       await this.loadHistory();
       return { row_count: ((_a = nextRun.upload) == null ? void 0 : _a.nop_count) || ((_c = (_b = dashboard.dataset) == null ? void 0 : _b.nops) == null ? void 0 : _c.length) || 0 };
