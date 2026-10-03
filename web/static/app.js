@@ -986,10 +986,10 @@ KpiWorkspace = class KpiWorkspace extends React.Component {
     if (!rangeStart || !rangeEnd || rangeStart > rangeEnd) { if (this.state.filteredDashboard) this.setState({ filteredDashboard: null }); return; }
     this.setState({ filterLoading: true });
     try {
-      const history = await getHistory(), selected = (history.items || []).filter((item) => { const upload = item.history && item.history.upload || {}, raw = String(upload.filename || "").match(/(20\d{2})(1[0-2]|0?[1-9])(?:\D|$)/), date = String(item.date_end || ""), previous = new Date(`${date}T00:00:00Z`); previous.setUTCMonth(previous.getUTCMonth() - 1); const inferredClosing = Boolean(raw && Number(raw[1]) === previous.getUTCFullYear() && Number(raw[2]) === previous.getUTCMonth() + 1 && Number(date.slice(8, 10)) >= 1 && Number(date.slice(8, 10)) <= 5); const type = upload.reporting_type === "closing_previous_month" || inferredClosing ? "closing_previous_month" : "current"; return item.date_end >= rangeStart && item.date_end <= rangeEnd && type === periodType; }), byDate = new Map();
+      const history = await getHistory(), selected = (history.items || []).filter((item) => { const upload = item.history && item.history.upload || {}, filename = String(upload.filename || item.history && item.history.file || item.filename || ""), raw = filename.match(/(20\d{2})(1[0-2]|0?[1-9])(?:\D|$)/), date = String(item.date_end || ""), previous = new Date(`${date}T00:00:00Z`); previous.setUTCMonth(previous.getUTCMonth() - 1); const filePeriodType = raw ? (Number(raw[1]) === previous.getUTCFullYear() && Number(raw[2]) === previous.getUTCMonth() + 1 && Number(date.slice(8, 10)) >= 1 && Number(date.slice(8, 10)) <= 5 ? "closing_previous_month" : "current") : null, type = filePeriodType || upload.reporting_type || "current"; return item.date_end >= rangeStart && item.date_end <= rangeEnd && type === periodType; }), byDate = new Map();
       selected.forEach((item) => { const prior = byDate.get(item.date_end); if (!prior || String(item.updated_at || "") >= String(prior.updated_at || "")) byDate.set(item.date_end, item); });
       const matches = [...byDate.values()].sort((a, b) => String(a.date_end).localeCompare(String(b.date_end)));
-      const dashboards = await Promise.all(matches.map((item) => getDashboard(item.run_id, region, nop)), labels = matches.map((item) => { const upload = item.history && item.history.upload || {}, label = upload.reporting_period && upload.reporting_period.label; if (label) return label; const raw = String(upload.filename || "").match(/(20\d{2})(1[0-2]|0?[1-9])(?:\D|$)/); if (periodType === "closing_previous_month" && raw) return new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(Number(raw[1]), Number(raw[2]) - 1, 1))) + " +" + Number(String(item.date_end).slice(8, 10)); return excelDateLabel(item.date_end); }));
+      const dashboards = await Promise.all(matches.map((item) => getDashboard(item.run_id, region, nop)), labels = matches.map((item) => { const upload = item.history && item.history.upload || {}, filename = String(upload.filename || item.history && item.history.file || item.filename || ""), raw = filename.match(/(20\d{2})(1[0-2]|0?[1-9])(?:\D|$)/); if (periodType === "closing_previous_month" && raw) return new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(Number(raw[1]), Number(raw[2]) - 1, 1))) + " +" + Number(String(item.date_end).slice(8, 10)); const label = upload.reporting_period && upload.reporting_period.label; return label || excelDateLabel(item.date_end); }));
       this.setState({ filteredDashboard: mergeRangeDashboards(dashboards, matches.map((item) => item.date_end), labels) });
     } catch (error) { this.setState({ filteredDashboard: null }); } finally { this.setState({ filterLoading: false }); }
   }
@@ -1325,30 +1325,18 @@ class App extends React.Component {
     __publicField(this, "onRangeDate", (field, value) => this.setState({ [field]: value }, () => this.applyDateRange()));
     __publicField(this, "clearDateRange", () => this.setState({ rangeStart: "", rangeEnd: "", rangeDashboard: null, pageError: "", notice: "Filter tanggal KPI Table direset." }));
     __publicField(this, "applyDateRange", async () => {
-      const { rangeStart, rangeEnd, region, nop } = this.state;
+      const { rangeStart, rangeEnd } = this.state;
       if (!rangeStart || !rangeEnd) {
-        this.setState({ rangeDashboard: null, rangeLoading: false });
+        this.setState({ rangeDashboard: null, rangeLoading: false, notice: "" });
         return;
       }
       if (rangeStart > rangeEnd) {
         this.setState({ rangeDashboard: null, pageError: "Tanggal awal tidak boleh lebih besar dari tanggal akhir." });
         return;
       }
-      this.setState({ rangeLoading: true, pageError: "" });
-      try {
-        const history = await getHistory();
-        const matches = (history.items || []).filter((item) => item.date_end >= rangeStart && item.date_end <= rangeEnd).sort((a, b) => String(a.date_end).localeCompare(String(b.date_end)));
-        if (!matches.length) {
-          this.setState({ rangeDashboard: null, notice: `Tidak ada data upload antara ${shortDate(rangeStart)} dan ${shortDate(rangeEnd)}.` });
-          return;
-        }
-        const dashboards = await Promise.all(matches.map((item) => getDashboard(item.run_id, region, nop)));
-        this.setState({ rangeDashboard: mergeRangeDashboards(dashboards, matches.map((item) => item.date_end)), notice: `KPI Table menampilkan ${matches.length} upload dari ${shortDate(rangeStart)} sampai ${shortDate(rangeEnd)}.` });
-      } catch (e) {
-        this.setState({ rangeDashboard: null, pageError: e.message });
-      } finally {
-        this.setState({ rangeLoading: false });
-      }
+      // Penyaringan riwayat dilakukan oleh KpiWorkspace karena di sana pilihan
+      // "Closing bulan sebelumnya" atau "Bulan berjalan" tersedia.
+      this.setState({ rangeDashboard: null, rangeLoading: false, pageError: "", notice: "" });
     });
     __publicField(this, "savePrompt", async (value) => {
       localStorage.setItem(PROMPT_KEY, value);
