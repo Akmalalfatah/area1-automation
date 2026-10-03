@@ -97,7 +97,7 @@ const previousMonthPeriod=date=>{const source=new Date(`${date}T00:00:00Z`),prev
 const reportingPeriodLabel=(year,month)=>new Intl.DateTimeFormat('id-ID',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(Date.UTC(year,month-1,1)))
 export async function uploadAndProcess(runsDir,id,file,uploadDate,reportingType='current'){
   const state=await loadState(runsDir,id), extracted=await extractDailyFile(file.buffer)
-  const type=reportingType==='closing_previous_month'?'closing_previous_month':'current',uploadYear=Number(uploadDate.slice(0,4)),uploadMonth=Number(uploadDate.slice(5,7)),uploadDay=Number(uploadDate.slice(8,10)),previous=previousMonthPeriod(uploadDate)
+  const uploadYear=Number(uploadDate.slice(0,4)),uploadMonth=Number(uploadDate.slice(5,7)),uploadDay=Number(uploadDate.slice(8,10)),previous=previousMonthPeriod(uploadDate),rawIsPreviousMonth=Boolean(extracted.period&&extracted.period.month===previous.month&&extracted.period.year===previous.year),type=reportingType==='closing_previous_month'||(uploadDay>=1&&uploadDay<=5&&rawIsPreviousMonth)?'closing_previous_month':'current'
   if(type==='closing_previous_month'&&(!Number.isInteger(uploadDay)||uploadDay<1||uploadDay>5))throw new ValidationError('Upload Closing bulan sebelumnya hanya tersedia pada H+1 sampai H+5.')
   if(extracted.period){
     const expected=type==='closing_previous_month'?previous:{year:uploadYear,month:uploadMonth}
