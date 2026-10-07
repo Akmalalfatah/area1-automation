@@ -701,13 +701,18 @@ const B_IMPROVEMENT_LABELS = {
 function MttrCard({ item }) {
   const ok = item.achievement <= item.target, gap = item.achievement - item.target, scale = Math.max(item.target, item.achievement);
   const sites = !ok && Array.isArray(item.affected_sites) ? item.affected_sites : [];
+  const renderSite = (site) => React.createElement("li", { key: site.site },
+    React.createElement("b", null, site.site),
+    site.site_name && site.site_name !== site.site ? ` - ${site.site_name}` : "",
+    `: ${site.tickets} ticket, MTTR tertinggi ${formatNumber(site.max_mttr)} jam`
+  );
   const affected = sites.length ? React.createElement("div", { className: "kpi-affected-sites" },
     React.createElement("span", null, "Site penyumbang MTTR P90"),
-    React.createElement("ul", null, sites.map((site) => React.createElement("li", { key: site.site },
-      React.createElement("b", null, site.site),
-      site.site_name && site.site_name !== site.site ? ` — ${site.site_name}` : "",
-      `: ${site.tickets} ticket, MTTR tertinggi ${formatNumber(site.max_mttr)} jam`
-    )))
+    React.createElement("ul", null, sites.slice(0, 10).map(renderSite)),
+    sites.length > 10 && React.createElement("details", null,
+      React.createElement("summary", null, `Lihat ${sites.length - 10} site lainnya`),
+      React.createElement("ul", null, sites.slice(10).map(renderSite))
+    )
   ) : null;
   return React.createElement("article", { className: `kpi-mttr-card ${ok ? "is-achieved" : "is-review"}` },
     React.createElement("header", null,
