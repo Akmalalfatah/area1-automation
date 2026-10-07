@@ -393,6 +393,7 @@ class MasterSiteUploadSection extends React.Component {
     var _a, _b, _c;
     const h = React.createElement, s = this.state, draft = s.drafts[s.kind] || {}, types = [["ekpi", "eKPI Automation"], ["dashboard", "PM Punchlist"], ["genset", "PM Genset"], ["site", "PM Site"], ["master", "Master Site"], ["ggr", "GGR"], ["inap", "Ticket INAP"], ["swfm", "Ticket SWFM"], ["kpi_b13_r01", "KPIData B.1-B.3 R01"], ["kpi_b13_r02", "KPIData B.1-B.3 R02"], ["kpi_b13_r10", "KPIData B.1-B.3 R10"]], label = types.find(([key]) => key === s.kind)[1], latest = (_a = s.items.find((item) => item.key === s.kind)) == null ? void 0 : _a.latest;
     const formatDate = (value) => value && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(8, 10) + "/" + value.slice(5, 7) + "/" + value.slice(0, 4) : "-";
+    const formatDateTime = (value) => { const date = value ? new Date(value) : null; return date && !Number.isNaN(date.getTime()) ? new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Jakarta", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }).format(date).replace(",", ", ") : formatDate(value); };
     return h(
       "div",
       { className: "space-y-4" },
@@ -403,7 +404,7 @@ class MasterSiteUploadSection extends React.Component {
         h("p", { className: "freshness-note" }, "Status diperbarui otomatis setelah upload. KPIData B.1-B.3 disimpan terpisah untuk R01, R02, dan R10 agar setiap regional dapat diperbarui tanpa menghapus regional lain."),
         h("div", { className: "freshness-grid" }, ...s.items.map((item) => {
           var _a2, _b2, _c2;
-          return h("article", { key: item.key, className: "freshness-item" }, h("div", { className: "freshness-item-head" }, h("strong", null, item.label), h("span", { className: "freshness-status " + (item.needs_upload ? "needs-update" : item.status === "Tanggal perlu validasi" ? "invalid-date" : "current") }, item.status)), h("p", { className: "freshness-file", title: ((_a2 = item.latest) == null ? void 0 : _a2.filename) || "" }, ((_b2 = item.latest) == null ? void 0 : _b2.filename) || "Belum ada file tersimpan"), h("div", { className: "freshness-item-foot" }, h("span", null, "Terakhir: " + formatDate((_c2 = item.latest) == null ? void 0 : _c2.upload_date)), h("span", null, item.cadence)), h("p", { className: "freshness-renewal " + (item.needs_update ? "due" : "") }, item.renewal_label));
+          return h("article", { key: item.key, className: "freshness-item" }, h("div", { className: "freshness-item-head" }, h("strong", null, item.label), h("span", { className: "freshness-status " + (item.needs_upload ? "needs-update" : item.status === "Tanggal perlu validasi" ? "invalid-date" : "current") }, item.status)), h("p", { className: "freshness-file", title: ((_a2 = item.latest) == null ? void 0 : _a2.filename) || "" }, ((_b2 = item.latest) == null ? void 0 : _b2.filename) || "Belum ada file tersimpan"), h("div", { className: "freshness-item-foot" }, h("span", null, "Terakhir: " + formatDateTime(item.latest && (item.latest.updated_at || item.latest.upload_date)))), h("p", { className: "freshness-renewal " + (item.needs_update ? "due" : "") }, item.renewal_label));
         })),
         s.error && h("p", { role: "alert", className: "pm-site-error" }, s.error)
       ),
@@ -416,7 +417,7 @@ class MasterSiteUploadSection extends React.Component {
           "div",
           { id: "source-upload-panel", role: "tabpanel", "aria-labelledby": "source-tab-" + s.kind },
           h("div", { className: "source-current" }, h("strong", null, (latest == null ? void 0 : latest.filename) || "Belum ada file " + label + " tersimpan"), h("span", null, "Terakhir upload: " + formatDate(latest == null ? void 0 : latest.upload_date))),
-          s.kind === "ekpi" && h("div", { className: "source-upload-period" }, h("label", null, "JENIS PERIODE KPI"), h("select", { className: "control", "aria-label": "Jenis periode KPI", value: draft.reportingType || "current", disabled: s.busy, onChange: (event) => this.setDraft({ reportingType: event.target.value }) }, h("option", { value: "current" }, "Bulan berjalan"), h("option", { value: "closing_previous_month" }, "Closing bulan sebelumnya (H+1 s.d. H+5)")), h("p", { className: "source-upload-note" }, "Pada H+1 sampai H+5, file Closing bulan sebelumnya dapat disimpan bersamaan dengan file Bulan berjalan pada tanggal yang sama.")),
+          s.kind === "ekpi" && h("div", { className: "source-upload-period" }, h("label", null, "JENIS PERIODE KPI"), h("select", { className: "control", "aria-label": "Jenis periode KPI", value: draft.reportingType || "current", disabled: s.busy, onChange: (event) => this.setDraft({ reportingType: event.target.value }) }, h("option", { value: "current" }, "Bulan berjalan"), h("option", { value: "closing_previous_month" }, "Closing bulan sebelumnya (H+1 tanpa batas)")), h("p", { className: "source-upload-note" }, "File Closing bulan sebelumnya dapat disimpan bersama file Bulan berjalan pada tanggal yang sama, tanpa batas H+.")),
           h("div", { className: "source-upload-form" }, h("label", { className: "source-file-picker" }, h("span", null, "Choose File"), h("span", { title: ((_b = draft.file) == null ? void 0 : _b.name) || "" }, ((_c = draft.file) == null ? void 0 : _c.name) || "Pilih file " + label + " (.xlsx)"), h("input", { key: s.kind + "-" + Boolean(draft.file), type: "file", accept: ".xlsx", "aria-label": "File upload " + label, onChange: (event) => {
             var _a2;
             const file = ((_a2 = event.target.files) == null ? void 0 : _a2[0]) || null;
@@ -699,7 +700,28 @@ const B_IMPROVEMENT_LABELS = {
 };
 function MttrCard({ item }) {
   const ok = item.achievement <= item.target, gap = item.achievement - item.target, scale = Math.max(item.target, item.achievement);
-  return /* @__PURE__ */ React.createElement("article", { className: `kpi-mttr-card ${ok ? "is-achieved" : "is-review"}` }, /* @__PURE__ */ React.createElement("header", null, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", null, "MTTR P90"), /* @__PURE__ */ React.createElement("h3", null, item.severity)), /* @__PURE__ */ React.createElement("span", { className: `kpi-status-tag ${ok ? "is-achieved" : "is-review"}` }, ok ? "Target tercapai" : "Perlu ditingkatkan")), /* @__PURE__ */ React.createElement("div", { className: "kpi-mttr-values" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", null, "Target SLA"), /* @__PURE__ */ React.createElement("strong", { className: "kpi-num" }, formatNumber(item.target), " jam")), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", null, "Pencapaian"), /* @__PURE__ */ React.createElement("strong", { className: "kpi-num" }, formatNumber(item.achievement), " jam"))), /* @__PURE__ */ React.createElement("div", { className: "kpi-mttr-track" }, /* @__PURE__ */ React.createElement("i", { style: { width: `${Math.min(100, item.target / scale * 100)}%` } }), /* @__PURE__ */ React.createElement("em", { style: { left: `${Math.min(100, item.achievement / scale * 100)}%` } })), /* @__PURE__ */ React.createElement("p", null, /* @__PURE__ */ React.createElement("span", { className: "kpi-num" }, item.tickets, " ticket"), " dianalisis. ", ok ? ["Lebih cepat ", /* @__PURE__ */ React.createElement("span", { key: "g", className: "kpi-num" }, formatNumber(Math.abs(gap)), " jam"), " dari target."] : ["Perlu turun ", /* @__PURE__ */ React.createElement("span", { key: "g", className: "kpi-num" }, formatNumber(gap), " jam"), " lagi untuk mencapai target."]));
+  const sites = !ok && Array.isArray(item.affected_sites) ? item.affected_sites : [];
+  const affected = sites.length ? React.createElement("div", { className: "kpi-affected-sites" },
+    React.createElement("span", null, "Site penyumbang MTTR P90"),
+    React.createElement("ul", null, sites.map((site) => React.createElement("li", { key: site.site },
+      React.createElement("b", null, site.site),
+      site.site_name && site.site_name !== site.site ? ` — ${site.site_name}` : "",
+      `: ${site.tickets} ticket, MTTR tertinggi ${formatNumber(site.max_mttr)} jam`
+    )))
+  ) : null;
+  return React.createElement("article", { className: `kpi-mttr-card ${ok ? "is-achieved" : "is-review"}` },
+    React.createElement("header", null,
+      React.createElement("div", null, React.createElement("span", null, "MTTR P90"), React.createElement("h3", null, item.severity)),
+      React.createElement("span", { className: `kpi-status-tag ${ok ? "is-achieved" : "is-review"}` }, ok ? "Target tercapai" : "Perlu ditingkatkan")
+    ),
+    React.createElement("div", { className: "kpi-mttr-values" },
+      React.createElement("div", null, React.createElement("span", null, "Target SLA"), React.createElement("strong", { className: "kpi-num" }, formatNumber(item.target), " jam")),
+      React.createElement("div", null, React.createElement("span", null, "Pencapaian"), React.createElement("strong", { className: "kpi-num" }, formatNumber(item.achievement), " jam"))
+    ),
+    React.createElement("div", { className: "kpi-mttr-track" }, React.createElement("i", { style: { width: `${Math.min(100, item.target / scale * 100)}%` } }), React.createElement("em", { style: { left: `${Math.min(100, item.achievement / scale * 100)}%` } })),
+    React.createElement("p", null, React.createElement("span", { className: "kpi-num" }, item.tickets, " ticket"), " dianalisis. ", ok ? ["Lebih cepat ", React.createElement("span", { key: "g", className: "kpi-num" }, formatNumber(Math.abs(gap)), " jam"), " dari target."] : ["Perlu turun ", React.createElement("span", { key: "g", className: "kpi-num" }, formatNumber(gap), " jam"), " lagi untuk mencapai target."]),
+    affected
+  );
 }
 function TicketNeedGrid({ metrics }) {
   const opportunities = metrics.filter((item) => Number(item.needed) > 0);
@@ -866,8 +888,8 @@ NopKpiImprovement = class NopKpiImprovement extends React.Component {
 function monthlyBoostingPeriod(fallback) {
   const parts = {}, values = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
   values.forEach((part) => { parts[part.type] = part.value; });
-  let year = Number(parts.year), month = Number(parts.month);
-  if (Number(parts.day) <= 5) { month--; if (!month) { month = 12; year--; } }
+  let year = Number(parts.year), month = Number(parts.month) - 1;
+  if (!month) { month = 12; year--; }
   return `${year}-${String(month).padStart(2, "0")}` || String(fallback || "").slice(0, 7);
 }
 function monthlyPeriodLabel(period) { return new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric", timeZone: "Asia/Jakarta" }).format(new Date(`${period}-01T00:00:00Z`)); }
@@ -990,7 +1012,7 @@ KpiWorkspace = class KpiWorkspace extends React.Component {
         const uploadDate = String(item.date_end || "");
         const previous = new Date(`${uploadDate}T00:00:00Z`);
         previous.setUTCMonth(previous.getUTCMonth() - 1);
-        const isClosing = Boolean(source && Number(source[1]) === previous.getUTCFullYear() && Number(source[2]) === previous.getUTCMonth() + 1 && Number(uploadDate.slice(8, 10)) >= 1 && Number(uploadDate.slice(8, 10)) <= 5);
+        const isClosing = Boolean(source && Number(source[1]) === previous.getUTCFullYear() && Number(source[2]) === previous.getUTCMonth() + 1);
         const belongsToSelectedPeriod = periodType === "closing_previous_month" ? isClosing : Boolean(source && !isClosing);
         return uploadDate >= rangeStart && uploadDate <= rangeEnd && belongsToSelectedPeriod;
       });

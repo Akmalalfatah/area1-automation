@@ -1842,6 +1842,7 @@ button { cursor: pointer; }
 .kpi-mttr-empty{margin-top:16px;color:#7b899b;font-size:10px;line-height:1.6}
 .kpi-mttr-note{margin-top:12px;padding-top:10px;border-top:1px solid #e0e6ed;color:#8390a1;font-size:9px;line-height:1.6}
 .kpi-need-block{margin-top:16px;padding-top:16px;border-top:1px solid #d8e0e9}
+.kpi-affected-sites{margin-top:12px;border-top:1px solid #e0e6ed;padding-top:10px;color:#53657a;font-size:9px;line-height:1.55}.kpi-affected-sites>span{display:block;color:#a53e45;font-size:9px;font-weight:700;letter-spacing:.04em}.kpi-affected-sites ul{margin:6px 0 0;padding-left:16px}.kpi-affected-sites li{margin:2px 0}.kpi-affected-sites b{color:#26384f}
 .kpi-focus-subtitle{margin:0 0 4px;color:#26384f;font-size:12px}
 
 /* ==== Peningkatan KPI NOP: navigasi satu tingkat dan tipografi yang mudah dipindai ==== */

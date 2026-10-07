@@ -202,13 +202,14 @@ function inferDateFromFilename(name) {
   if (match) return `${match[1]}-${match[2]}-${match[3]}`;
   return todayIso();
 }
-function mergeRangeDashboards(dashboards, dates = []) {
+function mergeRangeDashboards(dashboards, dates = [], labels = []) {
   const latest = dashboards[dashboards.length - 1];
   if (!latest) return null;
   const nops = dashboards.flatMap((dashboard, dashboardIndex) => dashboard.dataset.nops.map((item, itemIndex) => ({
     ...item,
     date: dates[dashboardIndex] || dashboard.dataset.date,
-    entryKey: `${dates[dashboardIndex] || dashboard.dataset.date}-${item.name}-${dashboardIndex}-${itemIndex}`
+    display_date: labels[dashboardIndex] || excelDateLabel(dates[dashboardIndex] || dashboard.dataset.date),
+    entryKey: `${labels[dashboardIndex] || dates[dashboardIndex] || dashboard.dataset.date}-${item.name}-${dashboardIndex}-${itemIndex}`
   })));
   return { ...latest, dataset: { ...latest.dataset, nops } };
 }
@@ -297,14 +298,15 @@ class MasterSiteUploadSection extends React.Component {
   };
   render(){const h=React.createElement,s=this.state,draft=s.drafts[s.kind]||{},types=[['ekpi','eKPI Automation'],['dashboard','PM Punchlist'],['genset','PM Genset'],['site','PM Site'],['master','Master Site'],['ggr','GGR'],['inap','Ticket INAP'],['swfm','Ticket SWFM'],['kpi_b13_r01','KPIData B.1-B.3 R01'],['kpi_b13_r02','KPIData B.1-B.3 R02'],['kpi_b13_r10','KPIData B.1-B.3 R10']],label=types.find(([key])=>key===s.kind)[1],latest=s.items.find(item=>item.key===s.kind)?.latest;
     const formatDate=value=>value&&/^\d{4}-\d{2}-\d{2}/.test(value)?value.slice(8,10)+'/'+value.slice(5,7)+'/'+value.slice(0,4):'-';
+    const formatDateTime=value=>{const date=value?new Date(value):null;return date&&!Number.isNaN(date.getTime())?new Intl.DateTimeFormat('id-ID',{timeZone:'Asia/Jakarta',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(date).replace(',',', '):formatDate(value);};
     return h('div',{className:'space-y-4'},
       h('section',{className:'corporate-panel data-freshness','aria-label':'Data Freshness'},h('header',null,h('h2',{className:'section-title'},'DATA FRESHNESS'),h('span',null,s.loading?'Memuat…':s.error?'Data belum dapat dibaca':s.items.filter(item=>item.latest).length+' dari '+s.items.length+' data tersedia')),
         h('p',{className:'freshness-note'},'Status diperbarui otomatis setelah upload. KPIData B.1-B.3 disimpan terpisah untuk R01, R02, dan R10 agar setiap regional dapat diperbarui tanpa menghapus regional lain.'),
-        h('div',{className:'freshness-grid'},...s.items.map(item=>h('article',{key:item.key,className:'freshness-item'},h('div',{className:'freshness-item-head'},h('strong',null,item.label),h('span',{className:'freshness-status '+(item.needs_upload?'needs-update':item.status==='Tanggal perlu validasi'?'invalid-date':'current')},item.status)),h('p',{className:'freshness-file',title:item.latest?.filename||''},item.latest?.filename||'Belum ada file tersimpan'),h('div',{className:'freshness-item-foot'},h('span',null,'Terakhir: '+formatDate(item.latest?.upload_date)),h('span',null,item.cadence)),h('p',{className:'freshness-renewal '+(item.needs_update?'due':'')},item.renewal_label)))),
+        h('div',{className:'freshness-grid'},...s.items.map(item=>h('article',{key:item.key,className:'freshness-item'},h('div',{className:'freshness-item-head'},h('strong',null,item.label),h('span',{className:'freshness-status '+(item.needs_upload?'needs-update':item.status==='Tanggal perlu validasi'?'invalid-date':'current')},item.status)),h('p',{className:'freshness-file',title:item.latest?.filename||''},item.latest?.filename||'Belum ada file tersimpan'),h('div',{className:'freshness-item-foot'},h('span',null,'Terakhir: '+formatDateTime(item.latest?.updated_at||item.latest?.upload_date))),h('p',{className:'freshness-renewal '+(item.needs_update?'due':'')},item.renewal_label)))),
         s.error&&h('p',{role:'alert',className:'pm-site-error'},s.error)),
       h('section',{className:'corporate-panel source-upload-section','aria-label':'Upload seluruh data'},h('header',null,h('h2',{className:'section-title'},'UPLOAD SELURUH DATA'),h('p',null,'Pilih jenis data, tanggal, dan file Excel. Semua upload aplikasi dilakukan dari halaman ini.')),
         h('div',{className:'source-tabs upload-center-tabs',role:'tablist','aria-label':'Jenis data upload'},...types.map(([key,name])=>h('button',{key,type:'button',role:'tab','aria-selected':key===s.kind,'aria-controls':'source-upload-panel',id:'source-tab-'+key,disabled:s.busy,onClick:()=>this.setState({kind:key,error:'',message:''})},name))),
-        h('div',{id:'source-upload-panel',role:'tabpanel','aria-labelledby':'source-tab-'+s.kind},h('div',{className:'source-current'},h('strong',null,latest?.filename||'Belum ada file '+label+' tersimpan'),h('span',null,'Terakhir upload: '+formatDate(latest?.upload_date))),s.kind==='ekpi'&&h('div',{className:'source-upload-period'},h('label',null,'JENIS PERIODE KPI'),h('select',{className:'control','aria-label':'Jenis periode KPI',value:draft.reportingType||'current',disabled:s.busy,onChange:event=>this.setDraft({reportingType:event.target.value})},h('option',{value:'current'},'Bulan berjalan'),h('option',{value:'closing_previous_month'},'Closing bulan sebelumnya (H+1 s.d. H+5)')),h('p',{className:'source-upload-note'},'Pada H+1 sampai H+5, file Closing bulan sebelumnya dapat disimpan bersamaan dengan file Bulan berjalan pada tanggal yang sama.')),
+        h('div',{id:'source-upload-panel',role:'tabpanel','aria-labelledby':'source-tab-'+s.kind},h('div',{className:'source-current'},h('strong',null,latest?.filename||'Belum ada file '+label+' tersimpan'),h('span',null,'Terakhir upload: '+formatDate(latest?.upload_date))),s.kind==='ekpi'&&h('div',{className:'source-upload-period'},h('label',null,'JENIS PERIODE KPI'),h('select',{className:'control','aria-label':'Jenis periode KPI',value:draft.reportingType||'current',disabled:s.busy,onChange:event=>this.setDraft({reportingType:event.target.value})},h('option',{value:'current'},'Bulan berjalan'),h('option',{value:'closing_previous_month'},'Closing bulan sebelumnya (H+1 tanpa batas)')),h('p',{className:'source-upload-note'},'File Closing bulan sebelumnya dapat disimpan bersama file Bulan berjalan pada tanggal yang sama, tanpa batas H+.')),
           h('div',{className:'source-upload-form'},h('label',{className:'source-file-picker'},h('span',null,'Choose File'),h('span',{title:draft.file?.name||''},draft.file?.name||'Pilih file '+label+' (.xlsx)'),h('input',{key:s.kind+'-'+Boolean(draft.file),type:'file',accept:'.xlsx','aria-label':'File upload '+label,onChange:event=>{const file=event.target.files?.[0]||null;this.setDraft({file,date:file?inferDateFromFilename(file.name):draft.date});}})),h('input',{type:'date',className:'control','aria-label':'Tanggal data upload '+label,value:draft.date||'',disabled:s.busy,onChange:event=>this.setDraft({date:event.target.value})}),h('button',{type:'button',className:'btn-primary',disabled:!draft.file||!draft.date||s.busy,onClick:this.upload},s.busy?'UPLOADING…':'UPLOAD FILE'),h(UploadHistoryButton,{key:s.kind,page:s.kind,label}))),
         s.message&&h('p',{role:'status',className:'source-upload-success'},s.message)),
       this.props.children);
@@ -533,6 +535,7 @@ function MttrCard({item}){
     <div className="kpi-mttr-values"><div><span>Target SLA</span><strong className="kpi-num">{formatNumber(item.target)} jam</strong></div><div><span>Pencapaian</span><strong className="kpi-num">{formatNumber(item.achievement)} jam</strong></div></div>
     <div className="kpi-mttr-track"><i style={{width:`${Math.min(100,item.target/scale*100)}%`}}></i><em style={{left:`${Math.min(100,item.achievement/scale*100)}%`}}></em></div>
     <p><span className="kpi-num">{item.tickets} ticket</span> dianalisis. {ok?['Lebih cepat ',<span key="g" className="kpi-num">{formatNumber(Math.abs(gap))} jam</span>,' dari target.']:['Perlu turun ',<span key="g" className="kpi-num">{formatNumber(gap)} jam</span>,' lagi untuk mencapai target.']}</p>
+    {!ok&&item.affected_sites?.length>0&&<div className="kpi-affected-sites"><span>Site penyumbang MTTR P90</span><ul>{item.affected_sites.map(site=><li key={site.site}><b>{site.site}</b>{site.site_name&&site.site_name!==site.site?' — '+site.site_name:''}: {site.tickets} ticket, MTTR tertinggi {formatNumber(site.max_mttr)} jam</li>)}</ul></div>}
   </article>;
 }
 function TicketNeedGrid({metrics}){
@@ -585,7 +588,7 @@ class NopImprovementCard extends React.Component{
 }
 function boostingDefaultPeriod(fallback){
   const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Jakarta',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(part=>[part.type,part.value]));
-  let year=Number(parts.year),month=Number(parts.month);if(Number(parts.day)<=5){month--;if(!month){month=12;year--;}}
+  let year=Number(parts.year),month=Number(parts.month)-1;if(!month){month=12;year--;}
   return `${year}-${String(month).padStart(2,'0')}`||String(fallback||'').slice(0,7);
 }
 function periodLabel(period){return new Intl.DateTimeFormat('id-ID',{month:'long',year:'numeric',timeZone:'Asia/Jakarta'}).format(new Date(`${period}-01T00:00:00Z`));}

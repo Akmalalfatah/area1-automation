@@ -97,8 +97,7 @@ const previousMonthPeriod=date=>{const source=new Date(`${date}T00:00:00Z`),prev
 const reportingPeriodLabel=(year,month)=>new Intl.DateTimeFormat('id-ID',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(Date.UTC(year,month-1,1)))
 export async function uploadAndProcess(runsDir,id,file,uploadDate,reportingType='current'){
   const state=await loadState(runsDir,id), extracted=await extractDailyFile(file.buffer)
-  const uploadYear=Number(uploadDate.slice(0,4)),uploadMonth=Number(uploadDate.slice(5,7)),uploadDay=Number(uploadDate.slice(8,10)),previous=previousMonthPeriod(uploadDate),rawIsPreviousMonth=Boolean(extracted.period&&extracted.period.month===previous.month&&extracted.period.year===previous.year),type=reportingType==='closing_previous_month'||(uploadDay>=1&&uploadDay<=5&&rawIsPreviousMonth)?'closing_previous_month':'current'
-  if(type==='closing_previous_month'&&(!Number.isInteger(uploadDay)||uploadDay<1||uploadDay>5))throw new ValidationError('Upload Closing bulan sebelumnya hanya tersedia pada H+1 sampai H+5.')
+  const uploadYear=Number(uploadDate.slice(0,4)),uploadMonth=Number(uploadDate.slice(5,7)),uploadDay=Number(uploadDate.slice(8,10)),previous=previousMonthPeriod(uploadDate),rawIsPreviousMonth=Boolean(extracted.period&&extracted.period.month===previous.month&&extracted.period.year===previous.year),type=reportingType==='closing_previous_month'||rawIsPreviousMonth?'closing_previous_month':'current'
   if(extracted.period){
     const expected=type==='closing_previous_month'?previous:{year:uploadYear,month:uploadMonth}
     if(extracted.period.month!==expected.month||extracted.period.year!==expected.year)throw new ValidationError(type==='closing_previous_month'?`File Closing harus berperiode ${String(expected.month).padStart(2,'0')}/${expected.year} (bulan sebelumnya).`:`Tanggal KPI tidak sesuai periode raw file: ${String(extracted.period.month).padStart(2,'0')}/${extracted.period.year}.`)
@@ -159,7 +158,8 @@ export function buildMttrMetrics(valuesBySeverity,targets=MTTR_TARGETS){
     const label=severity.split(' ').map(part=>part[0]+part.slice(1).toLowerCase()).join(' ')
     if(!mttr.length)return {severity:label,target,achievement:null,currentP90:null,gap:null,status:'Tidak Ada Data',tickets:0,totalTickets:0,needed:null,ticketNeeded:null,simulated:null,projectedP90:null,candidates:[],candidateTickets:[]}
     const achievement=percentileInc(mttr,.9),boosting=ticketNeedForTarget(items,target),status=achievement<=target?'Target Tercapai':'Perlu Ditingkatkan'
-    return {severity:label,target,achievement,currentP90:achievement,gap:achievement-target,status,tickets:mttr.length,totalTickets:mttr.length,needed:boosting.needed,ticketNeeded:boosting.needed,simulated:boosting.simulated,projectedP90:boosting.simulated,candidates:boosting.candidates,candidateTickets:boosting.candidates}
+    const affected_sites=achievement>target?[...items.filter(item=>item.mttr_hours>=achievement).reduce((sites,item)=>{const id=String(item.site||'').trim()||'Site tidak tersedia',name=String(item.site_name||'').trim()||id,current=sites.get(id)||{site:id,site_name:name,tickets:0,max_mttr:0};current.tickets++;current.max_mttr=Math.max(current.max_mttr,item.mttr_hours);sites.set(id,current);return sites},new Map()).values()].sort((a,b)=>b.max_mttr-a.max_mttr||b.tickets-a.tickets):[]
+    return {severity:label,target,achievement,currentP90:achievement,gap:achievement-target,status,tickets:mttr.length,totalTickets:mttr.length,needed:boosting.needed,ticketNeeded:boosting.needed,simulated:boosting.simulated,projectedP90:boosting.simulated,candidates:boosting.candidates,candidateTickets:boosting.candidates,affected_sites}
   })
 }
 
