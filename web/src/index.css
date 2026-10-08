@@ -241,10 +241,9 @@ button { cursor: pointer; }
   .kpi-sheet-heading, .kpi-ticket-priority-head { align-items:flex-start; flex-direction:column; gap:8px; }
   .kpi-ticket-priority { overflow-x:auto; }
   .kpi-ticket-priority table { min-width:520px; }
-  .kpi-table tbody td:first-child, .kpi-table thead th[rowspan]:first-child { width:220px; min-width:220px; max-width:220px; }
-  .kpi-table tbody td:nth-child(2), .kpi-table thead th[rowspan]:nth-child(2) { left:220px!important; }
+  .kpi-table tbody td:first-child, .kpi-table thead th[rowspan]:first-child { width:118px; min-width:118px; max-width:118px; padding-left:5px!important; padding-right:5px!important; font-size:8px!important; line-height:1.2!important; }
+  .kpi-table tbody td:nth-child(2), .kpi-table thead th[rowspan]:nth-child(2) { width:52px; min-width:52px; max-width:52px; left:118px!important; padding-left:4px!important; padding-right:4px!important; font-size:9px!important; }
   .kpi-table thead th:not([rowspan]), .kpi-table tbody td:nth-child(n+3) { min-width:82px!important; padding-left:6px!important; padding-right:6px!important; font-size:10px!important; }
-  .kpi-table tbody td:first-child, .kpi-table thead th[rowspan]:first-child { font-size:10px!important; }
   .kpi-capture::before { content:'Geser tabel ke samping untuk melihat NOP dan periode lainnya'; display:block; padding:7px 9px; background:#f3f6f9; color:#64758a; font-size:9px; font-weight:600; }
   .kpi-nop-title, .kpi-b-tab-heading strong, .kpi-affected-sites li { overflow-wrap:anywhere; }
 }
