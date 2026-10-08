@@ -49,6 +49,26 @@ CREATE TABLE IF NOT EXISTS pm_site_source_rows (
   PRIMARY KEY (source_kind,row_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Snapshot sumber dipertahankan per upload agar Peningkatan KPI dapat
+-- membaca sumber pada bulan yang dipilih, bukan hanya sumber aktif terbaru.
+CREATE TABLE IF NOT EXISTS pm_site_source_uploads (
+  source_upload_id VARCHAR(64) NOT NULL PRIMARY KEY,
+  source_kind VARCHAR(16) NOT NULL,
+  filename VARCHAR(512) NOT NULL,
+  upload_date DATE NOT NULL,
+  dataset JSON NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_pm_site_source_uploads_period (source_kind,upload_date,updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pm_site_source_upload_rows (
+  source_upload_id VARCHAR(64) NOT NULL,
+  row_no INT UNSIGNED NOT NULL,
+  payload JSON NOT NULL,
+  PRIMARY KEY (source_upload_id,row_no)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS application_upload_history (
   history_order BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE,
   upload_id VARCHAR(64) NOT NULL PRIMARY KEY,

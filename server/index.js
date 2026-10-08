@@ -11,7 +11,7 @@ import {databaseEnabled, deleteHistory, initDb, latestPreventiveUpload, listHist
 import {buildAnalysis, buildMttrMetrics, createRun, dashboardPayload, generateReport, loadDataset, loadState, MTTR_TARGETS_BY_COMPONENT, processRun, saveState, uploadAndProcess, uploadTicketMttrSummary, ValidationError} from './services.js'
 import {buildPreventiveDashboard, parsePreventiveWorkbook} from './preventive.js'
 import {patchTemplate} from './export-xlsx.js'
-import {siteData,listSites,analyzeSite,parseSiteSource,saveSiteSource,saveEvaluation} from './pm-site.js'
+import {siteData,siteDataForUploadMonth,listSites,analyzeSite,parseSiteSource,saveSiteSource,saveEvaluation} from './pm-site.js'
 import {workOrderKey} from './preventive.js'
 import {gensetData,analyzeGenset,saveGensetEvaluation,enrichGensetSource} from './pm-genset.js'
 import {preventiveUploadHistory,applicationUploadHistory} from './db.js'
@@ -36,12 +36,12 @@ app.get('/api/runs/:id/dashboard',asyncHandler(async(req,res)=>{
   res.json(payload)
 }))
 app.get('/api/runs/:id/mttr-boosting',asyncHandler(async(req,res)=>{
-  const dataset=await loadDataset(RUNS_DIR,req.params.id),data=await siteData(),period=boostingPeriod(req.query,dataset.date)
+  const dataset=await loadDataset(RUNS_DIR,req.params.id),period=boostingPeriod(req.query,dataset.date),sourceSnapshot=await siteDataForUploadMonth(period),data=sourceSnapshot.data
   const selected=dataset.nops.filter(item=>(!req.query.region||item.region===req.query.region)&&(!req.query.nop||item.name===req.query.nop)),names=selected.map(item=>item.name)
   const b13Rows=combinedKpiB13Rows(data),swfmSummaries=deriveTicketMttrByNop(data,names,period),kpiSummaries=buildKpiB13Summaries(b13Rows,names,period)
   const ticket_summaries=mergeTicketSummaries(names,swfmSummaries,kpiSummaries,period)
-  const available_periods=[...new Set([...(data.swfm||[]).map(row=>String(row.occurred_at||'').slice(0,7)),...b13Rows.map(row=>row.period)].filter(value=>/^\d{4}-\d{2}$/.test(value)))].sort().reverse()
-  res.json({period,available_periods,ticket_summaries:withoutSimulationRows(ticket_summaries),debug:buildBoostingDebug(ticket_summaries),source:'KPIData B.1-B.3 dengan fallback Ticket SWFM'})
+  const available_periods=[...new Set([...sourceSnapshot.available_periods,...(data.swfm||[]).map(row=>String(row.occurred_at||'').slice(0,7)),...b13Rows.map(row=>row.period)].filter(value=>/^\d{4}-\d{2}$/.test(value)))].sort().reverse()
+  res.json({period,available_periods,ticket_summaries:withoutSimulationRows(ticket_summaries),debug:buildBoostingDebug(ticket_summaries),source:sourceSnapshot.historical?'Snapshot upload pada bulan terpilih: KPIData B.1-B.3 dengan fallback Ticket SWFM':'KPIData B.1-B.3 dengan fallback Ticket SWFM'})
 }))
 
 app.post('/api/runs/:id/report',asyncHandler(async(req,res)=>{
@@ -79,7 +79,7 @@ app.get('/api/runs/:id/export.xlsx',asyncHandler(async(req,res)=>{
 }))
 
 app.get('/api/runs/:id/mttr-boosting/export.xlsx',asyncHandler(async(req,res)=>{
-  const dataset=await loadDataset(RUNS_DIR,req.params.id),data=await siteData(),period=boostingPeriod(req.query,dataset.date)
+  const dataset=await loadDataset(RUNS_DIR,req.params.id),period=boostingPeriod(req.query,dataset.date),sourceSnapshot=await siteDataForUploadMonth(period),data=sourceSnapshot.data
   const selected=dataset.nops.filter(item=>(!req.query.region||item.region===req.query.region)&&(!req.query.nop||item.name===req.query.nop)),names=selected.map(item=>item.name)
   const b13Rows=combinedKpiB13Rows(data),summaries=mergeTicketSummaries(names,deriveTicketMttrByNop(data,names,period),buildKpiB13Summaries(b13Rows,names,period),period)
   const workbook=buildBoostingWorkbook(dataset,selected,summaries,{period,region:req.query.region||'',nop:req.query.nop||''}),buffer=await workbook.xlsx.writeBuffer()

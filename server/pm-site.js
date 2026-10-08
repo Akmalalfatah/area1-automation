@@ -81,14 +81,16 @@ export async function saveSiteSource(kind,filename,date,dataset){
   const connection=await getPool().getConnection()
   try{
     await connection.beginTransaction()
-    const {rows,...metadata}=dataset
+    const {rows,...metadata}=dataset,sourceUploadId=crypto.randomUUID()
     await connection.query('INSERT INTO pm_site_sources(source_kind,filename,upload_date,dataset) VALUES(?,?,?,?) ON DUPLICATE KEY UPDATE filename=VALUES(filename),upload_date=VALUES(upload_date),dataset=VALUES(dataset)',[kind,filename,date,JSON.stringify(metadata)])
     await connection.query('DELETE FROM pm_site_source_rows WHERE source_kind=?',[kind])
     for(let start=0;start<rows.length;start+=100){const values=rows.slice(start,start+100).map((row,index)=>[kind,start+index,JSON.stringify(row)]);await connection.query('INSERT INTO pm_site_source_rows(source_kind,row_no,payload) VALUES ?',[values])}
-    await recordApplicationUpload(kind,crypto.randomUUID(),filename,date,dataset.row_count,connection)
+    await connection.query('INSERT INTO pm_site_source_uploads(source_upload_id,source_kind,filename,upload_date,dataset) VALUES(?,?,?,?,?)',[sourceUploadId,kind,filename,date,JSON.stringify(metadata)])
+    for(let start=0;start<rows.length;start+=100){const values=rows.slice(start,start+100).map((row,index)=>[sourceUploadId,start+index,JSON.stringify(row)]);await connection.query('INSERT INTO pm_site_source_upload_rows(source_upload_id,row_no,payload) VALUES ?',[values])}
+    await recordApplicationUpload(kind,sourceUploadId,filename,date,dataset.row_count,connection)
     await connection.commit()
+    return{source_kind:kind,filename,row_count:dataset.row_count,issue_count:dataset.issues.length,source_upload_id:sourceUploadId}
   }catch(error){await connection.rollback().catch(()=>{});throw error}finally{connection.release()}
-  return{source_kind:kind,filename,row_count:dataset.row_count,issue_count:dataset.issues.length}
 }
 export async function siteData(){
   if(!databaseEnabled){const data=await preview(),uploaded=await loadPreventiveRows();const kinds=new Set(uploaded.map(row=>row.maintenance_kind));return{...data,pm:[...(data.pm||[]).filter(row=>!kinds.has(row.maintenance_kind)),...uploaded],evaluations:[],read_only:true}}
@@ -99,6 +101,37 @@ export async function siteData(){
   const [records]=await getPool().query('SELECT source_kind,payload FROM pm_site_source_rows ORDER BY source_kind,row_no')
   for(const record of records){const payload=typeof record.payload==='string'?JSON.parse(record.payload):record.payload;data[record.source_kind].push(payload)}
   return data
+}
+
+const uploadMonth=value=>String(value||'').slice(0,7)
+const sourceRowsForUploads=async uploads=>{
+  const data={pm:await loadPreventiveRows(),evaluations:[],sources:uploads.map(({dataset,...meta})=>meta),quality:[],read_only:false}
+  if(!uploads.length)return data
+  const ids=uploads.map(upload=>upload.source_upload_id)
+  const [records]=await getPool().query('SELECT source_upload_id,payload FROM pm_site_source_upload_rows WHERE source_upload_id IN (?) ORDER BY source_upload_id,row_no',[ids])
+  const rowsByUpload=new Map(ids.map(id=>[id,[]]))
+  for(const record of records)rowsByUpload.get(record.source_upload_id)?.push(typeof record.payload==='string'?JSON.parse(record.payload):record.payload)
+  for(const upload of uploads){
+    const dataset=typeof upload.dataset==='string'?JSON.parse(upload.dataset):upload.dataset
+    data[upload.source_kind]=rowsByUpload.get(upload.source_upload_id)||[]
+    data.quality.push(...(dataset.issues||[]).map(issue=>({...issue,source:upload.source_kind})))
+  }
+  return data
+}
+
+// Mengambil snapshot terbaru dari masing-masing jenis source yang di-upload
+// pada bulan filter. Snapshot bulan lain tidak boleh ikut terpakai.
+export async function siteDataForUploadMonth(period){
+  if(!databaseEnabled)return{data:await siteData(),historical:false,available_periods:[]}
+  const [allUploads]=await getPool().query('SELECT source_upload_id,source_kind,filename,upload_date,dataset,updated_at FROM pm_site_source_uploads ORDER BY upload_date DESC,updated_at DESC')
+  if(!allUploads.length)return{data:await siteData(),historical:false,available_periods:[]}
+  const available_periods=[...new Set(allUploads.map(upload=>uploadMonth(upload.upload_date)).filter(value=>/^\d{4}-\d{2}$/.test(value)))].sort().reverse()
+  const selected=[],seen=new Set()
+  for(const upload of allUploads){
+    if(uploadMonth(upload.upload_date)!==period||seen.has(upload.source_kind))continue
+    seen.add(upload.source_kind);selected.push(upload)
+  }
+  return{data:await sourceRowsForUploads(selected),historical:true,available_periods}
 }
 
 const milliseconds=value=>Date.parse(value?.length===10?value+'T00:00:00Z':value+'Z')
