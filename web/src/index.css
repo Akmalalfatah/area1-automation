@@ -202,6 +202,10 @@ button { cursor: pointer; }
   .preventive-detail-grid { grid-template-columns:1fr; }
   .preventive-filter-row { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .kpi-capture, .kpi-boosting-table-wrap, .preventive-table { overflow-x:auto; }
+  .kpi-capture { position:relative; padding-bottom:8px; }
+  .kpi-capture .kpi-scrollbar { overflow-x:auto!important; overscroll-behavior-x:contain; touch-action:pan-x pan-y; -webkit-overflow-scrolling:touch; }
+  .kpi-table thead th:not([rowspan]), .kpi-table tbody td:nth-child(n+3) { min-width:96px!important; }
+  .kpi-table tbody td:nth-child(2), .kpi-table thead th[rowspan]:nth-child(2) { left:280px!important; }
 }
 
 @media (max-width: 640px) {
@@ -238,5 +242,9 @@ button { cursor: pointer; }
   .kpi-ticket-priority { overflow-x:auto; }
   .kpi-ticket-priority table { min-width:520px; }
   .kpi-table tbody td:first-child, .kpi-table thead th[rowspan]:first-child { width:220px; min-width:220px; max-width:220px; }
+  .kpi-table tbody td:nth-child(2), .kpi-table thead th[rowspan]:nth-child(2) { left:220px!important; }
+  .kpi-table thead th:not([rowspan]), .kpi-table tbody td:nth-child(n+3) { min-width:82px!important; padding-left:6px!important; padding-right:6px!important; font-size:10px!important; }
+  .kpi-table tbody td:first-child, .kpi-table thead th[rowspan]:first-child { font-size:10px!important; }
+  .kpi-capture::before { content:'Geser tabel ke samping untuk melihat NOP dan periode lainnya'; display:block; padding:7px 9px; background:#f3f6f9; color:#64758a; font-size:9px; font-weight:600; }
   .kpi-nop-title, .kpi-b-tab-heading strong, .kpi-affected-sites li { overflow-wrap:anywhere; }
 }
