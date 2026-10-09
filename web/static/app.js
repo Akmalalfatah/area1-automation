@@ -154,7 +154,12 @@ function shortDateTime(value) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit" }).format(date);
+  return new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit", hour12: false }).format(date) + " WIB";
+}
+function wibDateTime(value, fallbackDate) {
+  const date = value ? new Date(value) : null;
+  if (date && !Number.isNaN(date.getTime())) return new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Jakarta", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }).format(date).replace(",", "") + " WIB";
+  return fallbackDate ? shortDate(fallbackDate) : "-";
 }
 function excelDateLabel(value) {
   if (!value) return "-";
@@ -337,9 +342,9 @@ class UploadHistoryButton extends React.Component {
       if (event.target === event.currentTarget) this.close();
     }, onKeyDown: (event) => {
       if (event.key === "Escape") this.close();
-    } }, h("section", { role: "dialog", "aria-modal": true, "aria-label": `Riwayat upload ${label}`, className: "pm-upload-history-dialog" }, h("header", null, h("div", null, h("h3", null, `Riwayat upload ${label}`), h("p", null, "File tersimpan pada halaman ini")), h("button", { type: "button", "aria-label": "Tutup riwayat upload", onClick: this.close, ref: (node) => this.dismiss = node }, h(X, { size: 18 }))), s.loading ? h("p", { className: "pm-history-message", role: "status" }, "Memuat riwayat\u2026") : s.error ? h("p", { className: "pm-history-message", role: "alert" }, s.error) : s.items.length ? h("div", { className: "pm-history-table-scroll" }, h("table", null, h("thead", null, h("tr", null, h("th", null, "File upload"), h("th", null, "Upload date"))), h("tbody", null, ...s.items.map((item) => {
+    } }, h("section", { role: "dialog", "aria-modal": true, "aria-label": `Riwayat upload ${label}`, className: "pm-upload-history-dialog" }, h("header", null, h("div", null, h("h3", null, `Riwayat upload ${label}`), h("p", null, "File tersimpan pada halaman ini")), h("button", { type: "button", "aria-label": "Tutup riwayat upload", onClick: this.close, ref: (node) => this.dismiss = node }, h(X, { size: 18 }))), s.loading ? h("p", { className: "pm-history-message", role: "status" }, "Memuat riwayat\u2026") : s.error ? h("p", { className: "pm-history-message", role: "alert" }, s.error) : s.items.length ? h("div", { className: "pm-history-table-scroll" }, h("table", null, h("thead", null, h("tr", null, h("th", null, "File upload"), h("th", null, "Waktu upload (WIB)"))), h("tbody", null, ...s.items.map((item) => {
       var _a, _b, _c, _d, _e;
-      return h("tr", { key: item.upload_id || item.run_id }, h("td", null, item.filename || ((_b = (_a = item.history) == null ? void 0 : _a.upload) == null ? void 0 : _b.filename) || ((_c = item.history) == null ? void 0 : _c.file) || "Nama file belum tersedia"), h("td", null, shortDate(item.upload_date || ((_e = (_d = item.history) == null ? void 0 : _d.upload) == null ? void 0 : _e.date) || item.date_end)));
+      return h("tr", { key: item.upload_id || item.run_id }, h("td", null, item.filename || ((_b = (_a = item.history) == null ? void 0 : _a.upload) == null ? void 0 : _b.filename) || ((_c = item.history) == null ? void 0 : _c.file) || "Nama file belum tersedia"), h("td", null, wibDateTime(item.updated_at, item.upload_date || ((_e = (_d = item.history) == null ? void 0 : _d.upload) == null ? void 0 : _e.date) || item.date_end)));
     })))) : h("p", { className: "pm-history-message" }, "Belum ada upload tersimpan pada halaman ini."))));
   }
 }
@@ -405,7 +410,7 @@ class MasterSiteUploadSection extends React.Component {
     var _a, _b, _c;
     const h = React.createElement, s = this.state, draft = s.drafts[s.kind] || {}, types = [["ekpi", "eKPI Automation"], ["dashboard", "PM Punchlist"], ["genset", "PM Genset"], ["site", "PM Site"], ["master", "Master Site"], ["ggr", "GGR"], ["inap", "Ticket INAP"], ["swfm", "Ticket SWFM"], ["kpi_b13_r01", "KPIData B.1-B.3 R01"], ["kpi_b13_r02", "KPIData B.1-B.3 R02"], ["kpi_b13_r10", "KPIData B.1-B.3 R10"]], label = types.find(([key]) => key === s.kind)[1], latest = (_a = s.items.find((item) => item.key === s.kind)) == null ? void 0 : _a.latest;
     const formatDate = (value) => value && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(8, 10) + "/" + value.slice(5, 7) + "/" + value.slice(0, 4) : "-";
-    const formatDateTime = (value) => { const date = value ? new Date(value) : null; return date && !Number.isNaN(date.getTime()) ? new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Jakarta", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }).format(date).replace(",", ", ") : formatDate(value); };
+    const formatDateTime = (value) => { const date = value ? new Date(value) : null; return date && !Number.isNaN(date.getTime()) ? new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Jakarta", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }).format(date).replace(",", ", ") + " WIB" : formatDate(value); };
     return h(
       "div",
       { className: "space-y-4" },
@@ -1170,12 +1175,13 @@ class KpiCategoryTrend extends React.Component {
           const visibleKeys = graphOrder.filter((key) => Number(bar.counts[key] || 0) > 0);
           return React.createElement("article", { key: group.name, className: "border border-slate-200 bg-slate-50 p-4" },
             React.createElement("strong", { className: "block text-center text-[11px] text-[#40516A]" }, group.name),
-            React.createElement("div", { className: "mt-4 flex h-[230px] items-end justify-center gap-3 border-b border-slate-300 px-2" },
+            React.createElement("div", { className: "mt-4 flex items-end justify-center gap-3 border-b border-slate-300 px-2", style: { height: "250px" } },
               visibleKeys.map((key) => {
-                const count = Number(bar.counts[key] || 0), height = Math.max(12, count / graphMaximum * 100);
-                return React.createElement("div", { key, className: "flex h-full min-w-0 flex-1 flex-col justify-end" },
-                  React.createElement("div", { className: "flex items-center justify-center rounded-t text-[11px] font-bold text-white", style: { height: `${height}%`, minHeight: "28px", background: graphColors[key] } }, count),
-                  React.createElement("span", { className: "mt-2 text-center text-[10px] font-semibold text-slate-500" }, key));
+                const count = Number(bar.counts[key] || 0), height = count / Math.max(1, bar.total) * 100;
+                return React.createElement("div", { key, className: "min-w-0 flex-1" },
+                  React.createElement("div", { className: "flex items-end", style: { height: "214px" } },
+                    React.createElement("div", { className: "flex w-full items-center justify-center rounded-t text-[11px] font-bold text-white", style: { height: `${height}%`, background: graphColors[key], overflow: "visible" } }, count)),
+                  React.createElement("span", { className: "mt-2 block text-center text-[10px] font-semibold text-slate-500" }, key));
               })),
             React.createElement("p", { className: "mt-3 text-center text-[10px] font-semibold text-slate-500" }, `${bar.total} NOP`));
         })) : React.createElement("p", { className: "border border-dashed border-slate-300 p-8 text-center text-[10px] text-slate-400" }, this.state.recapScope === "month" && !this.state.recapMonth ? "Pilih bulan untuk menampilkan rekap." : "Belum ada data kategori KPI untuk pilihan rekap ini."));
@@ -1197,7 +1203,7 @@ function SummaryCard({ label, value, detail, footer, tone = "green", delta }) {
   return /* @__PURE__ */ React.createElement("div", { className: "corporate-panel relative min-h-[166px] border-t-[12px] p-4", style: { borderTopColor: palette.line } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { className: "h-2 w-2", style: { background: palette.dot } }), /* @__PURE__ */ React.createElement("p", { className: "text-[10px] font-semibold tracking-[.05em] text-[#53657A]" }, label)), /* @__PURE__ */ React.createElement("div", { className: "mt-4 flex items-end gap-2" }, /* @__PURE__ */ React.createElement("p", { className: "text-[24px] font-semibold leading-none", style: { color: palette.value } }, value), delta && /* @__PURE__ */ React.createElement("span", { className: `pb-0.5 text-[10px] font-semibold ${String(delta).startsWith("-") ? "text-[#D51B47]" : "text-[#078558]"}` }, delta)), /* @__PURE__ */ React.createElement("p", { className: "mt-3 text-[9px] leading-4 text-slate-400" }, detail), footer && /* @__PURE__ */ React.createElement("p", { className: "absolute bottom-3 left-4 text-[9px] text-slate-400" }, footer));
 }
 function ExportCard({ hasTable, hasReport, reportLoading, tableImageLoading, shareLoading, onDownloadTableImage, onCopyReport, onShareExcel, onSettings }) {
-  return /* @__PURE__ */ React.createElement("div", { className: "corporate-panel min-h-[160px] p-4" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between" }, /* @__PURE__ */ React.createElement("p", { className: "text-[10px] font-semibold tracking-[.05em] text-[#53657A]" }, "EXPORT & SHARE"), reportLoading && /* @__PURE__ */ React.createElement(RefreshCw, { size: 13, className: "animate-spin text-[#173E68]" })), /* @__PURE__ */ React.createElement("div", { className: "mt-4 space-y-2" }, /* @__PURE__ */ React.createElement("button", { disabled: !hasTable || tableImageLoading, onClick: onDownloadTableImage, className: "btn-secondary flex h-8 w-full items-center gap-2 px-3 text-[9px] font-semibold disabled:opacity-40" }, tableImageLoading ? /* @__PURE__ */ React.createElement(RefreshCw, { size: 12, className: "animate-spin" }) : /* @__PURE__ */ React.createElement(Download, { size: 12 }), /* @__PURE__ */ React.createElement("span", { className: "truncate" }, tableImageLoading ? "Preparing image..." : "Download KPI Table Image")), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-[1fr_32px] gap-1.5" }, /* @__PURE__ */ React.createElement("button", { disabled: !hasReport, onClick: onCopyReport, className: "btn-secondary flex h-8 items-center gap-2 px-3 text-[9px] font-semibold disabled:opacity-40" }, /* @__PURE__ */ React.createElement(Clipboard, { size: 12 }), /* @__PURE__ */ React.createElement("span", { className: "truncate" }, "Copy AI Report"), hasReport && !reportLoading && /* @__PURE__ */ React.createElement("span", { className: "status-ready ml-auto shrink-0" }, "Ready")), /* @__PURE__ */ React.createElement("button", { onClick: onSettings, className: "icon-button flex h-8 items-center justify-center border border-[#CBD5E1] bg-white text-[#52647A]" }, /* @__PURE__ */ React.createElement(Settings2, { size: 12 }))), /* @__PURE__ */ React.createElement("button", { disabled: !hasTable || shareLoading, onClick: onShareExcel, className: "btn-primary flex h-8 w-full items-center gap-2 px-3 text-[9px] font-semibold disabled:opacity-40" }, shareLoading ? /* @__PURE__ */ React.createElement(RefreshCw, { size: 12, className: "animate-spin" }) : /* @__PURE__ */ React.createElement(Share2, { size: 12 }), /* @__PURE__ */ React.createElement("span", { className: "truncate" }, shareLoading ? "Preparing Excel..." : "Share Excel File (Filter Aktif)"))));
+  return /* @__PURE__ */ React.createElement("div", { className: "corporate-panel min-h-[160px] p-4" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between" }, /* @__PURE__ */ React.createElement("p", { className: "text-[10px] font-semibold tracking-[.05em] text-[#53657A]" }, "EXPORT & SHARE"), reportLoading && /* @__PURE__ */ React.createElement(RefreshCw, { size: 13, className: "animate-spin text-[#173E68]" })), /* @__PURE__ */ React.createElement("div", { className: "mt-4 space-y-2" }, /* @__PURE__ */ React.createElement("button", { disabled: !hasTable || tableImageLoading, onClick: onDownloadTableImage, className: "btn-secondary flex h-8 w-full items-center gap-2 px-3 text-[9px] font-semibold disabled:opacity-40" }, tableImageLoading ? /* @__PURE__ */ React.createElement(RefreshCw, { size: 12, className: "animate-spin" }) : /* @__PURE__ */ React.createElement(Download, { size: 12 }), /* @__PURE__ */ React.createElement("span", { className: "truncate" }, tableImageLoading ? "Preparing image..." : "Download KPI Table Image")), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-[1fr_32px] gap-1.5" }, /* @__PURE__ */ React.createElement("button", { disabled: !hasReport, onClick: onCopyReport, className: "btn-secondary flex h-8 items-center gap-2 px-3 text-[9px] font-semibold disabled:opacity-40" }, /* @__PURE__ */ React.createElement(Clipboard, { size: 12 }), /* @__PURE__ */ React.createElement("span", { className: "truncate" }, "Copy AI Report"), hasReport && !reportLoading && /* @__PURE__ */ React.createElement("span", { className: "status-ready ml-auto shrink-0" }, "Ready")), /* @__PURE__ */ React.createElement("button", { onClick: onSettings, className: "icon-button flex h-8 items-center justify-center border border-[#CBD5E1] bg-white text-[#52647A]" }, /* @__PURE__ */ React.createElement(Settings2, { size: 12 }))), /* @__PURE__ */ React.createElement("button", { disabled: !hasTable || shareLoading, onClick: onShareExcel, className: "btn-primary flex h-8 w-full items-center gap-2 px-3 text-[9px] font-semibold disabled:opacity-40" }, shareLoading ? /* @__PURE__ */ React.createElement(RefreshCw, { size: 12, className: "animate-spin" }) : /* @__PURE__ */ React.createElement(Download, { size: 12 }), /* @__PURE__ */ React.createElement("span", { className: "truncate" }, shareLoading ? "Preparing Excel..." : "Download Excel (Filter Aktif)"))));
 }
 function TopImprovementChart({ items, comparisonAvailable }) {
   const visible = items.slice(0, 5);
@@ -1511,20 +1517,13 @@ class App extends React.Component {
       }
     });
     __publicField(this, "shareExcel", async () => {
-      var _a, _b, _c;
       this.setState({ shareLoading: true, pageError: "", notice: "" });
       try {
-        const exported = await getKpiExport(this.state.run.id, this.state.region, this.state.nop), blob = exported.blob;
-        const file = new File([blob], exported.filename, { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-        if (navigator.share && ((_c = navigator.canShare) == null ? void 0 : _c.call(navigator, { files: [file] }))) {
-          await navigator.share({ title: "KPI Performance", files: [file] });
-          this.setState({ notice: "File Excel KPI sesuai filter aktif berhasil dibagikan." });
-        } else {
-          downloadBlob(blob, file.name);
-          this.setState({ notice: "File Excel KPI sesuai filter aktif diunduh karena browser belum mendukung berbagi file langsung." });
-        }
+        const exported = await getKpiExport(this.state.run.id, this.state.region, this.state.nop);
+        downloadBlob(exported.blob, exported.filename);
+        this.setState({ notice: "File Excel KPI sesuai filter aktif berhasil diunduh." });
       } catch (e) {
-        if (e.name !== "AbortError") this.setState({ pageError: `Share gagal: ${e.message}` });
+        this.setState({ pageError: `Export Excel gagal: ${e.message}` });
       } finally {
         this.setState({ shareLoading: false });
       }
