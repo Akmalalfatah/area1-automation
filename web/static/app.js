@@ -1326,17 +1326,18 @@ async function copyText(text) {
 class PunchlistWorkspace extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { rows: [], options: { regional: [], nop: [] }, search: "", regional: "", nop: "", notes: {}, loading: true, saving: {}, error: "", message: "", dialogSite: null, dialogStep: "question", dialogNote: "" };
+    this.state = { rows: [], options: { month: [], regional: [], nop: [] }, search: "", month: "", regional: "", nop: "", notes: {}, loading: true, saving: {}, error: "", message: "", dialogSite: null, dialogStep: "question", dialogNote: "" };
     this.load = async () => {
-      const { search, regional, nop } = this.state, params = new URLSearchParams();
+      const { search, month, regional, nop } = this.state, params = new URLSearchParams();
       if (search) params.set("search", search);
+      if (month) params.set("month", month);
       if (regional) params.set("regional", regional);
       if (nop) params.set("nop", nop);
       this.setState({ loading: true, error: "" });
       try {
         const data = await api(`/api/punchlist${params.size ? `?${params}` : ""}`), notes = {};
         for (const row of data.rows || []) notes[row.site_id] = row.note || "";
-        this.setState({ rows: data.rows || [], options: data.options || { regional: [], nop: [] }, notes });
+        this.setState({ rows: data.rows || [], options: data.options || { month: [], regional: [], nop: [] }, notes });
       } catch (error) {
         this.setState({ error: error.message });
       } finally {
@@ -1357,13 +1358,12 @@ class PunchlistWorkspace extends React.Component {
         this.setState((state) => ({ saving: { ...state.saving, [siteId]: false } }));
       }
     };
-    this.openAction = (row) => {
-      const hasFinding = window.confirm(`Apakah ada temuan untuk site ${row.site_id}?\n\nPilih OK jika ada temuan, atau Cancel jika tidak ada temuan.`);
-      if (!hasFinding) return this.save(row.site_id, "Tidak ada Temuan.");
-      const note = window.prompt(`Masukkan temuan untuk site ${row.site_id}:`, this.state.notes[row.site_id] || "");
-      if (note === null) return;
-      if (!note.trim()) return this.setState({ error: "Temuan tidak boleh kosong. Pilih Tidak Ada Temuan bila tidak ada catatan." });
-      this.save(row.site_id, note);
+    this.openAction = (row) => this.setState({ dialogSite: row, dialogStep: "question", dialogNote: this.state.notes[row.site_id] || "" });
+    this.closeAction = () => this.setState({ dialogSite: null, dialogStep: "question", dialogNote: "" });
+    this.chooseNoFinding = () => this.save(this.state.dialogSite.site_id, "Tidak ada Temuan.");
+    this.saveFinding = () => {
+      if (!this.state.dialogNote.trim()) return this.setState({ error: "Temuan tidak boleh kosong. Pilih Tidak Ada Temuan bila tidak ada catatan." });
+      this.save(this.state.dialogSite.site_id, this.state.dialogNote);
     };
   }
   componentDidMount() { this.load(); }
@@ -1371,8 +1371,9 @@ class PunchlistWorkspace extends React.Component {
     const h = React.createElement, s = this.state, notedCount = s.rows.filter((row) => String(s.notes[row.site_id] || "").trim()).length;
     const filters = h("div", { className: "preventive-filter-row" },
       h("div", { className: "preventive-filter-search" }, h("label", { className: "filter-label mb-1 block" }, "SEARCH"), h("input", { value: s.search, onChange: (event) => this.setFilter("search", event.target.value), className: "control h-10 w-full px-3 text-[10px]", placeholder: "Cari Site ID, Site Name, NOP, atau catatan" })),
+      h("div", null, h("label", { className: "filter-label mb-1 block" }, "BULAN"), h("select", { value: s.month, onChange: (event) => this.setFilter("month", event.target.value), className: "control h-10 w-[170px] px-3 text-[10px] font-semibold" }, h("option", { value: "" }, "All Bulan"), ...(s.options.month || []).map((value) => h("option", { key: value, value }, new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}-01T00:00:00Z`))))),
       h("div", null, h("label", { className: "filter-label mb-1 block" }, "REGIONAL"), h("select", { value: s.regional, onChange: (event) => this.setFilter("regional", event.target.value), className: "control h-10 w-[180px] px-3 text-[10px] font-semibold" }, h("option", { value: "" }, "All Regional"), ...(s.options.regional || []).map((value) => h("option", { key: value, value }, value)))),
-      h("div", null, h("label", { className: "filter-label mb-1 block" }, "NOP"), h("select", { value: s.nop, onChange: (event) => this.setFilter("nop", event.target.value), className: "control h-10 w-[180px] px-3 text-[10px] font-semibold" }, h("option", { value: "" }, "All NOP"), ...(s.options.nop || []).map((value) => h("option", { key: value, value }, compactNop(value))))));
+      h("div", null, h("label", { className: "filter-label mb-1 block" }, "NOP"), h("select", { value: s.nop, onChange: (event) => this.setFilter("nop", event.target.value), className: "control h-10 w-[180px] px-3 text-[10px] font-semibold" }, h("option", { value: "" }, "All NOP"), ...(s.options.nop || []).map((value) => h("option", { key: value, value }, compactNop(value)))))));
     const cards = s.rows.map((row) => h("details", { key: row.site_id, className: "preventive-info-card pm-dashboard-work-card" },
       h("summary", { className: "preventive-card-head" },
         h("div", { className: "preventive-card-section" }, h("p", { className: "preventive-card-label" }, "SITE ID"), h("p", { className: "pm-site-work-value" }, row.site_id)),
@@ -1382,6 +1383,21 @@ class PunchlistWorkspace extends React.Component {
       h("div", { className: "preventive-card-details" }, h("div", { className: "preventive-detail-grid" }, h("div", null, h("p", { className: "preventive-card-label" }, "REGIONAL"), h("p", { className: "mt-1 text-[10px] font-medium text-[#42536A]" }, row.regional || "-")), h("div", null, h("p", { className: "preventive-card-label" }, "TERAKHIR DISIMPAN"), h("p", { className: "mt-1 text-[10px] font-medium text-[#42536A]" }, row.updated_at ? wibDateTime(row.updated_at) : "Belum ada catatan"))),
         h("div", { className: "preventive-notes mt-4" }, h("p", { className: "preventive-card-label" }, "CATATAN PUNCHLIST"), h("p", { className: "mt-1 text-[10px] leading-5 text-[#42536A]" }, s.notes[row.site_id] || "Belum ada catatan")),
         h("div", { className: "mt-3 flex items-center justify-end" }, h("button", { type: "button", disabled: !!s.saving[row.site_id], onClick: () => this.openAction(row), className: "btn-primary h-8 px-3 text-[9px] font-semibold disabled:opacity-40" }, "ACTION TEMUAN")))));
+    if (s.dialogSite) {
+      const site = s.dialogSite, saving = !!s.saving[site.site_id];
+      const question = h("div", { className: "p-5" },
+        h("p", { className: "text-[13px] font-semibold text-[#26384F]" }, "Apakah ada temuan?"),
+        h("p", { className: "mt-2 text-[10px] leading-5 text-slate-500" }, "Pilih Ada Temuan untuk menulis catatan, atau Tidak Ada Temuan untuk menyimpan status tanpa temuan."),
+        h("div", { className: "mt-5 flex justify-end gap-2" }, h("button", { type: "button", onClick: () => this.setState({ dialogStep: "text" }), className: "btn-secondary h-9 px-4 text-[10px] font-semibold" }, "ADA TEMUAN"), h("button", { type: "button", disabled: saving, onClick: this.chooseNoFinding, className: "btn-primary h-9 px-4 text-[10px] font-semibold disabled:opacity-40" }, saving ? "MENYIMPAN..." : "TIDAK ADA TEMUAN")));
+      const textForm = h("div", { className: "p-5" },
+        h("label", null, h("span", { className: "filter-label mb-2 block" }, "TEMUAN"), h("textarea", { autoFocus: true, value: s.dialogNote, maxLength: 5000, onChange: (event) => this.setState({ dialogNote: event.target.value }), className: "control h-[130px] w-full resize-y p-3 text-[11px] leading-5", placeholder: "Tulis temuan, kendala, atau tindak lanjut site..." })),
+        h("div", { className: "mt-5 flex justify-end gap-2" }, h("button", { type: "button", disabled: saving, onClick: () => this.setState({ dialogStep: "question" }), className: "btn-secondary h-9 px-4 text-[10px] font-semibold" }, "KEMBALI"), h("button", { type: "button", disabled: saving, onClick: this.saveFinding, className: "btn-primary h-9 px-4 text-[10px] font-semibold disabled:opacity-40" }, saving ? "MENYIMPAN..." : "SIMPAN TEMUAN")));
+      const dialog = h("div", { className: "pm-upload-history-overlay", onClick: (event) => { if (event.target === event.currentTarget && !saving) this.closeAction(); } },
+        h("section", { role: "dialog", "aria-modal": true, "aria-label": "Action Temuan", className: "pm-upload-history-dialog", style: { maxWidth: "480px" } },
+          h("header", null, h("div", null, h("h3", null, "Action Temuan"), h("p", null, `${site.site_id} ${site.site_name ? `- ${site.site_name}` : ""}`)), h("button", { type: "button", "aria-label": "Tutup", disabled: saving, onClick: this.closeAction }, h(X, { size: 18 }))),
+          s.dialogStep === "question" ? question : textForm));
+      cards.push(ReactDOM.createPortal(dialog, document.body, "punchlist-action-modal"));
+    }
     return h("div", { className: "space-y-4" }, h("div", { className: "grid grid-cols-2 gap-4" }, h(PreventiveSummaryCard, { label: "SITE PM", value: s.rows.length, detail: "Site yang tersedia dari data PM Site", tone: "navy" }), h(PreventiveSummaryCard, { label: "SUDAH DICATAT", value: notedCount, detail: "Site dengan catatan Punchlist", tone: "orange" })), s.error && h("p", { className: "border border-red-300 bg-red-50 px-4 py-3 text-[10px] text-red-800" }, s.error), s.message && h("p", { className: "border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10px] text-emerald-800" }, s.message), h("section", { className: "corporate-panel p-5" }, filters, h("div", { className: "mt-4 flex items-center justify-between" }, h("div", null, h("h2", { className: "section-title" }, "PM PUNCHLIST - GENERAL INFORMATION"), h("p", { className: "mt-1 text-[10px] text-slate-400" }, s.loading ? "Memuat daftar site..." : `Menampilkan ${s.rows.length} site dari data PM Site`)), s.loading && h(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" })), h("div", { className: "kpi-scrollbar preventive-card-list" }, ...cards, !s.loading && !cards.length && h("p", { className: "p-8 text-center text-[10px] text-slate-400" }, "Belum ada data PM Site. Upload data PM Site terlebih dahulu."))));
   }
 }

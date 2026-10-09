@@ -225,9 +225,9 @@ export function listSites(data,filters={}){
 
 export async function listPunchlistSites(data,filters={}){
   if(!databaseEnabled)throw Object.assign(new Error('Penyimpanan Punchlist membutuhkan MySQL. Konfigurasikan database pada server/.env.'),{status:503})
-  const sites=new Map(),masters=new Map((data.master||[]).map(row=>[normalizeSite(row.site_id),row]))
-  for(const row of data.pm||[]){
-    if(row.maintenance_kind!=='site')continue
+  const sites=new Map(),masters=new Map((data.master||[]).map(row=>[normalizeSite(row.site_id),row])),pmSiteRows=(data.pm||[]).filter(row=>row.maintenance_kind==='site'),months=[...new Set(pmSiteRows.map(row=>String(row.schedule_date||'').slice(0,7)).filter(value=>/^\d{4}-\d{2}$/.test(value)))].sort().reverse()
+  for(const row of pmSiteRows){
+    if(filters.month&&String(row.schedule_date||'').slice(0,7)!==filters.month)continue
     const siteId=normalizeSite(row.site_id),master=masters.get(siteId)
     if(siteId)sites.set(siteId,{site_id:siteId,site_name:master?.site_name||row.site_name||'',nop:master?.nop||row.nop||'',regional:master?.regional||row.regional||''})
   }
@@ -239,7 +239,7 @@ export async function listPunchlistSites(data,filters={}){
     if(filters.nop&&site.nop!==filters.nop)return false
     return !query||[site.site_id,site.site_name,site.nop,site.regional].join(' ').toLowerCase().includes(query)
   }).map(site=>({...site,note:bySite.get(site.site_id)?.note||'',updated_at:bySite.get(site.site_id)?.updated_at||null})).sort((a,b)=>a.nop.localeCompare(b.nop)||a.site_id.localeCompare(b.site_id))
-  return{rows,options:{regional:[...new Set(rows.map(row=>row.regional).filter(Boolean))].sort(),nop:[...new Set(rows.map(row=>row.nop).filter(Boolean))].sort()}}
+  return{rows,options:{month:months,regional:[...new Set(rows.map(row=>row.regional).filter(Boolean))].sort(),nop:[...new Set(rows.map(row=>row.nop).filter(Boolean))].sort()}}
 }
 
 export async function savePunchlistNote(siteId,input){
