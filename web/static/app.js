@@ -1078,7 +1078,7 @@ class KpiCategoryTrend extends React.Component {
     }
   }
   render() {
-    const { region, nop } = this.props, monthName = (value) => new Intl.DateTimeFormat("id-ID", { month: "short" }).format(/* @__PURE__ */ new Date(`${value.slice(0, 7)}-01T00:00:00`)).replace(".", "");
+    const { region, nop } = this.props, monthName = (value) => { const text = String(value || ""); if (!/^\d{4}-\d{2}/.test(text)) return text || "-"; return new Intl.DateTimeFormat("id-ID", { month: "short" }).format(/* @__PURE__ */ new Date(`${text.slice(0, 7)}-01T00:00:00`)).replace(".", ""); };
     const filteredItems = this.state.filteredDashboard ? Object.entries((this.state.filteredDashboard.dataset.nops || []).reduce((groups, item) => { const key = item.date || this.state.filteredDashboard.dataset.date; (groups[key] || (groups[key] = [])).push(item); return groups; }, {})).sort(([a], [b]) => String(a).localeCompare(String(b))).map(([date, nops]) => ({ date, dashboard: { dataset: { nops } } })) : null;
     const regions = ["R01_Sumbagut", "R02_Sumbagsel", "R10_Sumbagteng"];
     const palette = { K: "#C00000", C: "#FFC000", B: "#1683BA", BS: "#13C66B" };
