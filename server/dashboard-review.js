@@ -1,6 +1,7 @@
 import {normalizeSite,scheduleLabel} from './pm-site.js'
 export function enrichDashboardReview(rows,data,today=new Date().toISOString().slice(0,10)){
   const masterIndex=new Map((data.master||[]).map(master=>[normalizeSite(master.site_id),master]))
+  const punchlistIndex=new Map((data.punchlist_notes||[]).map(note=>[normalizeSite(note.site_id),note]))
   const normalize=value=>String(value||'').toUpperCase().replace(/[^A-Z0-9]/g,'')
   return rows.map(row=>{
     const master=masterIndex.get(normalizeSite(row.site_id))||null,reasons=[]
@@ -16,6 +17,7 @@ export function enrichDashboardReview(rows,data,today=new Date().toISOString().s
       if(row.maintenance_kind==='genset'&&['NO','N','TIDAK','FALSE','0'].includes(normalize(master.genset_active)))reasons.push('Genset tidak aktif pada Master Site')
       if(master.latitude==null||master.longitude==null||!Number.isFinite(Number(master.latitude))||!Number.isFinite(Number(master.longitude))||Math.abs(master.latitude)>90||Math.abs(master.longitude)>180)reasons.push('Koordinat Master Site perlu validasi')
     }
-    return{...row,master,review_reasons:reasons,review_label:reasons.length?'Perlu ditinjau':'Tidak ditemukan kendala jadwal/master',schedule_label:schedule}
+    const punchlist=punchlistIndex.get(normalizeSite(row.site_id))
+    return{...row,master,punchlist_note:punchlist?.note||'',punchlist_updated_at:punchlist?.updated_at||null,review_reasons:reasons,review_label:reasons.length?'Perlu ditinjau':'Tidak ditemukan kendala jadwal/master',schedule_label:schedule}
   }).sort((a,b)=>b.review_reasons.length-a.review_reasons.length)
 }

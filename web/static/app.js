@@ -277,7 +277,7 @@ function Sidebar({ activePage, preventiveOpen, onPage, onTogglePreventive }) {
       h("button", { onClick: () => onPage("ekpi"), className: `sidebar-nav-button sidebar-main-item flex h-[42px] items-center text-left text-xs font-semibold ${activePage === "ekpi" ? "is-active" : ""}` }, h("span", null, "eKPI Automation")),
       h("button", { onClick: () => onPage("data-upload"), className: `sidebar-nav-button sidebar-main-item flex h-[42px] items-center text-left text-xs font-semibold ${activePage === "data-upload" ? "is-active" : ""}` }, h("span", null, "Data Upload")),
       h("button", { onClick: onTogglePreventive, "aria-expanded": preventiveOpen, className: `sidebar-nav-button sidebar-main-item flex h-[42px] items-center gap-2 text-left text-xs font-semibold ${preventiveOpen ? "is-active" : ""}` }, h(ChevronRight, { size: 15, className: `sidebar-arrow ${preventiveOpen ? "is-open" : ""}` }), h("span", null, "Preventive Management")),
-      preventiveOpen && h("div", { className: "sidebar-subnav py-1" }, menu("preventive-dashboard", "Dashboard"), menu("preventive-genset", "PM Genset"), menu("preventive-site", "PM Site"))
+      preventiveOpen && h("div", { className: "sidebar-subnav py-1" }, menu("preventive-dashboard", "Dashboard"), menu("punchlist", "Punchlist Site"), menu("preventive-genset", "PM Genset"), menu("preventive-site", "PM Site"))
     ),
     h(
       "div",
@@ -524,7 +524,7 @@ function PreventiveDashboardCards({ data, file, date, busy, loading, filters, on
         h("div", { className: `pm-dashboard-review ${((_a = row.review_reasons) == null ? void 0 : _a.length) ? "needs-review" : ""}` }, h("div", null, h("strong", null, row.review_label || "Memerlukan pemeriksaan"), h("p", null, ((_b = row.review_reasons) == null ? void 0 : _b.length) ? row.review_reasons.join(" \xB7 ") : "Pemeriksaan ringkas jadwal dan Master Site; riwayat gangguan ditinjau pada halaman evaluasi.")), ["site", "genset"].includes(row.maintenance_kind) && h("button", { type: "button", onClick: () => onReview(row) }, `Evaluasi ${row.maintenance_kind === "genset" ? "PM Genset" : "PM Site"} \u2192`)),
         h("div", { className: "preventive-detail-grid" }, ...details(row).map(([label, value]) => h("div", { key: label }, h("p", { className: "preventive-card-label" }, label), label === "STATUS" ? h(window.PMWorkStatus, { status: value }) : h("p", { className: "mt-1 text-[10px] font-medium leading-4 text-[#42536A]" }, value)))),
         h("div", { className: "pm-dashboard-master" }, h("h3", null, "MASTER SITE"), row.master ? h("div", { className: "preventive-detail-grid" }, ...[["CLASS / TYPE", [row.master.class_site, row.master.type_site].filter(Boolean).join(" \xB7 ")], ["REGIONAL / NOP", [row.master.regional, row.master.nop].filter(Boolean).join(" \xB7 ")], ["CLUSTER", row.master.cluster], ["SITE AKTIF", masterActiveLabel(row.master.active)], ["GENSET AKTIF", masterActiveLabel(row.master.genset_active)], ["OWNER", row.master.owner]].map(([label, value]) => h("div", { key: label }, h("p", { className: "preventive-card-label" }, label), h("p", { className: "mt-1 text-[10px] text-[#42536A]" }, value || "Belum tersedia")))) : h("p", null, "Site belum ditemukan pada Master Site. Upload atau periksa data referensi di Dashboard.")),
-        h("div", { className: "preventive-notes" }, h("p", { className: "preventive-card-label" }, "NOTES"), h("p", { className: "mt-1 text-[10px] leading-5 text-[#42536A]" }, row.notes || "-"))
+        h("div", { className: "preventive-notes" }, h("p", { className: "preventive-card-label" }, row.punchlist_note ? "PUNCHLIST SITE" : "NOTES"), h("p", { className: "mt-1 text-[10px] leading-5 text-[#42536A]" }, row.punchlist_note || row.notes || "-"))
       )
     );
   }) : [h("div", { key: "empty", className: "flex h-[180px] items-center justify-center text-[10px] text-slate-400" }, "Belum ada data preventive pada rentang tanggal dan filter ini.")];
@@ -1323,11 +1323,62 @@ async function copyText(text) {
   textarea.remove();
   if (!copied) throw new Error("Teks tidak dapat disalin oleh browser ini.");
 }
+class PunchlistWorkspace extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { rows: [], options: { regional: [], nop: [] }, search: "", regional: "", nop: "", notes: {}, loading: true, saving: {}, error: "", message: "" };
+    this.load = async () => {
+      const { search, regional, nop } = this.state, params = new URLSearchParams();
+      if (search) params.set("search", search);
+      if (regional) params.set("regional", regional);
+      if (nop) params.set("nop", nop);
+      this.setState({ loading: true, error: "" });
+      try {
+        const data = await api(`/api/punchlist${params.size ? `?${params}` : ""}`), notes = {};
+        for (const row of data.rows || []) notes[row.site_id] = row.note || "";
+        this.setState({ rows: data.rows || [], options: data.options || { regional: [], nop: [] }, notes });
+      } catch (error) {
+        this.setState({ error: error.message });
+      } finally {
+        this.setState({ loading: false });
+      }
+    };
+    this.setFilter = (key, value) => this.setState({ [key]: value }, this.load);
+    this.setNote = (siteId, note) => this.setState((state) => ({ notes: { ...state.notes, [siteId]: note }, message: "" }));
+    this.save = async (siteId) => {
+      this.setState((state) => ({ saving: { ...state.saving, [siteId]: true }, error: "", message: "" }));
+      try {
+        const saved = await api(`/api/punchlist/${encodeURIComponent(siteId)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note: this.state.notes[siteId] || "" }) });
+        this.setState((state) => ({ rows: state.rows.map((row) => row.site_id === siteId ? { ...row, note: saved.note, updated_at: saved.updated_at } : row), notes: { ...state.notes, [siteId]: saved.note || "" }, message: saved.note ? `Catatan ${siteId} berhasil disimpan.` : `Catatan ${siteId} dihapus.` }));
+      } catch (error) {
+        this.setState({ error: error.message });
+      } finally {
+        this.setState((state) => ({ saving: { ...state.saving, [siteId]: false } }));
+      }
+    };
+  }
+  componentDidMount() { this.load(); }
+  render() {
+    const h = React.createElement, s = this.state;
+    return h("div", { className: "space-y-4" },
+      h("section", { className: "corporate-panel p-5" },
+        h("div", { className: "flex flex-wrap items-end justify-between gap-3" }, h("div", null, h("p", { className: "pm-site-eyebrow" }, "PUNCHLIST SITE"), h("h2", { className: "section-title mt-1" }, "CATATAN PENEMUAN SITE"), h("p", { className: "mt-1 text-[10px] text-slate-400" }, "Catat temuan dan tindak lanjut sederhana untuk setiap site.")), h("span", { className: "text-[10px] text-slate-500" }, `${s.rows.length} site`)),
+        h("div", { className: "mt-5 grid gap-3 md:grid-cols-3" },
+          h("input", { value: s.search, onChange: (event) => this.setFilter("search", event.target.value), className: "control h-9 w-full px-3 text-[10px]", placeholder: "Cari Site ID atau nama site" }),
+          h("select", { value: s.regional, onChange: (event) => this.setFilter("regional", event.target.value), className: "control h-9 w-full px-3 text-[10px]" }, h("option", { value: "" }, "All Regional"), ...(s.options.regional || []).map((value) => h("option", { key: value, value }, value))),
+          h("select", { value: s.nop, onChange: (event) => this.setFilter("nop", event.target.value), className: "control h-9 w-full px-3 text-[10px]" }, h("option", { value: "" }, "All NOP"), ...(s.options.nop || []).map((value) => h("option", { key: value, value }, value))))),
+      s.error && h("p", { className: "border border-red-300 bg-red-50 px-4 py-3 text-[10px] text-red-800" }, s.error), s.message && h("p", { className: "border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10px] text-emerald-800" }, s.message),
+      s.loading ? h("p", { className: "corporate-panel p-8 text-center text-[10px] text-slate-400" }, "Memuat daftar site...") : h("section", { className: "grid gap-4 md:grid-cols-2 xl:grid-cols-3" }, ...s.rows.map((row) => h("article", { key: row.site_id, className: "corporate-panel flex min-h-[240px] flex-col p-4" },
+        h("div", { className: "border-b border-slate-200 pb-3" }, h("div", { className: "flex items-start justify-between gap-3" }, h("div", { className: "min-w-0" }, h("strong", { className: "block text-[12px] text-[#26384F]" }, row.site_id), h("p", { className: "mt-1 truncate text-[10px] text-slate-500", title: row.site_name }, row.site_name || "Nama site belum tersedia")), h("span", { className: "shrink-0 bg-slate-100 px-2 py-1 text-[9px] font-semibold text-[#40516A]" }, row.nop || "-")), h("p", { className: "mt-2 text-[9px] text-slate-400" }, row.regional || "Regional belum tersedia")),
+        h("label", { className: "mt-4 block flex-1" }, h("span", { className: "mb-2 block text-[9px] font-semibold tracking-[.05em] text-[#53657A]" }, "CATATAN PENEMUAN"), h("textarea", { value: s.notes[row.site_id] || "", maxLength: 5000, onChange: (event) => this.setNote(row.site_id, event.target.value), className: "control h-[92px] w-full resize-y p-3 text-[10px] leading-5", placeholder: "Tulis temuan, kendala, atau tindak lanjut site..." })),
+        h("div", { className: "mt-3 flex items-center justify-between gap-2" }, h("span", { className: "text-[9px] text-slate-400" }, row.updated_at ? `Disimpan: ${wibDateTime(row.updated_at)}` : "Belum ada catatan"), h("button", { type: "button", disabled: !!s.saving[row.site_id], onClick: () => this.save(row.site_id), className: "btn-primary h-8 px-3 text-[9px] font-semibold disabled:opacity-40" }, s.saving[row.site_id] ? "MENYIMPAN..." : "SIMPAN CATATAN")))), s.rows.length === 0 && h("p", { className: "corporate-panel col-span-full p-8 text-center text-[10px] text-slate-400" }, "Belum ada site dari Master Site atau PM Site. Upload Master Site terlebih dahulu.")));
+  }
+}
 class App extends React.Component {
   constructor(props) {
     super(props);
     __publicField(this, "openPage", async (page, preserveFilters = false) => {
-      const isPreventive = page.startsWith("preventive");
+      const isPreventive = page.startsWith("preventive") || page === "punchlist";
       window.history.replaceState({}, "", page === "data-upload" ? `${window.location.pathname}?page=data-upload` : window.location.pathname);
       window.dispatchEvent(new Event("app:navigate"));
       clearTimeout(this.preventiveSearchTimer);
@@ -1599,8 +1650,8 @@ class App extends React.Component {
     const declining = (_b = analysis == null ? void 0 : analysis.attention_nops) == null ? void 0 : _b[0];
     const bestNopName = best ? compactNop(best.nop) : "-";
     const decliningNopName = declining ? compactNop(declining.nop) : "-";
-    const preventivePage = s.activePage.startsWith("preventive");
-    const pageTitle = s.activePage === "data-upload" ? "DATA UPLOAD" : preventivePage ? "PREVENTIVE MANAGEMENT" : "AUTOMATION MANAGEMENT";
+    const preventivePage = s.activePage.startsWith("preventive") || s.activePage === "punchlist";
+    const pageTitle = s.activePage === "data-upload" ? "DATA UPLOAD" : s.activePage === "punchlist" ? "PUNCHLIST SITE" : preventivePage ? "PREVENTIVE MANAGEMENT" : "AUTOMATION MANAGEMENT";
     const refreshTicketSummary = async () => {
       const dashboard = await getDashboard(s.run.id, s.region, s.nop);
       this.setState({ dashboard, rangeDashboard: null, notice: "Ticket Summary MTTR tersimpan untuk NOP ini." });
@@ -1609,7 +1660,7 @@ class App extends React.Component {
     return /* @__PURE__ */ React.createElement("div", { className: "app-shell min-h-screen bg-[#E9EFF5] pl-[250px]" }, /* @__PURE__ */ React.createElement(Sidebar, { activePage: s.activePage, preventiveOpen: s.preventiveOpen, onPage: this.openPage, onTogglePreventive: this.togglePreventive }), /* @__PURE__ */ React.createElement("header", { className: "h-[66px] bg-white shadow-[0_1px_0_#D7DFE8]" }, /* @__PURE__ */ React.createElement("div", { className: "flex h-full items-center px-6" }, /* @__PURE__ */ React.createElement("h1", { className: "text-[20px] font-semibold text-[#29496C]" }, pageTitle))), /* @__PURE__ */ React.createElement("main", { className: "space-y-4 p-5" }, s.pageError && /* @__PURE__ */ React.createElement("div", { className: "border border-red-300 bg-red-50 px-4 py-3 text-[10px] text-red-800" }, s.pageError), s.notice && /* @__PURE__ */ React.createElement("div", { className: "border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10px] font-medium text-emerald-800" }, s.notice), s.activePage === "ekpi" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(UploadPanel, { run: s.run, draftFile: s.draftFile, draftDate: s.draftDate, busyUpload: s.busyUpload, setDraftFile: (file) => this.setState({ draftFile: file }), setDraftDate: (value) => this.setState({ draftDate: value }), onUpload: this.handleUpload })), s.activePage === "ekpi" && ready && /* @__PURE__ */ React.createElement("div", { className: "flex min-w-0 flex-col gap-4" }, /* @__PURE__ */ React.createElement(KpiWorkspace, { config: s.config, dashboard: s.rangeDashboard || s.dashboard, region: s.region, nop: s.nop, rowGroup: s.rowGroup, onRegion: this.onRegion, onNop: this.onNop, onRowGroup: this.onRowGroup, rangeStart: s.rangeStart, rangeEnd: s.rangeEnd, rangeLoading: s.rangeLoading, onRangeDate: this.onRangeDate, onClearRange: this.clearDateRange, tableRef: this.setTableRef, runId: s.run.id, onTicketUploaded: refreshTicketSummary }), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-[1fr_1fr_1fr_1.05fr] gap-4" }, /* @__PURE__ */ React.createElement(SummaryCard, { label: analysis.comparison_available ? "NOP IMPROVED" : "AVAILABLE NOP", value: analysis.comparison_available ? `${analysis.improved_count} NOPs` : `${analysis.nop_count} NOPs`, detail: analysis.comparison_available ? best ? `Peningkatan tertinggi: ${bestNopName} (${deltaText(best.delta)} poin)` : "Belum ada NOP dengan peningkatan" : `Mencakup ${analysis.nop_count} NOP pada filter aktif`, tone: "green" }), /* @__PURE__ */ React.createElement(SummaryCard, { label: analysis.comparison_available ? "NOP DECLINE" : "AVERAGE KPI SCORE", value: analysis.comparison_available ? `${analysis.declined_count} NOPs` : `${formatNumber(analysis.current_average)}%`, detail: analysis.comparison_available ? declining ? `Penurunan terbesar: ${decliningNopName} (${deltaText(declining.delta)} poin)` : "Tidak ada NOP yang menurun" : `Rata-rata KPI seluruh NOP pada filter`, tone: "red" }), /* @__PURE__ */ React.createElement(SummaryCard, { label: analysis.comparison_available ? "BEST IMPROVEMENT" : "BEST KPI SCORE", value: bestNopName, delta: analysis.comparison_available && best ? `${deltaText(best.delta)}%` : "", detail: best ? `${bestNopName} mencatat KPI Score ${formatNumber(best.end)}%` : "Belum ada data KPI", tone: "navy" }), /* @__PURE__ */ React.createElement(ExportCard, { hasTable: Boolean(ready), hasReport: Boolean(s.reportText), reportLoading: s.reportLoading, tableImageLoading: s.tableImageLoading, shareLoading: s.shareLoading, onDownloadTableImage: this.downloadTableImage, onCopyReport: this.copyReport, onShareExcel: this.shareExcel, onSettings: () => this.setState({ showPrompt: true, promptDraft: s.prompt }) })), /* @__PURE__ */ React.createElement(KpiCategoryTrend, { runId: s.run.id, region: s.region, nop: s.nop }), /* @__PURE__ */ React.createElement(TopImprovementChart, { items: analysis.top_nops, comparisonAvailable: analysis.comparison_available }), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 items-stretch gap-4" }, /* @__PURE__ */ React.createElement(NopComparisonPanel, { best: analysis.top_nops, attention: analysis.attention_nops, comparisonAvailable: analysis.comparison_available }), /* @__PURE__ */ React.createElement(PointKpiPanel, { best: analysis.top_components, worst: analysis.worst_components, comparisonAvailable: analysis.comparison_available })), s.reportError && /* @__PURE__ */ React.createElement("div", { className: "border border-amber-200 bg-amber-50 px-4 py-3 text-[10px] text-amber-800" }, "AI Report: ", s.reportError)), s.activePage === "preventive-dashboard" && /* @__PURE__ */ React.createElement(PreventiveDashboardCards, { data: s.preventiveData, file: s.preventiveFile, date: s.preventiveDate, busy: s.preventiveBusy, loading: s.preventiveLoading, filters: s.preventiveFilters, onFile: (file) => this.setState({ preventiveFile: file }), onDate: (value) => this.setState({ preventiveDate: value }), onUpload: this.handlePreventiveUpload, onFilter: this.changePreventiveFilter, onRefresh: () => this.refreshPreventive(), onReview: (row) => {
       const page = row.maintenance_kind === "genset" ? "preventive-genset" : "preventive-site";
       this.setState({ preventiveFilters: { ...this.state.preventiveFilters, siteId: row.site_id, search: "", nop: "" } }, () => this.openPage(page, true));
-    } }), s.activePage === "preventive-genset" && /* @__PURE__ */ React.createElement(window.PMGensetWorkspace, { key: s.navigationRevision, RoutinePage: PreventiveRoutinePage, SummaryCard: PreventiveSummaryCard, data: s.preventiveData, loading: s.preventiveLoading, filters: s.preventiveFilters, onFilter: this.changePreventiveFilter, kind: "genset" }), s.activePage === "preventive-site" && /* @__PURE__ */ React.createElement(PreventiveRoutinePage, { key: s.navigationRevision, data: s.preventiveData, loading: s.preventiveLoading, filters: s.preventiveFilters, onFilter: this.changePreventiveFilter, kind: "site" })), s.showPrompt && /* @__PURE__ */ React.createElement(PromptModal, { draft: s.promptDraft, setDraft: (value) => this.setState({ promptDraft: value }), onClose: () => this.setState({ showPrompt: false }), onSave: this.savePrompt }));
+    } }), s.activePage === "punchlist" && /* @__PURE__ */ React.createElement(PunchlistWorkspace, { key: s.navigationRevision }), s.activePage === "preventive-genset" && /* @__PURE__ */ React.createElement(window.PMGensetWorkspace, { key: s.navigationRevision, RoutinePage: PreventiveRoutinePage, SummaryCard: PreventiveSummaryCard, data: s.preventiveData, loading: s.preventiveLoading, filters: s.preventiveFilters, onFilter: this.changePreventiveFilter, kind: "genset" }), s.activePage === "preventive-site" && /* @__PURE__ */ React.createElement(PreventiveRoutinePage, { key: s.navigationRevision, data: s.preventiveData, loading: s.preventiveLoading, filters: s.preventiveFilters, onFilter: this.changePreventiveFilter, kind: "site" })), s.showPrompt && /* @__PURE__ */ React.createElement(PromptModal, { draft: s.promptDraft, setDraft: (value) => this.setState({ promptDraft: value }), onClose: () => this.setState({ showPrompt: false }), onSave: this.savePrompt }));
   }
 }
 ReactDOM.render(/* @__PURE__ */ React.createElement(App, null), document.getElementById("root"));

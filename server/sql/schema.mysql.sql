@@ -49,6 +49,12 @@ CREATE TABLE IF NOT EXISTS pm_site_source_rows (
   PRIMARY KEY (source_kind,row_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS site_punchlist_notes (
+  site_id VARCHAR(128) NOT NULL PRIMARY KEY,
+  note TEXT NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Snapshot sumber dipertahankan per upload agar Peningkatan KPI dapat
 -- membaca sumber pada bulan yang dipilih, bukan hanya sumber aktif terbaru.
 CREATE TABLE IF NOT EXISTS pm_site_source_uploads (

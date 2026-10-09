@@ -93,10 +93,11 @@ export async function saveSiteSource(kind,filename,date,dataset){
   }catch(error){await connection.rollback().catch(()=>{});throw error}finally{connection.release()}
 }
 export async function siteData(){
-  if(!databaseEnabled){const data=await preview(),uploaded=await loadPreventiveRows();const kinds=new Set(uploaded.map(row=>row.maintenance_kind));return{...data,pm:[...(data.pm||[]).filter(row=>!kinds.has(row.maintenance_kind)),...uploaded],evaluations:[],read_only:true}}
+  if(!databaseEnabled){const data=await preview(),uploaded=await loadPreventiveRows();const kinds=new Set(uploaded.map(row=>row.maintenance_kind));return{...data,pm:[...(data.pm||[]).filter(row=>!kinds.has(row.maintenance_kind)),...uploaded],evaluations:[],punchlist_notes:[],read_only:true}}
   const [sources]=await getPool().query('SELECT source_kind,filename,upload_date,dataset FROM pm_site_sources')
   const [evaluations]=await getPool().query('SELECT * FROM pm_site_evaluations')
-  const data={pm:await loadPreventiveRows(),evaluations,sources:sources.map(({dataset,...meta})=>meta),quality:[],read_only:false}
+  const [punchlistNotes]=await getPool().query('SELECT site_id,note,updated_at FROM site_punchlist_notes')
+  const data={pm:await loadPreventiveRows(),evaluations,punchlist_notes:punchlistNotes,sources:sources.map(({dataset,...meta})=>meta),quality:[],read_only:false}
   for(const source of sources){const dataset=typeof source.dataset==='string'?JSON.parse(source.dataset):source.dataset;data[source.source_kind]=dataset.rows||[];data.quality.push(...(dataset.issues||[]).map(issue=>({...issue,source:source.source_kind})))}
   const [records]=await getPool().query('SELECT source_kind,payload FROM pm_site_source_rows ORDER BY source_kind,row_no')
   for(const record of records){const payload=typeof record.payload==='string'?JSON.parse(record.payload):record.payload;data[record.source_kind].push(payload)}
@@ -105,7 +106,8 @@ export async function siteData(){
 
 const uploadMonth=value=>String(value||'').slice(0,7)
 const sourceRowsForUploads=async uploads=>{
-  const data={pm:await loadPreventiveRows(),evaluations:[],sources:uploads.map(({dataset,...meta})=>meta),quality:[],read_only:false}
+  const [punchlistNotes]=await getPool().query('SELECT site_id,note,updated_at FROM site_punchlist_notes')
+  const data={pm:await loadPreventiveRows(),evaluations:[],punchlist_notes:punchlistNotes,sources:uploads.map(({dataset,...meta})=>meta),quality:[],read_only:false}
   if(!uploads.length)return data
   const ids=uploads.map(upload=>upload.source_upload_id)
   const [records]=await getPool().query('SELECT source_upload_id,payload FROM pm_site_source_upload_rows WHERE source_upload_id IN (?) ORDER BY source_upload_id,row_no',[ids])
@@ -144,7 +146,8 @@ function siteIndex(data){
   const master=new Map((data.master||[]).map(row=>[normalizeSite(row.site_id),row])),incidents=new Map(),evaluations=new Map()
   for(const row of [...(data.swfm||[]),...(data.inap||[]),...(data.ggr||[])]){const site=normalizeSite(row.site_id);if(!incidents.has(site))incidents.set(site,[]);incidents.get(site).push(row)}
   for(const row of data.evaluations||[])evaluations.set(`${normalizeSite(row.site_id)}|${row.pm_ticket_no}`,row)
-  const index={master,incidents,evaluations};indices.set(data,index);return index
+  const punchlists=new Map((data.punchlist_notes||[]).map(row=>[normalizeSite(row.site_id),row]))
+  const index={master,incidents,evaluations,punchlists};indices.set(data,index);return index
 }
 export function scheduleLabel(pm,today=new Date().toISOString().slice(0,10)){
   const status=key(pm.status)
@@ -187,7 +190,7 @@ export function analyzeSite(pm,data,today=new Date().toISOString().slice(0,10)){
   const missingSources=['master','swfm','inap','ggr'].filter(source=>!Object.hasOwn(data,source))
   if(missingSources.length)issues.push(`Sumber belum diimpor: ${missingSources.join(', ')}.`)
   if(incidents.some(row=>row.time_confirmation))issues.push('Urutan waktu hari 0 perlu konfirmasi karena maintenance hanya memiliki tanggal.')
-  const evaluation=index.evaluations.get(`${site}|${pm.ticket_no}`)||null
+  const evaluation=index.evaluations.get(`${site}|${pm.ticket_no}`)||null,punchlist=index.punchlists.get(site)||null
   const distributions={};for(const row of incidents){const item=distributions[row.category]||{category:row.category,count:0,validated:0,provisional:0};item.count++;item[row.validated?'validated':'provisional']++;distributions[row.category]=item}
   const critical=swfm.some(row=>/CRITICAL|MAJOR/.test(normalizeSite(row.severity)))
   const repeated=swfm.length>=2
@@ -196,7 +199,7 @@ export function analyzeSite(pm,data,today=new Date().toISOString().slice(0,10)){
   const status=evaluation&&evaluation.evaluation_status!=='Belum ditinjau'?'Sudah dievaluasi':issues.length?'Data perlu validasi':repeated?'Gangguan berulang':incidents.length?'Perlu ditinjau':'Tidak ada indikasi'
   const unknownDuration=swfm.filter(row=>row.duration_minutes==null).length
   const pln=incidents.some(row=>row.validated&&key(row.rc1)==='PLNOFF')
-  return{pm,master,incidents,distribution:Object.values(distributions),issues,missing_sources:missingSources,evaluation,evaluation_label:status,priority,priority_reasons:reasons,schedule_label:scheduleLabel(pm,today),summary:{incident_count:swfm.length,ggr_count:ggr.length,first_delay:incidents[0]?.delay_days??null,total_downtime_minutes:swfm.reduce((sum,row)=>sum+(row.duration_minutes??0),0),unknown_duration:unknownDuration,validated_pln_off:pln},timeline:[{label:'Maintenance sebelumnya',date:pm.last_maintenance},...incidents.map(row=>({label:row.type,date:row.occurred_at,ticket_no:row.ticket_no})),{label:'Hari ini',date:today},{label:'Jadwal PM berikutnya',date:pm.schedule_date}].filter(row=>row.date).sort((a,b)=>String(a.date).localeCompare(String(b.date))),read_only:!!data.read_only}
+  return{pm,master,incidents,distribution:Object.values(distributions),issues,missing_sources:missingSources,evaluation,punchlist_note:punchlist?.note||'',punchlist_updated_at:punchlist?.updated_at||null,evaluation_label:status,priority,priority_reasons:reasons,schedule_label:scheduleLabel(pm,today),summary:{incident_count:swfm.length,ggr_count:ggr.length,first_delay:incidents[0]?.delay_days??null,total_downtime_minutes:swfm.reduce((sum,row)=>sum+(row.duration_minutes??0),0),unknown_duration:unknownDuration,validated_pln_off:pln},timeline:[{label:'Maintenance sebelumnya',date:pm.last_maintenance},...incidents.map(row=>({label:row.type,date:row.occurred_at,ticket_no:row.ticket_no})),{label:'Hari ini',date:today},{label:'Jadwal PM berikutnya',date:pm.schedule_date}].filter(row=>row.date).sort((a,b)=>String(a.date).localeCompare(String(b.date))),read_only:!!data.read_only}
 }
 export function listSites(data,filters={}){
   const unique=new Map()
@@ -216,8 +219,38 @@ export function listSites(data,filters={}){
     if(filters.schedule_state==='upcoming'&&(isTerminal(pm)||pm.submitted_date||pm.schedule_date<new Date().toISOString().slice(0,10)))return false
     const query=String(filters.search||'').trim().toLowerCase()
     return !query||[pm.site_id,master?.site_name||pm.site_name,pm.ticket_no].join(' ').toLowerCase().includes(query)
-  }).map(detail=>({id:workOrderKey(detail.pm),...detail.pm,site_name:detail.master?.site_name||detail.pm.site_name,nop:detail.master?.nop||detail.pm.nop,regional:detail.master?.regional||detail.pm.regional,schedule_label:detail.schedule_label,evaluation_label:detail.evaluation_label,incident_count:detail.incidents.length,condition_label:detail.incidents.length?"Gangguan tercatat":!detail.pm.last_maintenance||detail.missing_sources.length?"Belum dapat dievaluasi":detail.issues.length?"Perlu ditinjau":"Tidak ada gangguan tercatat",condition_tone:detail.incidents.length?"red":!detail.pm.last_maintenance||detail.missing_sources.length?"gray":detail.issues.length?"orange":"green",priority:detail.priority}))
+  }).map(detail=>({id:workOrderKey(detail.pm),...detail.pm,site_name:detail.master?.site_name||detail.pm.site_name,nop:detail.master?.nop||detail.pm.nop,regional:detail.master?.regional||detail.pm.regional,schedule_label:detail.schedule_label,evaluation_label:detail.evaluation_label,punchlist_note:detail.punchlist_note,punchlist_updated_at:detail.punchlist_updated_at,incident_count:detail.incidents.length,condition_label:detail.incidents.length?"Gangguan tercatat":!detail.pm.last_maintenance||detail.missing_sources.length?"Belum dapat dievaluasi":detail.issues.length?"Perlu ditinjau":"Tidak ada gangguan tercatat",condition_tone:detail.incidents.length?"red":!detail.pm.last_maintenance||detail.missing_sources.length?"gray":detail.issues.length?"orange":"green",priority:detail.priority}))
   return{rows,options:{nop:option('nop'),regional:option('regional'),status:option('status'),pic:option('pic'),interval:option('interval'),evaluation:option('evaluation')},read_only:!!data.read_only,sources:data.sources||[]}
+}
+
+export async function listPunchlistSites(data,filters={}){
+  if(!databaseEnabled)throw Object.assign(new Error('Penyimpanan Punchlist membutuhkan MySQL. Konfigurasikan database pada server/.env.'),{status:503})
+  const sites=new Map(),masters=new Map((data.master||[]).map(row=>[normalizeSite(row.site_id),row]))
+  for(const row of data.pm||[]){
+    if(row.maintenance_kind!=='site')continue
+    const siteId=normalizeSite(row.site_id),master=masters.get(siteId)
+    if(siteId)sites.set(siteId,{site_id:siteId,site_name:master?.site_name||row.site_name||'',nop:master?.nop||row.nop||'',regional:master?.regional||row.regional||''})
+  }
+  const [notes]=await getPool().query('SELECT site_id,note,updated_at FROM site_punchlist_notes ORDER BY updated_at DESC')
+  const bySite=new Map(notes.map(note=>[normalizeSite(note.site_id),note]))
+  const query=String(filters.search||'').trim().toLowerCase()
+  const rows=[...sites.values()].filter(site=>{
+    if(filters.regional&&site.regional!==filters.regional)return false
+    if(filters.nop&&site.nop!==filters.nop)return false
+    return !query||[site.site_id,site.site_name,site.nop,site.regional].join(' ').toLowerCase().includes(query)
+  }).map(site=>({...site,note:bySite.get(site.site_id)?.note||'',updated_at:bySite.get(site.site_id)?.updated_at||null})).sort((a,b)=>a.nop.localeCompare(b.nop)||a.site_id.localeCompare(b.site_id))
+  return{rows,options:{regional:[...new Set(rows.map(row=>row.regional).filter(Boolean))].sort(),nop:[...new Set(rows.map(row=>row.nop).filter(Boolean))].sort()}}
+}
+
+export async function savePunchlistNote(siteId,input){
+  if(!databaseEnabled)throw Object.assign(new Error('Penyimpanan Punchlist membutuhkan MySQL. Konfigurasikan database pada server/.env.'),{status:503})
+  const normalized=normalizeSite(siteId),note=String(input?.note||'').trim()
+  if(!normalized)throw Object.assign(new Error('Site ID wajib diisi.'),{status:422})
+  if(note.length>5000)throw Object.assign(new Error('Catatan maksimal 5.000 karakter.'),{status:422})
+  if(!note){await getPool().query('DELETE FROM site_punchlist_notes WHERE site_id=?',[normalized]);return{site_id:normalized,note:'',updated_at:null}}
+  await getPool().query('INSERT INTO site_punchlist_notes(site_id,note) VALUES(?,?) ON DUPLICATE KEY UPDATE note=VALUES(note),updated_at=CURRENT_TIMESTAMP',[normalized,note])
+  const [[saved]]=await getPool().query('SELECT site_id,note,updated_at FROM site_punchlist_notes WHERE site_id=?',[normalized])
+  return saved
 }
 export const evaluationStatuses=['Belum ditinjau','Perlu konfirmasi NOP','Sedang ditindaklanjuti','Menunggu verifikasi','Selesai']
 export function validateEvaluation(input){
