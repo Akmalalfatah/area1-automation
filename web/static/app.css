@@ -1960,4 +1960,5 @@ button { cursor: pointer; }
   .kpi-table thead th:not([rowspan]), .kpi-table tbody td:nth-child(n+3) { min-width:82px!important; padding-left:6px!important; padding-right:6px!important; font-size:10px!important; }
   .kpi-capture::before { content:'Geser tabel ke samping untuk melihat NOP dan periode lainnya'; display:block; padding:7px 9px; background:#f3f6f9; color:#64758a; font-size:9px; font-weight:600; }
   .kpi-nop-title, .kpi-b-tab-heading strong, .kpi-affected-sites li { overflow-wrap:anywhere; }
+  .corporate-panel[aria-label="Rekap distribusi kategori KPI"] > .grid { grid-template-columns:1fr!important; }
 }
