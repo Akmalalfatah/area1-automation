@@ -143,10 +143,13 @@ const category=value=>{const text=normalizeSite(value);if(/POWER|ENERGY|PLN|GENS
 const indices=new WeakMap()
 function siteIndex(data){
   if(indices.has(data))return indices.get(data)
-  const master=new Map((data.master||[]).map(row=>[normalizeSite(row.site_id),row])),incidents=new Map(),evaluations=new Map()
+  const master=new Map((data.master||[]).map(row=>[normalizeSite(row.site_id),row])),incidents=new Map(),evaluations=new Map(),punchlists=new Map()
   for(const row of [...(data.swfm||[]),...(data.inap||[]),...(data.ggr||[])]){const site=normalizeSite(row.site_id);if(!incidents.has(site))incidents.set(site,[]);incidents.get(site).push(row)}
   for(const row of data.evaluations||[])evaluations.set(`${normalizeSite(row.site_id)}|${row.pm_ticket_no}`,row)
-  const punchlists=new Map((data.punchlist_notes||[]).map(row=>[normalizeSite(row.site_id),row]))
+  // Notes dari file PM Site adalah sumber utama Punchlist. Catatan lama pada tabel
+  // terpisah hanya dipakai sebagai fallback agar data sebelum revisi tidak hilang.
+  for(const row of data.pm||[])if(row.maintenance_kind==='site'&&String(row.notes||'').trim())punchlists.set(normalizeSite(row.site_id),{site_id:normalizeSite(row.site_id),note:String(row.notes).trim(),updated_at:row._updated_at||null})
+  for(const row of data.punchlist_notes||[])if(!punchlists.has(normalizeSite(row.site_id)))punchlists.set(normalizeSite(row.site_id),row)
   const index={master,incidents,evaluations,punchlists};indices.set(data,index);return index
 }
 export function scheduleLabel(pm,today=new Date().toISOString().slice(0,10)){
@@ -242,13 +245,26 @@ export async function listPunchlistSites(data,filters={}){
   return{rows,options:{month:months,regional:[...new Set(rows.map(row=>row.regional).filter(Boolean))].sort(),nop:[...new Set(rows.map(row=>row.nop).filter(Boolean))].sort()}}
 }
 
+async function syncPunchlistToPmSite(siteId,note){
+  const [records]=await getPool().query('SELECT id,filename,dataset FROM preventive_uploads')
+  for(const record of records){
+    const dataset=typeof record.dataset==='string'?JSON.parse(record.dataset):record.dataset
+    const kind=dataset?.maintenance_kind||(String(record.filename||'').toLowerCase().includes('genset')?'genset':String(record.filename||'').toLowerCase().includes('punchlist')?'punchlist':'site')
+    if(kind!=='site'||!Array.isArray(dataset?.rows))continue
+    let changed=false
+    for(const row of dataset.rows)if(normalizeSite(row.site_id)===siteId&&String(row.notes||'')!==note){row.notes=note;changed=true}
+    if(changed)await getPool().query('UPDATE preventive_uploads SET dataset=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',[JSON.stringify(dataset),record.id])
+  }
+}
+
 export async function savePunchlistNote(siteId,input){
   if(!databaseEnabled)throw Object.assign(new Error('Penyimpanan Punchlist membutuhkan MySQL. Konfigurasikan database pada server/.env.'),{status:503})
   const normalized=normalizeSite(siteId),note=String(input?.note||'').trim()
   if(!normalized)throw Object.assign(new Error('Site ID wajib diisi.'),{status:422})
   if(note.length>5000)throw Object.assign(new Error('Catatan maksimal 5.000 karakter.'),{status:422})
-  if(!note){await getPool().query('DELETE FROM site_punchlist_notes WHERE site_id=?',[normalized]);return{site_id:normalized,note:'',updated_at:null}}
+  if(!note){await syncPunchlistToPmSite(normalized,'');await getPool().query('DELETE FROM site_punchlist_notes WHERE site_id=?',[normalized]);return{site_id:normalized,note:'',updated_at:null}}
   await getPool().query('INSERT INTO site_punchlist_notes(site_id,note) VALUES(?,?) ON DUPLICATE KEY UPDATE note=VALUES(note),updated_at=CURRENT_TIMESTAMP',[normalized,note])
+  await syncPunchlistToPmSite(normalized,note)
   const [[saved]]=await getPool().query('SELECT site_id,note,updated_at FROM site_punchlist_notes WHERE site_id=?',[normalized])
   return saved
 }
