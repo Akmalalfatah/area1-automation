@@ -1027,11 +1027,13 @@ KpiWorkspace = class KpiWorkspace extends React.Component {
         const filename = String(upload.filename || item.history && item.history.file || item.filename || "");
         const source = filename.match(/(20\d{2})(0?[1-9]|1[0-2])(?:\D|$)/);
         const uploadDate = String(item.date_end || "");
+        const sourcePeriod = upload.reporting_period && upload.reporting_period.source_period || (source ? `${source[1]}-${String(source[2]).padStart(2, "0")}` : uploadDate.slice(0, 7));
         const previous = new Date(`${uploadDate}T00:00:00Z`);
         previous.setUTCMonth(previous.getUTCMonth() - 1);
         const isClosing = upload.reporting_type ? upload.reporting_type === "closing_previous_month" : Boolean(source && Number(source[1]) === previous.getUTCFullYear() && Number(source[2]) === previous.getUTCMonth() + 1);
         const belongsToSelectedPeriod = periodType === "closing_previous_month" ? isClosing : Boolean(source && !isClosing);
-        return uploadDate >= rangeStart && uploadDate <= rangeEnd && belongsToSelectedPeriod;
+        const dateMatches = periodType === "closing_previous_month" ? sourcePeriod >= rangeStart.slice(0, 7) && sourcePeriod <= rangeEnd.slice(0, 7) : uploadDate >= rangeStart && uploadDate <= rangeEnd;
+        return dateMatches && belongsToSelectedPeriod;
       });
       const byDate = new Map();
       selected.forEach((item) => { const previous = byDate.get(item.date_end); if (!previous || String(item.updated_at || "") >= String(previous.updated_at || "")) byDate.set(item.date_end, item); });
@@ -1089,12 +1091,22 @@ class KpiCategoryTrend extends React.Component {
       this.setState({ items: [], historyItems: [], loading: false });
     }
   }
+  sourcePeriod(item) {
+    const upload = item.history && item.history.upload || {}, saved = upload.reporting_period && upload.reporting_period.source_period;
+    if (saved) return saved;
+    const uploadDate = String(item.date_end || "");
+    if (upload.reporting_type === "closing_previous_month" && /^\d{4}-\d{2}/.test(uploadDate)) {
+      const date = new Date(`${uploadDate.slice(0, 7)}-01T00:00:00Z`); date.setUTCMonth(date.getUTCMonth() - 1);
+      return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+    }
+    return uploadDate.slice(0, 7);
+  }
   async loadRecap() {
     const { recapScope, recapMonth, historyItems } = this.state;
     if (recapScope === "filtered") { this.setState({ recapDashboard: null, recapLoading: false }); return; }
     this.setState({ recapLoading: true, recapDashboard: null });
     try {
-      const sourcePeriod = (item) => item.history && item.history.upload && item.history.upload.reporting_period && item.history.upload.reporting_period.source_period || String(item.date_end || "").slice(0, 7);
+      const sourcePeriod = (item) => this.sourcePeriod(item);
       const candidates = historyItems.filter((item) => recapScope === "all" || sourcePeriod(item) === recapMonth).sort((a, b) => String(a.updated_at || a.date_end).localeCompare(String(b.updated_at || b.date_end)));
       const dashboards = await Promise.all(candidates.map((item) => getDashboard(item.run_id)));
       const latestByNop = new Map(); dashboards.forEach((dashboard) => (dashboard.dataset.nops || []).forEach((item) => latestByNop.set(`${item.region}|${item.name}`, item)));
@@ -1121,7 +1133,7 @@ class KpiCategoryTrend extends React.Component {
     const filteredItems = (() => { const latestByNop = new Map(); (filterDashboard.dataset.nops || []).forEach((item) => latestByNop.set(`${item.region}|${item.name}`, item)); return [{ date: "Rekap akhir periode", dashboard: { dataset: { nops: [...latestByNop.values()] } } }]; })();
     const recapDashboard = this.state.recapScope === "filtered" ? filterDashboard : this.state.recapDashboard;
     const recapItems = recapDashboard ? [{ date: "Rekap akhir periode", dashboard: recapDashboard }] : null;
-    const recapMonths = [...new Set(this.state.historyItems.map((item) => item.history && item.history.upload && item.history.upload.reporting_period && item.history.upload.reporting_period.source_period || String(item.date_end || "").slice(0, 7)).filter(Boolean))].sort().reverse();
+    const recapMonths = [...new Set(this.state.historyItems.map((item) => this.sourcePeriod(item)).filter(Boolean))].sort().reverse();
     const periodLabel = (month) => new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${month}-01T00:00:00Z`));
     const regions = ["R01_Sumbagut", "R02_Sumbagsel", "R10_Sumbagteng"];
     const palette = { K: "#C00000", C: "#FFC000", B: "#1683BA", BS: "#13C66B" };
@@ -1138,6 +1150,18 @@ class KpiCategoryTrend extends React.Component {
       });
       return { date: entry.date, label: monthName(entry.date), counts, total: nops.length };
     }).filter((bar) => bar.total) })).filter((group) => group.bars.length);
+    const graphColors = { K: "#C00000", C: "#FFC000", B: "#1683BA", BS: "#13C66B" }, graphOrder = ["K", "C", "B", "BS"], graphMaximum = Math.max(1, ...groups.flatMap((group) => graphOrder.map((key) => Number(group.bars[0] && group.bars[0].counts[key] || 0))));
+    const recapControls = React.createElement("div", { className: "flex flex-wrap items-end gap-2" },
+      React.createElement("div", null,
+        React.createElement("label", { className: "filter-label mb-1 block" }, "REKAP DATA"),
+        React.createElement("select", { value: this.state.recapScope, onChange: (event) => this.setRecapScope(event.target.value), className: "control h-8 min-w-[150px] px-2 text-[9px] font-semibold" },
+          React.createElement("option", { value: "filtered" }, "Filter KPI Table"), React.createElement("option", { value: "month" }, "Rekap Bulan"), React.createElement("option", { value: "all" }, "All"))),
+      this.state.recapScope === "month" && React.createElement("div", null,
+        React.createElement("label", { className: "filter-label mb-1 block" }, "BULAN"),
+        React.createElement("select", { value: this.state.recapMonth, onChange: (event) => this.setRecapMonth(event.target.value), className: "control h-8 min-w-[135px] px-2 text-[9px] font-semibold" },
+          React.createElement("option", { value: "" }, "Pilih bulan"), recapMonths.map((month) => React.createElement("option", { key: month, value: month }, periodLabel(month))))),
+      recapItems && groups.length && React.createElement("button", { type: "button", onClick: () => this.exportImage(groups), className: "btn-secondary flex h-8 items-center gap-2 px-3 text-[9px] font-semibold", style: { background: "#18864B", borderColor: "#18864B", color: "#fff" } }, React.createElement(Download, { size: 12 }), "Export Image"));
+    return React.createElement("section", { className: "corporate-panel p-5", "aria-label": "Rekap distribusi kategori KPI" }, React.createElement("div", { className: "mb-5 flex flex-wrap items-end justify-between gap-3 border-b border-slate-200 pb-4" }, React.createElement("div", null, React.createElement("h3", { className: "section-title" }, "REKAP DISTRIBUSI KATEGORI KPI"), React.createElement("p", { className: "mt-1 text-[10px] text-slate-400" }, "Jumlah NOP pada kategori KPI terakhir sesuai pilihan rekap.")), recapControls), this.state.recapLoading ? React.createElement("p", { className: "p-8 text-center text-[10px] text-slate-400" }, "Menyiapkan rekap kategori KPI...") : groups.length ? React.createElement("div", { className: "grid gap-4", style: { gridTemplateColumns: `repeat(${groups.length},minmax(0,1fr))` } }, groups.map((group) => { const bar = group.bars[0]; return React.createElement("article", { key: group.name, className: "border border-slate-200 bg-slate-50 p-4" }, React.createElement("strong", { className: "block text-center text-[11px] text-[#40516A]" }, group.name), React.createElement("div", { className: "mt-4 flex h-[230px] items-end justify-center gap-3 border-b border-slate-300 px-2" }, graphOrder.map((key) => { const count = Number(bar.counts[key] || 0), height = count ? Math.max(12, count / graphMaximum * 100) : 0; return React.createElement("div", { key, className: "flex h-full min-w-0 flex-1 flex-col justify-end" }, React.createElement("div", { className: "flex items-center justify-center rounded-t text-[11px] font-bold text-white", style: { height: `${height}%`, minHeight: count ? "28px" : "0", background: graphColors[key] } }, count || ""), React.createElement("span", { className: "mt-2 text-center text-[10px] font-semibold text-slate-500" }, key)); })), React.createElement("p", { className: "mt-3 text-center text-[10px] font-semibold text-slate-500" }, `${bar.total} NOP`)); })) : React.createElement("p", { className: "border border-dashed border-slate-300 p-8 text-center text-[10px] text-slate-400" }, this.state.recapScope === "month" && !this.state.recapMonth ? "Pilih bulan untuk menampilkan rekap." : "Belum ada data kategori KPI untuk pilihan rekap ini."));
     if (true) {
       const selectScope = React.createElement("select", { value: this.state.recapScope, onChange: (event) => this.setRecapScope(event.target.value), className: "control h-8 min-w-[150px] px-2 text-[9px] font-semibold" }, React.createElement("option", { value: "filtered" }, "Filter KPI Table"), React.createElement("option", { value: "month" }, "Rekap Bulan"), React.createElement("option", { value: "all" }, "All"));
       const selectMonth = this.state.recapScope === "month" && React.createElement("select", { value: this.state.recapMonth, onChange: (event) => this.setRecapMonth(event.target.value), className: "control h-8 min-w-[135px] px-2 text-[9px] font-semibold" }, React.createElement("option", { value: "" }, "Pilih bulan"), recapMonths.map((month) => React.createElement("option", { key: month, value: month }, periodLabel(month))));
