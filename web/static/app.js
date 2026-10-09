@@ -277,7 +277,7 @@ function Sidebar({ activePage, preventiveOpen, onPage, onTogglePreventive }) {
       h("button", { onClick: () => onPage("ekpi"), className: `sidebar-nav-button sidebar-main-item flex h-[42px] items-center text-left text-xs font-semibold ${activePage === "ekpi" ? "is-active" : ""}` }, h("span", null, "eKPI Automation")),
       h("button", { onClick: () => onPage("data-upload"), className: `sidebar-nav-button sidebar-main-item flex h-[42px] items-center text-left text-xs font-semibold ${activePage === "data-upload" ? "is-active" : ""}` }, h("span", null, "Data Upload")),
       h("button", { onClick: onTogglePreventive, "aria-expanded": preventiveOpen, className: `sidebar-nav-button sidebar-main-item flex h-[42px] items-center gap-2 text-left text-xs font-semibold ${preventiveOpen ? "is-active" : ""}` }, h(ChevronRight, { size: 15, className: `sidebar-arrow ${preventiveOpen ? "is-open" : ""}` }), h("span", null, "Preventive Management")),
-      preventiveOpen && h("div", { className: "sidebar-subnav py-1" }, menu("preventive-dashboard", "Dashboard"), menu("punchlist", "Punchlist Site"), menu("preventive-genset", "PM Genset"), menu("preventive-site", "PM Site"))
+      preventiveOpen && h("div", { className: "sidebar-subnav py-1" }, menu("preventive-dashboard", "Dashboard"), menu("preventive-site", "PM Site"), menu("punchlist", "PM Punchlist"), menu("preventive-genset", "PM Genset"))
     ),
     h(
       "div",
@@ -1326,7 +1326,7 @@ async function copyText(text) {
 class PunchlistWorkspace extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { rows: [], options: { regional: [], nop: [] }, search: "", regional: "", nop: "", notes: {}, loading: true, saving: {}, error: "", message: "" };
+    this.state = { rows: [], options: { regional: [], nop: [] }, search: "", regional: "", nop: "", notes: {}, loading: true, saving: {}, error: "", message: "", dialogSite: null, dialogStep: "question", dialogNote: "" };
     this.load = async () => {
       const { search, regional, nop } = this.state, params = new URLSearchParams();
       if (search) params.set("search", search);
@@ -1345,33 +1345,44 @@ class PunchlistWorkspace extends React.Component {
     };
     this.setFilter = (key, value) => this.setState({ [key]: value }, this.load);
     this.setNote = (siteId, note) => this.setState((state) => ({ notes: { ...state.notes, [siteId]: note }, message: "" }));
-    this.save = async (siteId) => {
+    this.save = async (siteId, noteOverride) => {
       this.setState((state) => ({ saving: { ...state.saving, [siteId]: true }, error: "", message: "" }));
       try {
-        const saved = await api(`/api/punchlist/${encodeURIComponent(siteId)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note: this.state.notes[siteId] || "" }) });
-        this.setState((state) => ({ rows: state.rows.map((row) => row.site_id === siteId ? { ...row, note: saved.note, updated_at: saved.updated_at } : row), notes: { ...state.notes, [siteId]: saved.note || "" }, message: saved.note ? `Catatan ${siteId} berhasil disimpan.` : `Catatan ${siteId} dihapus.` }));
+        const note = noteOverride === void 0 ? this.state.notes[siteId] || "" : noteOverride;
+        const saved = await api(`/api/punchlist/${encodeURIComponent(siteId)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note }) });
+        this.setState((state) => ({ rows: state.rows.map((row) => row.site_id === siteId ? { ...row, note: saved.note, updated_at: saved.updated_at } : row), notes: { ...state.notes, [siteId]: saved.note || "" }, dialogSite: null, dialogStep: "question", dialogNote: "", message: saved.note ? `Catatan ${siteId} berhasil disimpan.` : `Catatan ${siteId} dihapus.` }));
       } catch (error) {
         this.setState({ error: error.message });
       } finally {
         this.setState((state) => ({ saving: { ...state.saving, [siteId]: false } }));
       }
     };
+    this.openAction = (row) => {
+      const hasFinding = window.confirm(`Apakah ada temuan untuk site ${row.site_id}?\n\nPilih OK jika ada temuan, atau Cancel jika tidak ada temuan.`);
+      if (!hasFinding) return this.save(row.site_id, "Tidak ada Temuan.");
+      const note = window.prompt(`Masukkan temuan untuk site ${row.site_id}:`, this.state.notes[row.site_id] || "");
+      if (note === null) return;
+      if (!note.trim()) return this.setState({ error: "Temuan tidak boleh kosong. Pilih Tidak Ada Temuan bila tidak ada catatan." });
+      this.save(row.site_id, note);
+    };
   }
   componentDidMount() { this.load(); }
   render() {
-    const h = React.createElement, s = this.state;
-    return h("div", { className: "space-y-4" },
-      h("section", { className: "corporate-panel p-5" },
-        h("div", { className: "flex flex-wrap items-end justify-between gap-3" }, h("div", null, h("p", { className: "pm-site-eyebrow" }, "PUNCHLIST SITE"), h("h2", { className: "section-title mt-1" }, "CATATAN PENEMUAN SITE"), h("p", { className: "mt-1 text-[10px] text-slate-400" }, "Catat temuan dan tindak lanjut sederhana untuk setiap site.")), h("span", { className: "text-[10px] text-slate-500" }, `${s.rows.length} site`)),
-        h("div", { className: "mt-5 grid gap-3 md:grid-cols-3" },
-          h("input", { value: s.search, onChange: (event) => this.setFilter("search", event.target.value), className: "control h-9 w-full px-3 text-[10px]", placeholder: "Cari Site ID atau nama site" }),
-          h("select", { value: s.regional, onChange: (event) => this.setFilter("regional", event.target.value), className: "control h-9 w-full px-3 text-[10px]" }, h("option", { value: "" }, "All Regional"), ...(s.options.regional || []).map((value) => h("option", { key: value, value }, value))),
-          h("select", { value: s.nop, onChange: (event) => this.setFilter("nop", event.target.value), className: "control h-9 w-full px-3 text-[10px]" }, h("option", { value: "" }, "All NOP"), ...(s.options.nop || []).map((value) => h("option", { key: value, value }, value))))),
-      s.error && h("p", { className: "border border-red-300 bg-red-50 px-4 py-3 text-[10px] text-red-800" }, s.error), s.message && h("p", { className: "border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10px] text-emerald-800" }, s.message),
-      s.loading ? h("p", { className: "corporate-panel p-8 text-center text-[10px] text-slate-400" }, "Memuat daftar site...") : h("section", { className: "grid gap-4 md:grid-cols-2 xl:grid-cols-3" }, ...s.rows.map((row) => h("article", { key: row.site_id, className: "corporate-panel flex min-h-[240px] flex-col p-4" },
-        h("div", { className: "border-b border-slate-200 pb-3" }, h("div", { className: "flex items-start justify-between gap-3" }, h("div", { className: "min-w-0" }, h("strong", { className: "block text-[12px] text-[#26384F]" }, row.site_id), h("p", { className: "mt-1 truncate text-[10px] text-slate-500", title: row.site_name }, row.site_name || "Nama site belum tersedia")), h("span", { className: "shrink-0 bg-slate-100 px-2 py-1 text-[9px] font-semibold text-[#40516A]" }, row.nop || "-")), h("p", { className: "mt-2 text-[9px] text-slate-400" }, row.regional || "Regional belum tersedia")),
-        h("label", { className: "mt-4 block flex-1" }, h("span", { className: "mb-2 block text-[9px] font-semibold tracking-[.05em] text-[#53657A]" }, "CATATAN PENEMUAN"), h("textarea", { value: s.notes[row.site_id] || "", maxLength: 5000, onChange: (event) => this.setNote(row.site_id, event.target.value), className: "control h-[92px] w-full resize-y p-3 text-[10px] leading-5", placeholder: "Tulis temuan, kendala, atau tindak lanjut site..." })),
-        h("div", { className: "mt-3 flex items-center justify-between gap-2" }, h("span", { className: "text-[9px] text-slate-400" }, row.updated_at ? `Disimpan: ${wibDateTime(row.updated_at)}` : "Belum ada catatan"), h("button", { type: "button", disabled: !!s.saving[row.site_id], onClick: () => this.save(row.site_id), className: "btn-primary h-8 px-3 text-[9px] font-semibold disabled:opacity-40" }, s.saving[row.site_id] ? "MENYIMPAN..." : "SIMPAN CATATAN")))), s.rows.length === 0 && h("p", { className: "corporate-panel col-span-full p-8 text-center text-[10px] text-slate-400" }, "Belum ada site dari Master Site atau PM Site. Upload Master Site terlebih dahulu.")));
+    const h = React.createElement, s = this.state, notedCount = s.rows.filter((row) => String(s.notes[row.site_id] || "").trim()).length;
+    const filters = h("div", { className: "preventive-filter-row" },
+      h("div", { className: "preventive-filter-search" }, h("label", { className: "filter-label mb-1 block" }, "SEARCH"), h("input", { value: s.search, onChange: (event) => this.setFilter("search", event.target.value), className: "control h-10 w-full px-3 text-[10px]", placeholder: "Cari Site ID, Site Name, NOP, atau catatan" })),
+      h("div", null, h("label", { className: "filter-label mb-1 block" }, "REGIONAL"), h("select", { value: s.regional, onChange: (event) => this.setFilter("regional", event.target.value), className: "control h-10 w-[180px] px-3 text-[10px] font-semibold" }, h("option", { value: "" }, "All Regional"), ...(s.options.regional || []).map((value) => h("option", { key: value, value }, value)))),
+      h("div", null, h("label", { className: "filter-label mb-1 block" }, "NOP"), h("select", { value: s.nop, onChange: (event) => this.setFilter("nop", event.target.value), className: "control h-10 w-[180px] px-3 text-[10px] font-semibold" }, h("option", { value: "" }, "All NOP"), ...(s.options.nop || []).map((value) => h("option", { key: value, value }, compactNop(value))))));
+    const cards = s.rows.map((row) => h("details", { key: row.site_id, className: "preventive-info-card pm-dashboard-work-card" },
+      h("summary", { className: "preventive-card-head" },
+        h("div", { className: "preventive-card-section" }, h("p", { className: "preventive-card-label" }, "SITE ID"), h("p", { className: "pm-site-work-value" }, row.site_id)),
+        h("div", { className: "preventive-card-section with-divider" }, h("p", { className: "preventive-card-label" }, "SITE NAME"), h("p", { className: "pm-site-work-value" }, row.site_name || "Belum tersedia")),
+        h("div", { className: "preventive-card-section with-divider" }, h("p", { className: "preventive-card-label" }, "NOP"), h("p", { className: "pm-site-work-value" }, compactNop(row.nop))),
+        h("div", { className: "preventive-card-section with-divider" }, h("p", { className: "preventive-card-label" }, "PUNCHLIST"), h("span", { className: `status-ready ${s.notes[row.site_id] ? "" : "opacity-50"}` }, s.notes[row.site_id] ? "Ada catatan" : "Belum ada")), h(ChevronRight, { size: 15, className: "preventive-card-chevron" })),
+      h("div", { className: "preventive-card-details" }, h("div", { className: "preventive-detail-grid" }, h("div", null, h("p", { className: "preventive-card-label" }, "REGIONAL"), h("p", { className: "mt-1 text-[10px] font-medium text-[#42536A]" }, row.regional || "-")), h("div", null, h("p", { className: "preventive-card-label" }, "TERAKHIR DISIMPAN"), h("p", { className: "mt-1 text-[10px] font-medium text-[#42536A]" }, row.updated_at ? wibDateTime(row.updated_at) : "Belum ada catatan"))),
+        h("div", { className: "preventive-notes mt-4" }, h("p", { className: "preventive-card-label" }, "CATATAN PUNCHLIST"), h("p", { className: "mt-1 text-[10px] leading-5 text-[#42536A]" }, s.notes[row.site_id] || "Belum ada catatan")),
+        h("div", { className: "mt-3 flex items-center justify-end" }, h("button", { type: "button", disabled: !!s.saving[row.site_id], onClick: () => this.openAction(row), className: "btn-primary h-8 px-3 text-[9px] font-semibold disabled:opacity-40" }, "ACTION TEMUAN")))));
+    return h("div", { className: "space-y-4" }, h("div", { className: "grid grid-cols-2 gap-4" }, h(PreventiveSummaryCard, { label: "SITE PM", value: s.rows.length, detail: "Site yang tersedia dari data PM Site", tone: "navy" }), h(PreventiveSummaryCard, { label: "SUDAH DICATAT", value: notedCount, detail: "Site dengan catatan Punchlist", tone: "orange" })), s.error && h("p", { className: "border border-red-300 bg-red-50 px-4 py-3 text-[10px] text-red-800" }, s.error), s.message && h("p", { className: "border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10px] text-emerald-800" }, s.message), h("section", { className: "corporate-panel p-5" }, filters, h("div", { className: "mt-4 flex items-center justify-between" }, h("div", null, h("h2", { className: "section-title" }, "PM PUNCHLIST - GENERAL INFORMATION"), h("p", { className: "mt-1 text-[10px] text-slate-400" }, s.loading ? "Memuat daftar site..." : `Menampilkan ${s.rows.length} site dari data PM Site`)), s.loading && h(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" })), h("div", { className: "kpi-scrollbar preventive-card-list" }, ...cards, !s.loading && !cards.length && h("p", { className: "p-8 text-center text-[10px] text-slate-400" }, "Belum ada data PM Site. Upload data PM Site terlebih dahulu."))));
   }
 }
 class App extends React.Component {
