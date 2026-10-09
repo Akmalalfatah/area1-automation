@@ -1694,7 +1694,7 @@ button { cursor: pointer; }
 .preventive-card-label { font-size: 8px; line-height: 1.2; font-weight: 600; letter-spacing: .08em; color: #8090a2; }
 .preventive-filter-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px; }
 .preventive-filter-search { min-width: 250px; flex: 1; margin-left: auto; }
-.punchlist-filter-grid { display:grid; grid-template-columns:minmax(280px,1fr) repeat(3,minmax(170px,220px)); align-items:end; gap:12px; border-bottom:1px solid #e2e8f0; padding-bottom:16px; }
+.corporate-panel .punchlist-filter-grid { display:grid!important; grid-template-columns:minmax(320px,1fr) repeat(3,minmax(175px,220px))!important; align-items:end!important; gap:12px!important; border-bottom:1px solid #e2e8f0; padding-bottom:16px; }
 .punchlist-filter-search, .punchlist-filter-field { min-width:0; }
 .punchlist-filter-grid .control { min-width:0; }
 .preventive-card-list { margin-top: 16px; max-height: 620px; overflow: auto; border: 1px solid #cbd5e1; background: #fff; padding: 0; }
@@ -1918,7 +1918,7 @@ button { cursor: pointer; }
   .kpi-mttr-grid, .kpi-mttr-summary, .kpi-simulation-grid, .kpi-b-simple-severity { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .preventive-detail-grid { grid-template-columns:1fr; }
   .preventive-filter-row { grid-template-columns:repeat(2,minmax(0,1fr)); }
-  .punchlist-filter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .corporate-panel .punchlist-filter-grid { grid-template-columns:repeat(2,minmax(0,1fr))!important; }
   .punchlist-filter-search { grid-column:1 / -1; }
   .kpi-capture, .kpi-boosting-table-wrap, .preventive-table { overflow-x:auto; }
   .kpi-capture { position:relative; padding-bottom:8px; }
@@ -1947,7 +1947,7 @@ button { cursor: pointer; }
   .source-upload-form, .kpi-ticket-upload>div { flex-direction:column; align-items:stretch; }
   .source-file-picker, .kpi-ticket-upload .btn-secondary { max-width:none!important; width:100%; }
   .upload-center-tabs { grid-template-columns:1fr; }
-  .kpi-improvement-filter-date-row, .kpi-improvement-filter-secondary-row, .kpi-improvement-filter-monthly-row, .preventive-filter-row, .punchlist-filter-grid { grid-template-columns:1fr; }
+  .kpi-improvement-filter-date-row, .kpi-improvement-filter-secondary-row, .kpi-improvement-filter-monthly-row, .preventive-filter-row, .corporate-panel .punchlist-filter-grid { grid-template-columns:1fr!important; }
   .kpi-improvement-export-actions { align-self:stretch; }
   .kpi-improvement-export-actions .kpi-export-all-button { min-width:0; }
   .kpi-nop-improve-head, .preventive-card-head { grid-template-columns:1fr 22px; }

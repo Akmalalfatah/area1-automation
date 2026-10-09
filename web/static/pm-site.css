@@ -218,5 +218,17 @@
 .pm-site-work-card .preventive-card-section { min-width:0; padding:14px 12px; }
 .pm-site-work-value { overflow-wrap:anywhere; }
 .preventive-date-filters { padding-bottom:16px; margin-bottom:16px; }
+.pm-punchlist-summary { margin-top:16px; border:1px solid #cbd5e1; border-left:4px solid #0b8a5b; background:#fff; padding:16px; }
+.pm-punchlist-summary-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
+.pm-punchlist-summary-heading h3 { margin:5px 0 0; color:#29496c; font-size:14px; font-weight:600; }
+.pm-punchlist-summary-heading strong { color:#0a8054; font-size:16px; }
+.pm-punchlist-progress { height:14px; margin:16px 0 12px; overflow:hidden; background:#e8eef4; }
+.pm-punchlist-progress span { display:block; height:100%; min-width:0; background:#0b8a5b; transition:width .2s ease; }
+.pm-punchlist-summary-legend { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px 16px; color:#5b6d82; font-size:10px; }
+.pm-punchlist-summary-legend i { display:inline-block; width:8px; height:8px; margin-right:5px; border-radius:50%; }
+.pm-punchlist-summary-legend .is-noted { background:#0b8a5b; }.pm-punchlist-summary-legend .is-pending { background:#b6c2cf; }.pm-punchlist-summary-legend b { color:#29496c; }
+.pm-punchlist-note { margin-bottom:16px; border:1px solid #d7e0ea; background:#f8fafc; padding:14px; }
+.pm-punchlist-note p { margin:8px 0 6px; white-space:pre-wrap; overflow-wrap:anywhere; color:#42536a; font-size:11px; line-height:1.7; }.pm-punchlist-note small { color:#8090a2; font-size:9px; }
+.pm-punchlist-action-box { border:1px solid #d7e0ea; border-left:3px solid #e27b2b; background:#fffaf2; padding:14px; }.pm-punchlist-action-box>strong { color:#29496c; font-size:12px; }.pm-punchlist-action-box>p { margin:6px 0 0; color:#607086; font-size:10px; line-height:1.6; }
 @media(max-width:1000px) { .pm-site-work-card .preventive-card-head { grid-template-columns:repeat(3,minmax(0,1fr)); position:relative; padding-right:18px; } .pm-site-work-card .preventive-card-chevron { position:absolute; right:6px; top:20px; } }
 @media(max-width:700px) { .pm-site-work-card .preventive-card-head { grid-template-columns:repeat(2,minmax(0,1fr)); } }
