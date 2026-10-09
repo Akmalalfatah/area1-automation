@@ -1060,7 +1060,7 @@ KpiWorkspace = class KpiWorkspace extends React.Component {
 class KpiCategoryTrend extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { items: [], loading: true, filteredDashboard: null };
+    this.state = { items: [], historyItems: [], loading: true, filteredDashboard: null, recapScope: "filtered", recapMonth: "", recapDashboard: null, recapLoading: false };
   }
   componentDidMount() {
     this.onFilteredKpiDashboard = (event) => this.setState({ filteredDashboard: (event.detail == null ? void 0 : event.detail.dashboard) || null });
@@ -1084,11 +1084,25 @@ class KpiCategoryTrend extends React.Component {
       }
       const selected = [...latestByMonth.values()].sort((a, b) => String(a.date_end).localeCompare(String(b.date_end))).slice(-12);
       const dashboards = await Promise.all(selected.map((item) => getDashboard(item.run_id)));
-      this.setState({ items: selected.map((item, index) => ({ date: item.date_end, dashboard: dashboards[index] })), loading: false });
+      this.setState({ items: selected.map((item, index) => ({ date: item.date_end, dashboard: dashboards[index] })), historyItems: history.items || [], loading: false });
     } catch (error) {
-      this.setState({ items: [], loading: false });
+      this.setState({ items: [], historyItems: [], loading: false });
     }
   }
+  async loadRecap() {
+    const { recapScope, recapMonth, historyItems } = this.state;
+    if (recapScope === "filtered") { this.setState({ recapDashboard: null, recapLoading: false }); return; }
+    this.setState({ recapLoading: true, recapDashboard: null });
+    try {
+      const sourcePeriod = (item) => item.history && item.history.upload && item.history.upload.reporting_period && item.history.upload.reporting_period.source_period || String(item.date_end || "").slice(0, 7);
+      const candidates = historyItems.filter((item) => recapScope === "all" || sourcePeriod(item) === recapMonth).sort((a, b) => String(a.updated_at || a.date_end).localeCompare(String(b.updated_at || b.date_end)));
+      const dashboards = await Promise.all(candidates.map((item) => getDashboard(item.run_id)));
+      const latestByNop = new Map(); dashboards.forEach((dashboard) => (dashboard.dataset.nops || []).forEach((item) => latestByNop.set(`${item.region}|${item.name}`, item)));
+      this.setState({ recapDashboard: { dataset: { nops: [...latestByNop.values()] } }, recapLoading: false });
+    } catch (error) { this.setState({ recapDashboard: null, recapLoading: false }); }
+  }
+  setRecapScope(scope) { this.setState({ recapScope: scope }, () => this.loadRecap()); }
+  setRecapMonth(month) { this.setState({ recapMonth: month }, () => this.loadRecap()); }
   exportImage(groups) {
     const canvas = document.createElement("canvas"), width = 1600, height = 900, context = canvas.getContext("2d"), palette = { K: "#C00000", C: "#FFC000", B: "#1683BA", BS: "#13C66B" }, labels = { K: "Kurang", C: "Cukup", B: "Baik", BS: "Baik Sekali" };
     canvas.width = width; canvas.height = height; context.fillStyle = "#FFFFFF"; context.fillRect(0, 0, width, height);
@@ -1103,11 +1117,16 @@ class KpiCategoryTrend extends React.Component {
   }
   render() {
     const { region, nop } = this.props, monthName = (value) => { const text = String(value || ""); if (!/^\d{4}-\d{2}/.test(text)) return text || "-"; return new Intl.DateTimeFormat("id-ID", { month: "short" }).format(/* @__PURE__ */ new Date(`${text.slice(0, 7)}-01T00:00:00`)).replace(".", ""); };
-    const filteredItems = this.state.filteredDashboard ? (() => { const latestByNop = new Map(); (this.state.filteredDashboard.dataset.nops || []).forEach((item) => latestByNop.set(`${item.region}|${item.name}`, item)); return [{ date: "Rekap akhir periode", dashboard: { dataset: { nops: [...latestByNop.values()] } } }]; })() : null;
+    const filterDashboard = this.state.filteredDashboard || { dataset: { nops: this.state.items.flatMap((entry) => entry.dashboard && entry.dashboard.dataset && entry.dashboard.dataset.nops || []) } };
+    const filteredItems = (() => { const latestByNop = new Map(); (filterDashboard.dataset.nops || []).forEach((item) => latestByNop.set(`${item.region}|${item.name}`, item)); return [{ date: "Rekap akhir periode", dashboard: { dataset: { nops: [...latestByNop.values()] } } }]; })();
+    const recapDashboard = this.state.recapScope === "filtered" ? filterDashboard : this.state.recapDashboard;
+    const recapItems = recapDashboard ? [{ date: "Rekap akhir periode", dashboard: recapDashboard }] : null;
+    const recapMonths = [...new Set(this.state.historyItems.map((item) => item.history && item.history.upload && item.history.upload.reporting_period && item.history.upload.reporting_period.source_period || String(item.date_end || "").slice(0, 7)).filter(Boolean))].sort().reverse();
+    const periodLabel = (month) => new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${month}-01T00:00:00Z`));
     const regions = ["R01_Sumbagut", "R02_Sumbagsel", "R10_Sumbagteng"];
     const palette = { K: "#C00000", C: "#FFC000", B: "#1683BA", BS: "#13C66B" };
     const labels = { K: "Kurang", C: "Cukup", B: "Baik", BS: "Baik Sekali" };
-    const chartItems = filteredItems || this.state.items;
+    const chartItems = recapItems || this.state.items;
     const groups = regions.filter((name) => !region || region === name).map((name) => ({ name, bars: chartItems.map((entry) => {
       var _a, _b;
       const nops = (((_b = (_a = entry.dashboard) == null ? void 0 : _a.dataset) == null ? void 0 : _b.nops) || []).filter((item) => item.region === name && (!nop || item.name === nop));
@@ -1119,6 +1138,12 @@ class KpiCategoryTrend extends React.Component {
       });
       return { date: entry.date, label: monthName(entry.date), counts, total: nops.length };
     }).filter((bar) => bar.total) })).filter((group) => group.bars.length);
+    if (true) {
+      const selectScope = React.createElement("select", { value: this.state.recapScope, onChange: (event) => this.setRecapScope(event.target.value), className: "control h-8 min-w-[150px] px-2 text-[9px] font-semibold" }, React.createElement("option", { value: "filtered" }, "Filter KPI Table"), React.createElement("option", { value: "month" }, "Rekap Bulan"), React.createElement("option", { value: "all" }, "All"));
+      const selectMonth = this.state.recapScope === "month" && React.createElement("select", { value: this.state.recapMonth, onChange: (event) => this.setRecapMonth(event.target.value), className: "control h-8 min-w-[135px] px-2 text-[9px] font-semibold" }, React.createElement("option", { value: "" }, "Pilih bulan"), recapMonths.map((month) => React.createElement("option", { key: month, value: month }, periodLabel(month))));
+      const recapContent = this.state.recapLoading ? React.createElement("p", { className: "p-8 text-center text-[10px] text-slate-400" }, "Menyiapkan rekap kategori KPI...") : groups.length ? React.createElement("div", { className: "grid gap-4", style: { gridTemplateColumns: `repeat(${groups.length},minmax(0,1fr))` } }, groups.map((group) => { const bar = group.bars[0], counts = bar.counts; return React.createElement("article", { key: group.name, className: "border border-slate-200 bg-slate-50 p-4" }, React.createElement("strong", { className: "block text-center text-[11px] text-[#40516A]" }, group.name), React.createElement("div", { className: "mt-3 grid grid-cols-4 gap-1 text-center text-[10px]" }, ["K", "C", "B", "BS"].map((key) => React.createElement("span", { key, className: "rounded px-1 py-2 font-semibold text-white", style: { background: palette[key] } }, `${key}: ${counts[key]}`))), React.createElement("p", { className: "mt-3 text-center text-[10px] font-semibold text-slate-500" }, `${bar.total} NOP`)); })) : React.createElement("p", { className: "border border-dashed border-slate-300 p-8 text-center text-[10px] text-slate-400" }, this.state.recapScope === "month" && !this.state.recapMonth ? "Pilih bulan untuk menampilkan rekap." : "Belum ada data kategori KPI untuk pilihan rekap ini.");
+      return React.createElement("section", { className: "corporate-panel p-5", "aria-label": "Rekap distribusi kategori KPI" }, React.createElement("div", { className: "mb-4 flex flex-wrap items-end justify-between gap-3 border-b border-slate-200 pb-4" }, React.createElement("div", null, React.createElement("h3", { className: "section-title" }, "REKAP DISTRIBUSI KATEGORI KPI"), React.createElement("p", { className: "mt-1 text-[10px] text-slate-400" }, "Satu NOP dihitung sekali menggunakan data terakhir sesuai pilihan rekap.")), React.createElement("div", { className: "flex flex-wrap items-end gap-2" }, selectScope, selectMonth, recapItems && groups.length && React.createElement("button", { type: "button", onClick: () => this.exportImage(groups), className: "btn-secondary flex h-8 items-center gap-2 px-3 text-[9px] font-semibold", style: { background: "#18864B", borderColor: "#18864B", color: "#fff" } }, React.createElement(Download, { size: 12 }), "Export Image"))), recapContent);
+    }
     if (filteredItems) return /* @__PURE__ */ React.createElement("section", { className: "corporate-panel p-5", "aria-label": "Rekap distribusi kategori KPI" }, /* @__PURE__ */ React.createElement("div", { className: "mb-5 flex items-start justify-between gap-3" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("h3", { className: "section-title" }, "REKAP DISTRIBUSI KATEGORI KPI"), /* @__PURE__ */ React.createElement("p", { className: "mt-1 text-[10px] text-slate-400" }, "Satu NOP dihitung sekali berdasarkan upload terakhir pada filter aktif.")), groups.length && /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => this.exportImage(groups), className: "btn-secondary flex h-8 shrink-0 items-center gap-2 px-3 text-[9px] font-semibold", style: { background: "#18864B", borderColor: "#18864B", color: "#fff" } }, /* @__PURE__ */ React.createElement(Download, { size: 12 }), "Export Image")), groups.length ? /* @__PURE__ */ React.createElement("div", { className: "grid gap-4", style: { gridTemplateColumns: `repeat(${groups.length},minmax(0,1fr))` } }, groups.map((group) => { const bar = group.bars[0], order = ["K", "C", "B", "BS"], colors = { K: "#C00000", C: "#FFC000", B: "#1683BA", BS: "#13C66B" }; return /* @__PURE__ */ React.createElement("article", { key: group.name, className: "border border-slate-200 bg-slate-50 p-4" }, /* @__PURE__ */ React.createElement("strong", { className: "block text-center text-[11px] text-[#40516A]" }, group.name), /* @__PURE__ */ React.createElement("div", { className: "mt-4 flex h-[220px] flex-col-reverse overflow-hidden bg-slate-100" }, order.map((key) => bar.counts[key] ? /* @__PURE__ */ React.createElement("div", { key, className: "flex items-center justify-center text-[11px] font-semibold text-white", style: { height: `${bar.counts[key] / bar.total * 100}%`, flex: `0 0 ${bar.counts[key] / bar.total * 100}%`, background: colors[key] } }, bar.counts[key]) : null)), /* @__PURE__ */ React.createElement("p", { className: "mt-3 text-center text-[10px] font-semibold text-slate-500" }, `${bar.total} NOP`)); })) : /* @__PURE__ */ React.createElement("p", { className: "border border-dashed border-slate-300 p-8 text-center text-[10px] text-slate-400" }, "Belum ada data kategori KPI pada filter aktif."), /* @__PURE__ */ React.createElement("div", { className: "mt-4 flex flex-wrap justify-center gap-5 text-[10px] text-[#596579]" }, [["K", "Kurang", "#C00000"], ["C", "Cukup", "#FFC000"], ["B", "Baik", "#1683BA"], ["BS", "Baik Sekali", "#13C66B"]].map(([key, label, color]) => /* @__PURE__ */ React.createElement("span", { key, className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("i", { className: "h-3 w-3", style: { background: color } }), label))));
     return /* @__PURE__ */ React.createElement("section", { className: "corporate-panel p-5", "aria-label": "Distribusi kategori KPI per regional" }, /* @__PURE__ */ React.createElement("div", { className: "mb-5 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("h3", { className: "section-title" }, "DISTRIBUSI KATEGORI KPI"), /* @__PURE__ */ React.createElement("p", { className: "mt-1 text-[10px] text-slate-400" }, "Komposisi NOP per bulan berdasarkan upload terakhir")), this.state.loading && /* @__PURE__ */ React.createElement(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" })), groups.length ? /* @__PURE__ */ React.createElement("div", { className: "grid min-h-[285px] items-end border-b border-l border-[#CBD5E1] px-4 pt-5", style: { gridTemplateColumns: `repeat(${groups.length},minmax(0,1fr))` } }, groups.map((group, groupIndex) => {
       const single = group.bars.length === 1, barStyle = single ? { display: "flex", flexDirection: "column-reverse", width: "82%", flex: "0 0 82%", height: 210 } : { display: "flex", flexDirection: "column-reverse", minWidth: 24, maxWidth: 48, flex: "1 1 0", height: 210 }, labelStyle = single ? { width: "82%", flex: "0 0 82%" } : { minWidth: 24, maxWidth: 48, flex: "1 1 0" };
