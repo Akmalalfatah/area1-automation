@@ -1003,10 +1003,10 @@ KpiWorkspace = class KpiWorkspace extends React.Component {
   constructor(props) { super(props); this.state = { showImprovement: new URLSearchParams(window.location.search).get("view") === "improvement", periodType: "current", filteredDashboard: null, filterLoading: false, filterError: "" }; }
   componentDidMount() { this.resetFromSidebar = () => this.setState({ showImprovement: false }); window.addEventListener("app:navigate", this.resetFromSidebar); this.loadPeriod(); }
   componentDidUpdate(previousProps, previousState) { if (previousProps.rangeStart !== this.props.rangeStart || previousProps.rangeEnd !== this.props.rangeEnd || previousProps.region !== this.props.region || previousProps.nop !== this.props.nop || previousState.periodType !== this.state.periodType) this.loadPeriod(); }
-  componentWillUnmount() { window.removeEventListener("app:navigate", this.resetFromSidebar); }
+  componentWillUnmount() { window.removeEventListener("app:navigate", this.resetFromSidebar); window.dispatchEvent(new CustomEvent("kpi:filtered-dashboard", { detail: { dashboard: null } })); }
   async loadPeriod() {
     const { rangeStart, rangeEnd, region, nop } = this.props, periodType = this.state.periodType;
-    if (!rangeStart || !rangeEnd || rangeStart > rangeEnd) { this.setState({ filteredDashboard: null, filterLoading: false, filterError: "" }); return; }
+    if (!rangeStart || !rangeEnd || rangeStart > rangeEnd) { this.setState({ filteredDashboard: null, filterLoading: false, filterError: "" }, () => window.dispatchEvent(new CustomEvent("kpi:filtered-dashboard", { detail: { dashboard: null } }))); return; }
     this.setState({ filterLoading: true, filteredDashboard: null, filterError: "" });
     try {
       const history = await getHistory();
@@ -1017,14 +1017,14 @@ KpiWorkspace = class KpiWorkspace extends React.Component {
         const uploadDate = String(item.date_end || "");
         const previous = new Date(`${uploadDate}T00:00:00Z`);
         previous.setUTCMonth(previous.getUTCMonth() - 1);
-        const isClosing = Boolean(source && Number(source[1]) === previous.getUTCFullYear() && Number(source[2]) === previous.getUTCMonth() + 1);
+        const isClosing = upload.reporting_type ? upload.reporting_type === "closing_previous_month" : Boolean(source && Number(source[1]) === previous.getUTCFullYear() && Number(source[2]) === previous.getUTCMonth() + 1);
         const belongsToSelectedPeriod = periodType === "closing_previous_month" ? isClosing : Boolean(source && !isClosing);
         return uploadDate >= rangeStart && uploadDate <= rangeEnd && belongsToSelectedPeriod;
       });
       const byDate = new Map();
       selected.forEach((item) => { const previous = byDate.get(item.date_end); if (!previous || String(item.updated_at || "") >= String(previous.updated_at || "")) byDate.set(item.date_end, item); });
       const matches = [...byDate.values()].sort((a, b) => String(a.date_end).localeCompare(String(b.date_end)));
-      if (!matches.length) { this.setState({ filterError: "Tidak ada file Closing bulan sebelumnya pada rentang tanggal ini." }); return; }
+      if (!matches.length) { this.setState({ filteredDashboard: null, filterError: `Tidak ada data ${periodType === "closing_previous_month" ? "Closing bulan sebelumnya" : "Bulan berjalan"} pada rentang tanggal ini.` }, () => window.dispatchEvent(new CustomEvent("kpi:filtered-dashboard", { detail: { dashboard: null } }))); return; }
       const labels = matches.map((item) => {
         if (periodType === "current") return excelDateLabel(item.date_end);
         const closingDate = new Date(`${item.date_end}T00:00:00Z`);
@@ -1033,8 +1033,9 @@ KpiWorkspace = class KpiWorkspace extends React.Component {
         return `${month}+${Number(String(item.date_end).slice(8, 10))}`;
       });
       const dashboards = await Promise.all(matches.map((item) => getDashboard(item.run_id, region, nop)));
-      this.setState({ filteredDashboard: mergeRangeDashboards(dashboards, matches.map((item) => item.date_end), labels) });
-    } catch (error) { this.setState({ filteredDashboard: null, filterError: `Filter KPI gagal: ${error.message}` }); } finally { this.setState({ filterLoading: false }); }
+      const filteredDashboard = mergeRangeDashboards(dashboards, matches.map((item) => item.date_end), labels);
+      this.setState({ filteredDashboard }, () => window.dispatchEvent(new CustomEvent("kpi:filtered-dashboard", { detail: { dashboard: filteredDashboard } })));
+    } catch (error) { this.setState({ filteredDashboard: null, filterError: `Filter KPI gagal: ${error.message}` }, () => window.dispatchEvent(new CustomEvent("kpi:filtered-dashboard", { detail: { dashboard: null } }))); } finally { this.setState({ filterLoading: false }); }
   }
   render() {
     const { config, region, nop, rowGroup, onRegion, onNop, onRowGroup, rangeStart, rangeEnd, rangeLoading, onRangeDate, onClearRange, tableRef, runId, onTicketUploaded } = this.props;
@@ -1047,13 +1048,18 @@ KpiWorkspace = class KpiWorkspace extends React.Component {
 class KpiCategoryTrend extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { items: [], loading: true };
+    this.state = { items: [], loading: true, filteredDashboard: null };
   }
   componentDidMount() {
+    this.onFilteredKpiDashboard = (event) => this.setState({ filteredDashboard: (event.detail == null ? void 0 : event.detail.dashboard) || null });
+    window.addEventListener("kpi:filtered-dashboard", this.onFilteredKpiDashboard);
     this.load();
   }
   componentDidUpdate(previous) {
     if (previous.runId !== this.props.runId) this.load();
+  }
+  componentWillUnmount() {
+    window.removeEventListener("kpi:filtered-dashboard", this.onFilteredKpiDashboard);
   }
   async load() {
     this.setState({ loading: true });
@@ -1073,10 +1079,12 @@ class KpiCategoryTrend extends React.Component {
   }
   render() {
     const { region, nop } = this.props, monthName = (value) => new Intl.DateTimeFormat("id-ID", { month: "short" }).format(/* @__PURE__ */ new Date(`${value.slice(0, 7)}-01T00:00:00`)).replace(".", "");
+    const filteredItems = this.state.filteredDashboard ? Object.entries((this.state.filteredDashboard.dataset.nops || []).reduce((groups, item) => { const key = item.date || this.state.filteredDashboard.dataset.date; (groups[key] || (groups[key] = [])).push(item); return groups; }, {})).sort(([a], [b]) => String(a).localeCompare(String(b))).map(([date, nops]) => ({ date, dashboard: { dataset: { nops } } })) : null;
     const regions = ["R01_Sumbagut", "R02_Sumbagsel", "R10_Sumbagteng"];
     const palette = { K: "#C00000", C: "#FFC000", B: "#1683BA", BS: "#13C66B" };
     const labels = { K: "Kurang", C: "Cukup", B: "Baik", BS: "Baik Sekali" };
-    const groups = regions.filter((name) => !region || region === name).map((name) => ({ name, bars: this.state.items.map((entry) => {
+    const chartItems = filteredItems || this.state.items;
+    const groups = regions.filter((name) => !region || region === name).map((name) => ({ name, bars: chartItems.map((entry) => {
       var _a, _b;
       const nops = (((_b = (_a = entry.dashboard) == null ? void 0 : _a.dataset) == null ? void 0 : _b.nops) || []).filter((item) => item.region === name && (!nop || item.name === nop));
       const counts = { K: 0, C: 0, B: 0, BS: 0 };
@@ -1441,8 +1449,11 @@ class App extends React.Component {
   }
   componentWillUnmount() {
     if (this.preventiveSearchTimer) window.clearTimeout(this.preventiveSearchTimer);
+    window.removeEventListener("kpi:filtered-dashboard", this.onFilteredKpiDashboard);
   }
   async componentDidMount() {
+    this.onFilteredKpiDashboard = (event) => this.setState({ rangeDashboard: (event.detail == null ? void 0 : event.detail.dashboard) || null });
+    window.addEventListener("kpi:filtered-dashboard", this.onFilteredKpiDashboard);
     try {
       const config = await getConfig();
       window.__defaultReportPrompt = config.default_prompt;
@@ -1491,8 +1502,9 @@ class App extends React.Component {
     const s = this.state;
     this.changePreventiveFilter.uploadProps = { file: s.preventiveFile, date: s.preventiveDate, busy: s.preventiveBusy, onFile: (file) => this.setState({ preventiveFile: file }), onDate: (value) => this.setState({ preventiveDate: value }), onUpload: this.handlePreventiveUpload };
     if (!s.config || !s.run) return /* @__PURE__ */ React.createElement("div", { className: "flex min-h-screen items-center justify-center bg-[#E9EFF5]" }, /* @__PURE__ */ React.createElement(RefreshCw, { className: "animate-spin text-[#173E68]" }));
-    const ready = s.run.processed && s.dashboard;
-    const analysis = ready ? s.dashboard.analysis : null;
+    const activeKpiDashboard = s.rangeDashboard || s.dashboard;
+    const ready = s.run.processed && activeKpiDashboard;
+    const analysis = ready ? activeKpiDashboard.analysis : null;
     const best = (_a = analysis == null ? void 0 : analysis.top_nops) == null ? void 0 : _a[0];
     const declining = (_b = analysis == null ? void 0 : analysis.attention_nops) == null ? void 0 : _b[0];
     const bestNopName = best ? compactNop(best.nop) : "-";
