@@ -46,7 +46,7 @@
     })}</ol></section></div>;
   }
   function SiteInformation({ detail }) {
-    const { pm, master, issues } = detail, m = master || {};
+    const { pm, master, issues = [] } = detail || {}, m = master || {};
     const type = String(m.type_site || '').replace(/^\d+\.\s*/,'').replace(/TELKOMSEL\s*/i,'').replace(/\/Simpul Besar/i,'').trim();
     const rows = pairs => <dl className="pm-site-information">{pairs.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>;
     return <div className="space-y-4">{issues.length > 0 && <div className="pm-site-validation">{issues.map(issue => <p key={issue}>{issue}</p>)}</div>}<div className="pm-site-two-columns">{panel('Ticket PM', rows([
@@ -140,4 +140,77 @@
 return <div className="pm-site-module space-y-4"><UploadPanel {...upload} latest={pmData?.latest_upload} label="PM SITE" /><div className="pm-site-cards"><SummaryCard label="PLAN SITE" value={plan} detail={`${shortDate(local.date_from)} sampai ${shortDate(local.date_to)}`} tone="navy" /><SummaryCard label="SUBMITTED" value={submitted} detail="Site unik dengan Submitted Date terisi" tone="green" /><SummaryCard label="ACHIEVEMENT" value={`${plan ? Math.round(submitted / plan * 10000) / 100 : 0}%`} detail="Submitted dibanding Plan pada filter aktif" tone="orange" /><SummaryCard label="BELUM SUBMIT" value={Math.max(0,plan - submitted)} detail="Site plan yang belum memiliki Submitted Date" tone="red" /></div>{data?.read_only && <p className="pm-site-banner">Preview memakai snapshot aktual. Konfigurasikan MySQL untuk import dan penyimpanan permanen.</p>}<section className="corporate-panel p-5"><div className="preventive-filter-row">{['date_from', 'date_to'].map(name => <label key={name} className="pm-site-form-field"><span className="filter-label">{name === 'date_from' ? 'DATE FROM' : 'DATE TO'}</span><input className="control h-10 px-3 text-[10px] font-semibold" type="date" value={local[name]} onChange={event => change(name, event.target.value)} onInput={event => change(name, event.target.value)} /></label>)}{select('NOP', 'nop', data?.options.nop || [])}{select('STATUS PM', 'status', data?.options.status || [])}{select('EVALUASI', 'evaluation', data?.options.evaluation || [])}<label className="pm-site-form-field preventive-filter-search"><span className="filter-label">CARI SITE</span><input className="control h-10 px-3 text-[10px]" value={local.search} onChange={event => change('search', event.target.value)} onInput={event => change('search', event.target.value)} placeholder="Cari Site ID atau Site Name" /></label></div><div className="pm-filter-charts"><window.PMAttentionCharts rows={rows} kind="site" loading={loading || !data} /></div>{error && <p role="alert" className="pm-site-error">{error}</p>}<div className="pm-site-list-heading"><h2 className="section-title">PM SITE - GENERAL INFORMATION</h2><p role="status" className="mt-1 text-[10px] text-slate-400">{loading ? 'Memuat…' : `Schedule ${shortDate(local.date_from)} sampai ${shortDate(local.date_to)} · Menampilkan ${Math.min(50, Math.max(0, rows.length - (page - 1) * 50))} dari ${rows.length} site`}</p></div><div className="preventive-card-list pm-site-work-list">{rows.slice((page - 1) * 50, page * 50).map(row => <button key={row.id} className="preventive-info-card pm-site-work-card" onClick={() => open(row.id)}><div className="preventive-card-head"><div className="preventive-card-section"><p className="preventive-card-label">SITE ID</p><p className="pm-site-work-value">{row.site_id}</p></div><div className="preventive-card-section with-divider"><p className="preventive-card-label">SITE NAME</p><p className="pm-site-work-value">{row.site_name}</p></div><div className="preventive-card-section with-divider"><p className="preventive-card-label">NOP</p><p className="pm-site-work-value">{nopName(row.nop)}</p></div><div className="preventive-card-section with-divider"><p className="preventive-card-label">PIC</p><p className="pm-site-work-value">{display(row.pic)}</p></div><div className="preventive-card-section with-divider"><p className="preventive-card-label">SCHEDULE</p><p className="pm-site-work-value">{shortDate(row.schedule_date)} · {row.schedule_label}</p></div><div className="preventive-card-section with-divider"><p className="preventive-card-label">STATUS PM</p><div className="pm-site-work-value"><div className="pm-card-statuses">{badge(titleCase(row.status))}<window.PMConditionBadge row={row}/></div></div></div><span className="preventive-card-chevron">›</span></div></button>)}</div>{!loading && !rows.length && <p className="p-4 text-[11px]">Tidak ada pekerjaan yang cocok dengan filter.</p>}<nav className="pm-work-pagination" aria-label="Navigasi daftar PM Site"><button className="pm-page-button" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>← Sebelumnya</button><span className="pm-page-position">Halaman {page} / {totalPages}</span><button className="pm-page-button" disabled={page >= totalPages} onClick={() => setPage(value => value + 1)}>Berikutnya →</button></nav></section></div>;
     }
   };
+
+  // Filter cakupan di atas dipakai oleh seluruh halaman. Filter pada General
+  // Information sengaja hanya dipakai untuk daftar card agar grafik tidak ikut berubah.
+  class PMSiteScopedModule extends R.Component {
+    constructor(props) {
+      super(props);
+      const initialMonth = props.filters.month || props.filters.dateFrom?.slice(0, 7) || new Date().toISOString().slice(0, 7);
+      const range = this.monthRange(initialMonth);
+      this.state = {
+        local: { month: initialMonth, date_from: range.date_from, date_to: range.date_to, regional: '', nop: '', status: '', evaluation: '', search: props.filters.siteId || props.filters.search || '' },
+        overview: null, data: null, detail: null, error: '', loading: false, page: 1, revision: 0
+      };
+    }
+    monthRange(month) {
+      if (!/^\d{4}-\d{2}$/.test(month || '')) return { date_from: '', date_to: '' };
+      const [year, number] = month.split('-').map(Number);
+      const last = new Date(Date.UTC(year, number, 0)).getUTCDate();
+      return { date_from: `${month}-01`, date_to: `${month}-${String(last).padStart(2, '0')}` };
+    }
+    componentDidMount() { this.active = true; this.refresh(); }
+    componentDidUpdate(previousProps, previousState) {
+      const nextMonth = this.props.filters.month || this.props.filters.dateFrom?.slice(0, 7);
+      const previousMonth = previousProps.filters.month || previousProps.filters.dateFrom?.slice(0, 7);
+      if (nextMonth && nextMonth !== previousMonth) {
+        const range = this.monthRange(nextMonth);
+        this.setState(current => ({ local: { ...current.local, month: nextMonth, ...range } }));
+        return;
+      }
+      if (previousState.local !== this.state.local || previousState.revision !== this.state.revision) this.refresh();
+    }
+    componentWillUnmount() { this.active = false; clearTimeout(this.timer); this.controller?.abort(); }
+    refresh() {
+      clearTimeout(this.timer); this.controller?.abort(); this.setState({ loading: true });
+      this.controller = new AbortController(); const controller = this.controller;
+      this.timer = setTimeout(() => {
+        const local = this.state.local;
+        const scope = { date_from: local.date_from, date_to: local.date_to, regional: local.regional, nop: local.nop };
+        Promise.all([
+          request(`/api/pm-site?${new URLSearchParams(scope)}`, { signal: controller.signal }),
+          request(`/api/pm-site?${new URLSearchParams(local)}`, { signal: controller.signal })
+        ]).then(([overview, data]) => {
+          if (this.active && !controller.signal.aborted) this.setState({ overview, data, error: '', page: 1 });
+        }).catch(failure => {
+          if (this.active && !controller.signal.aborted) this.setState({ error: failure.message });
+        }).finally(() => {
+          if (this.active && !controller.signal.aborted) this.setState({ loading: false });
+        });
+      }, 180);
+    }
+    render() {
+      const { local, overview, data, detail, error, loading, page } = this.state;
+      const { upload, pmData, UploadPanel, SummaryCard } = this.props;
+      const setLocal = value => this.setState(current => ({ local: typeof value === 'function' ? value(current.local) : value }));
+      const setDetail = value => this.setState(current => ({ detail: typeof value === 'function' ? value(current.detail) : value }));
+      const setError = error => this.setState({ error });
+      const setLoading = loading => this.setState({ loading });
+      const setRevision = revision => this.setState(current => ({ revision: typeof revision === 'function' ? revision(current.revision) : revision }));
+      const change = (name, value) => setLocal(current => {
+        if (name === 'month') return { ...current, month: value, ...this.monthRange(value) };
+        return { ...current, [name]: value, ...(name === 'regional' ? { nop: '' } : {}) };
+      });
+      const select = (label, name, values, allLabel = 'Semua') => <label key={name} className="pm-site-form-field"><span className="filter-label">{label}</span><select className="control h-10 px-3 text-[10px] font-semibold" value={local[name]} onChange={event => change(name, event.target.value)}><option value="">{allLabel}</option>{values.map(value => <option key={typeof value === 'string' ? value : value[0]} value={typeof value === 'string' ? value : value[0]}>{typeof value === 'string' ? value : value[1]}</option>)}</select></label>;
+      async function open(id) { setLoading(true); setError(''); try { setDetail(await request(`/api/pm-site/detail?${new URLSearchParams({ id })}`)); window.scrollTo({ top: 0 }); } catch (failure) { setError(failure.message); } finally { setLoading(false); } }
+      if (detail) return <div className="pm-site-module">{error && <p role="alert" className="pm-site-error">{error}</p>}<Detail key={detail.pm.ticket_no} detail={detail} SummaryCard={SummaryCard} back={() => { setDetail(null); setRevision(value => value + 1); }} onSaved={saved => setDetail(current => ({ ...current, evaluation: saved, evaluation_label: saved.evaluation_status === 'Belum ditinjau' ? current.evaluation_label : 'Sudah dievaluasi' }))} /></div>;
+      const scopeRows = overview?.rows || [], rows = data?.rows || [];
+      const totalPages = Math.max(1, Math.ceil(rows.length / 50));
+      const uniqueSites = values => new Set(values.map(row => String(row.site_id || '').trim().toUpperCase()).filter(Boolean)).size;
+      const plan = uniqueSites(scopeRows), submitted = uniqueSites(scopeRows.filter(row => row.submitted_date));
+      const options = overview?.options || data?.options || {};
+      return <div className="pm-site-module space-y-4"><UploadPanel {...upload} latest={pmData?.latest_upload} label="PM SITE" /><div className="pm-site-cards"><SummaryCard label="PLAN SITE" value={plan} detail={`${shortDate(local.date_from)} sampai ${shortDate(local.date_to)}`} tone="navy" /><SummaryCard label="SUBMITTED" value={submitted} detail="Site unik dengan Submitted Date terisi" tone="green" /><SummaryCard label="ACHIEVEMENT" value={`${plan ? Math.round(submitted / plan * 10000) / 100 : 0}%`} detail="Submitted dibanding Plan pada filter atas" tone="orange" /><SummaryCard label="BELUM SUBMIT" value={Math.max(0, plan - submitted)} detail="Site plan yang belum memiliki Submitted Date" tone="red" /></div>{overview?.read_only && <p className="pm-site-banner">Preview memakai snapshot aktual. Konfigurasikan MySQL untuk import dan penyimpanan permanen.</p>}<section className="corporate-panel p-5"><div className="preventive-filter-row"><label className="pm-site-form-field"><span className="filter-label">BULAN / TAHUN</span><input className="control h-10 px-3 text-[10px] font-semibold" type="month" value={local.month} onChange={event => change('month', event.target.value)} /></label>{select('REGIONAL', 'regional', options.regional || [], 'All Regional')}{select('NOP', 'nop', options.nop || [], 'All NOP')}</div><div className="pm-filter-charts"><window.PMAttentionCharts rows={scopeRows} kind="site" loading={loading || !overview} /></div>{error && <p role="alert" className="pm-site-error">{error}</p>}<div className="pm-site-list-heading"><h2 className="section-title">PM SITE - GENERAL INFORMATION</h2><p role="status" className="mt-1 text-[10px] text-slate-400">{loading ? 'Memuat…' : `Schedule ${shortDate(local.date_from)} sampai ${shortDate(local.date_to)} · Menampilkan ${Math.min(50, Math.max(0, rows.length - (page - 1) * 50))} dari ${rows.length} site`}</p></div><div className="preventive-filter-row mt-4">{select('STATUS PM', 'status', options.status || [], 'All Status')}{select('EVALUASI', 'evaluation', options.evaluation || [], 'Semua Evaluasi')}<label className="pm-site-form-field preventive-filter-search"><span className="filter-label">CARI SITE</span><input className="control h-10 px-3 text-[10px]" value={local.search} onChange={event => change('search', event.target.value)} onInput={event => change('search', event.target.value)} placeholder="Cari Site ID atau Site Name" /></label></div><div className="preventive-card-list pm-site-work-list">{rows.slice((page - 1) * 50, page * 50).map(row => <button key={row.id} className="preventive-info-card pm-site-work-card" onClick={() => open(row.id)}><div className="preventive-card-head"><div className="preventive-card-section"><p className="preventive-card-label">SITE ID</p><p className="pm-site-work-value">{row.site_id}</p></div><div className="preventive-card-section with-divider"><p className="preventive-card-label">SITE NAME</p><p className="pm-site-work-value">{row.site_name}</p></div><div className="preventive-card-section with-divider"><p className="preventive-card-label">NOP</p><p className="pm-site-work-value">{nopName(row.nop)}</p></div><div className="preventive-card-section with-divider"><p className="preventive-card-label">PIC</p><p className="pm-site-work-value">{display(row.pic)}</p></div><div className="preventive-card-section with-divider"><p className="preventive-card-label">SCHEDULE</p><p className="pm-site-work-value">{shortDate(row.schedule_date)} · {row.schedule_label}</p></div><div className="preventive-card-section with-divider"><p className="preventive-card-label">STATUS PM</p><div className="pm-site-work-value"><div className="pm-card-statuses">{badge(titleCase(row.status))}<window.PMConditionBadge row={row}/></div></div></div></div></button>)}</div>{!loading && !rows.length && <p className="p-4 text-[11px]">Tidak ada pekerjaan yang cocok dengan filter.</p>}<nav className="pm-work-pagination" aria-label="Navigasi daftar PM Site"><button className="pm-page-button" disabled={page <= 1} onClick={() => this.setState({ page: page - 1 })}>← Sebelumnya</button><span className="pm-page-position">Halaman {page} / {totalPages}</span><button className="pm-page-button" disabled={page >= totalPages} onClick={() => this.setState({ page: page + 1 })}>Berikutnya →</button></nav></section></div>;
+    }
+  }
+  window.PMSiteModule = PMSiteScopedModule;
 })();

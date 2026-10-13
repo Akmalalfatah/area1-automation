@@ -554,13 +554,17 @@ function PreventiveDashboardCards({ data, file, date, busy, loading, filters, on
     h(PreventiveSummaryCard, { label: "SUBMITTED", value: data && data.submitted != null ? data.submitted : 0, detail: `${formatNumber(data && data.achievement != null ? data.achievement : 0)}% dari Plan Site`, tone: "orange" }),
     h(PreventiveSummaryCard, { label: "BELUM SUBMIT", value: data && data.pending != null ? data.pending : 0, detail: "Site plan yang belum memiliki Submitted Date", tone: "red" })
   );
-  const filtersBar = h(
+  const progressFilters = h(
     "div",
     { className: "preventive-filter-row" },
     h("div", null, h("label", { className: "filter-label mb-1 block" }, "BULAN / TAHUN"), h("input", { type: "month", value: filters.month || filters.dateFrom?.slice(0, 7) || currentMonthIso(), onChange: (event) => onFilter("month", event.target.value), className: "control h-10 w-[165px] px-3 text-[10px] font-semibold" })),
-    h("div", null, h("label", { className: "filter-label mb-1 block" }, "JENIS PM"), h("select", { value: filters.maintenanceType || "", onChange: (event) => onFilter("maintenanceType", event.target.value), className: "control h-10 w-[155px] px-3 text-[10px] font-semibold" }, h("option", { value: "" }, "PM Site & Genset"), h("option", { value: "site" }, "PM Site"), h("option", { value: "genset" }, "PM Genset"))),
     h("div", null, h("label", { className: "filter-label mb-1 block" }, "REGIONAL"), h("select", { value: filters.regional || "", onChange: (event) => onFilter("regional", event.target.value), className: "control h-10 w-[180px] px-3 text-[10px] font-semibold" }, h("option", { value: "" }, "All Regional"), ...((data == null ? void 0 : data.regional_options) || []).map((item) => h("option", { key: item, value: item }, item)))),
-    h("div", null, h("label", { className: "filter-label mb-1 block" }, "NOP"), h("select", { value: filters.nop || "", onChange: (event) => onFilter("nop", event.target.value), className: "control h-10 w-[180px] px-3 text-[10px] font-semibold" }, h("option", { value: "" }, "All NOP"), ...((data == null ? void 0 : data.nop_options) || []).map((item) => h("option", { key: item, value: item }, compactNop(item))))),
+    h("div", null, h("label", { className: "filter-label mb-1 block" }, "NOP"), h("select", { value: filters.nop || "", onChange: (event) => onFilter("nop", event.target.value), className: "control h-10 w-[180px] px-3 text-[10px] font-semibold" }, h("option", { value: "" }, "All NOP"), ...((data == null ? void 0 : data.nop_options) || []).map((item) => h("option", { key: item, value: item }, compactNop(item)))))
+  );
+  const generalFilters = h(
+    "div",
+    { className: "preventive-filter-row mt-4" },
+    h("div", null, h("label", { className: "filter-label mb-1 block" }, "JENIS PM"), h("select", { value: filters.maintenanceType || "", onChange: (event) => onFilter("maintenanceType", event.target.value), className: "control h-10 w-[155px] px-3 text-[10px] font-semibold" }, h("option", { value: "" }, "PM Site & Genset"), h("option", { value: "site" }, "PM Site"), h("option", { value: "genset" }, "PM Genset"))),
     h("div", null, h("label", { className: "filter-label mb-1 block" }, "KEBUTUHAN PERBAIKAN"), h("select", { value: filters.needsAttention || "", onChange: (event) => onFilter("needsAttention", event.target.value), className: "control h-10 w-[190px] px-3 text-[10px] font-semibold" }, h("option", { value: "" }, "Semua Kondisi"), h("option", { value: "yes" }, "Perlu Tindak Lanjut"), h("option", { value: "no" }, "Tidak Ada Indikasi"))),
     h("div", null, h("label", { className: "filter-label mb-1 block" }, "STATUS PM"), h("select", { value: filters.status || "", onChange: (event) => onFilter("status", event.target.value), className: "control h-10 w-[155px] px-3 text-[10px] font-semibold", "aria-label": "Status PM Dashboard" }, h("option", { value: "" }, "All Status"), ...((data == null ? void 0 : data.status_options) || []).map((status) => h("option", { key: status, value: status }, status)))),
     h("div", { className: "preventive-filter-search" }, h("label", { className: "filter-label mb-1 block" }, "SEARCH"), h("input", { type: "search", value: filters.search, onChange: (event) => onFilter("search", event.target.value), placeholder: "Cari Site ID, Site Name, NOP, atau Notes", className: "control h-10 w-full px-3 text-[10px]" }))
@@ -604,10 +608,11 @@ function PreventiveDashboardCards({ data, file, date, busy, loading, filters, on
     summary,
     h(PreventiveOperationalInsights, { data, filters, onFilter }),
     h("section", { className: "corporate-panel p-5 preventive-dashboard-combined" },
-      filtersBar,
+      progressFilters,
       h("div", { className: "mt-5" }, progressTable),
       h("div", { className: "mt-6 border-t border-slate-200 pt-5" },
         h("div", { className: "flex items-center justify-between" }, h("div", null, h("h2", { className: "section-title" }, "GENERAL INFORMATION"), h("p", { className: "mt-1 text-[10px] text-slate-400" }, `Schedule ${data && data.period_start ? shortDate(data.period_start) : "-"} sampai ${data && data.period_end ? shortDate(data.period_end) : "-"} \xB7 Menampilkan ${Math.min(rows.length, 100)} dari ${rows.length} site`)), loading && h(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" })),
+        generalFilters,
         h("div", { className: "kpi-scrollbar preventive-card-list" }, ...cards)
       )
     )
