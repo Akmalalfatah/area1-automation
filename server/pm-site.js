@@ -99,6 +99,12 @@ export async function saveSiteSource(kind,filename,date,dataset){
 // Baris B1-B3 adalah sumber terbesar. Halaman Dashboard/PM tidak memerlukannya;
 // sumber itu hanya diminta oleh Peningkatan KPI melalui siteDataForUploadMonth().
 const kpiB13SourceKinds=['kpi_b13','kpi_b13_r01','kpi_b13_r02','kpi_b13_r10']
+// Snapshot lama dapat tidak memiliki metadata `issues` atau bahkan payload dataset
+// (misalnya sumber yang diimpor sebelum tabel snapshot dibuat). Semua halaman yang
+// memilih bulan historis harus tetap dapat memakai baris sumber yang tersedia.
+const safeDataset=value=>{
+  try{const parsed=typeof value==='string'?JSON.parse(value):value;return parsed&&typeof parsed==='object'?parsed:{}}catch{return{}}
+}
 
 export async function siteData({includeKpiB13=false,includePm=true}={}){
   if(!databaseEnabled){
@@ -116,7 +122,7 @@ export async function siteData({includeKpiB13=false,includePm=true}={}){
   ])
   const sources=sourceResult[0],evaluations=evaluationResult[0],punchlistNotes=punchlistResult[0]
   const data={pm,evaluations,punchlist_notes:punchlistNotes,sources:sources.map(({dataset,...meta})=>meta),quality:[],read_only:false}
-  for(const source of sources){const dataset=typeof source.dataset==='string'?JSON.parse(source.dataset):source.dataset;data[source.source_kind]=dataset.rows||[];data.quality.push(...(dataset.issues||[]).map(issue=>({...issue,source:source.source_kind})))}
+  for(const source of sources){const dataset=safeDataset(source.dataset);data[source.source_kind]=dataset.rows||[];data.quality.push(...(dataset.issues||[]).map(issue=>({...issue,source:source.source_kind})))}
   const [records]=await getPool().query(`SELECT source_kind,payload FROM pm_site_source_rows${sourceWhere} ORDER BY source_kind,row_no`,sourceParams)
   for(const record of records){const payload=typeof record.payload==='string'?JSON.parse(record.payload):record.payload;data[record.source_kind].push(payload)}
   return data
@@ -137,7 +143,7 @@ const sourceRowsForUploads=async (uploads,{period='',includeKpiB13=true}={})=>{
     const rowsByUpload=new Map(ids.map(id=>[id,[]]))
     for(const record of records)rowsByUpload.get(record.source_upload_id)?.push(typeof record.payload==='string'?JSON.parse(record.payload):record.payload)
     for(const upload of uploads){
-      const dataset=typeof upload.dataset==='string'?JSON.parse(upload.dataset):upload.dataset
+      const dataset=safeDataset(upload.dataset)
       data[upload.source_kind]=rowsByUpload.get(upload.source_upload_id)||[]
       data.quality.push(...(dataset.issues||[]).map(issue=>({...issue,source:upload.source_kind})))
     }
@@ -155,7 +161,7 @@ const sourceRowsForUploads=async (uploads,{period='',includeKpiB13=true}={})=>{
       const rowsByKind=new Map(kinds.map(kind=>[kind,[]]))
       for(const row of legacyRows)rowsByKind.get(row.source_kind)?.push(typeof row.payload==='string'?JSON.parse(row.payload):row.payload)
       for(const source of fallbackSources){
-        const dataset=typeof source.dataset==='string'?JSON.parse(source.dataset):source.dataset
+        const dataset=safeDataset(source.dataset)
         data[source.source_kind]=rowsByKind.get(source.source_kind)||[]
         if(!data.sources.some(item=>item.source_kind===source.source_kind))data.sources.push({source_kind:source.source_kind,filename:source.filename,upload_date:source.upload_date})
         data.quality.push(...(dataset.issues||[]).map(issue=>({...issue,source:source.source_kind})))
@@ -170,7 +176,7 @@ const sourceRowsForUploads=async (uploads,{period='',includeKpiB13=true}={})=>{
       getPool().query("SELECT payload FROM pm_site_source_rows WHERE source_kind='master' ORDER BY row_no")
     ])
     if(masterSource){
-      const dataset=typeof masterSource.dataset==='string'?JSON.parse(masterSource.dataset):masterSource.dataset
+      const dataset=safeDataset(masterSource.dataset)
       data.master=masterRows.map(row=>typeof row.payload==='string'?JSON.parse(row.payload):row.payload)
       if(!data.sources.some(source=>source.source_kind==='master'))data.sources.push({source_kind:'master',filename:masterSource.filename,upload_date:masterSource.upload_date})
       data.quality.push(...(dataset.issues||[]).map(issue=>({...issue,source:'master'})))

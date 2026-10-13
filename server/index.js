@@ -115,9 +115,9 @@ function buildPreventiveProgressWorkbook(payload,query){
   summary.columns=[{width:28},{width:24}]
   summary.addRow(['RINGKASAN PREVENTIVE MANAGEMENT','']);summary.mergeCells('A1:B1')
   summary.addRows([['Periode',period],['Regional',query.regional||'Semua Regional'],['NOP',query.nop||'Semua NOP'],['Status PM',query.status||'Semua Status'],['Jenis PM',query.maintenance_type||'PM Site & Genset'],[],['Plan Site',payload.plan],['Approved',payload.approved],['Submitted',payload.submitted],['Belum Submit',payload.pending]])
-  const statusColumns=payload.status_options||[],headers=['Regional','NOP','Plan Site','Approved','Submitted','Belum Submit',...statusColumns]
+  const statusColumns=[['assigned','Assigned'],['closed','Closed'],['in_progress','In Progress'],['waiting_approval','Waiting Approval']],headers=['Regional','NOP','Plan Site','Approved','Submitted','Belum Submitted',...statusColumns.map(([,label])=>label)]
   progress.columns=headers.map((header,index)=>({header,key:`c${index}`,width:index<2?24:16}))
-  for(const item of payload.nop_summary||[])progress.addRow([item.regional||'Belum ditentukan',item.nop,item.plan,item.approved,item.submitted,item.pending,...statusColumns.map(status=>item.statuses?.[status]||0)])
+  for(const item of payload.nop_summary||[])progress.addRow([item.regional||'Belum ditentukan',item.nop,item.plan,item.approved,item.submitted,item.pending,...statusColumns.map(([key])=>item.progress_statuses?.[key]||0)])
   for(const sheet of [summary,progress]){sheet.views=[{state:'frozen',ySplit:sheet===progress?1:1}];sheet.getRow(1).font={bold:true,color:{argb:'FFFFFFFF'},size:12};sheet.getRow(1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF173E68'}};sheet.getRow(1).alignment={vertical:'middle'};sheet.getRow(1).height=24;sheet.eachRow((row,rowNumber)=>{row.eachCell(cell=>{cell.border={bottom:{style:'thin',color:{argb:'FFD8E0EA'}}};if(rowNumber>1)cell.alignment={vertical:'middle'}})})}
   progress.autoFilter={from:'A1',to:{row:Math.max(progress.rowCount,1),column:headers.length}}
   return workbook
