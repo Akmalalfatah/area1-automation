@@ -48,7 +48,7 @@
     }))));
   }
   function SiteInformation({ detail }) {
-      const { pm, master, issues } = detail, m = master || {};
+      const { pm, master, issues = [] } = detail || {}, m = master || {};
     const type = String(m.type_site || "").replace(/^\d+\.\s*/, "").replace(/TELKOMSEL\s*/i, "").replace(/\/Simpul Besar/i, "").trim();
     const rows = (pairs) => /* @__PURE__ */ R.createElement("dl", { className: "pm-site-information" }, pairs.map(([label, value]) => /* @__PURE__ */ R.createElement("div", { key: label }, /* @__PURE__ */ R.createElement("dt", null, label), /* @__PURE__ */ R.createElement("dd", null, value))));
     return /* @__PURE__ */ R.createElement("div", { className: "space-y-4" }, issues.length > 0 && /* @__PURE__ */ R.createElement("div", { className: "pm-site-validation" }, issues.map((issue) => /* @__PURE__ */ R.createElement("p", { key: issue }, issue))), /* @__PURE__ */ R.createElement("div", { className: "pm-site-two-columns" }, panel("Ticket PM", rows([

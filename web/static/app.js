@@ -497,13 +497,14 @@ function drawPmHeader(ctx, title, subtitle, width) {
   ctx.fillStyle = "#607086"; ctx.font = "18px Arial"; ctx.fillText(subtitle, 52, 100);
 }
 function downloadPreventiveInsightsImage(data, filters) {
-  const canvas = document.createElement("canvas"), regional = data && data.regional_summary || [], metric = filters.insightMetric || "approved", label = metric === "submitted" ? "Submitted" : "Approved", width = 1500, height = Math.max(440, 180 + regional.length * 78);
-  canvas.width = width; canvas.height = height; const ctx = canvas.getContext("2d"); drawPmHeader(ctx, "Capaian Preventive Management per Regional", `${monthLabel(filters.month || filters.dateFrom?.slice(0, 7))} · ${label}`, width);
-  regional.forEach((item, index) => { const y = 150 + index * 78, value = Number(metric === "submitted" ? item.achievement : item.approved_achievement) || 0, count = metric === "submitted" ? item.submitted : item.approved;
-    ctx.fillStyle = "#42536A"; ctx.font = "bold 19px Arial"; ctx.fillText(item.regional, 52, y + 20);
-    ctx.fillStyle = "#E8EEF4"; ctx.fillRect(52, y + 34, 1120, 22); ctx.fillStyle = "#0B8A5B"; ctx.fillRect(52, y + 34, 1120 * Math.min(100, value) / 100, 22);
-    ctx.fillStyle = "#173E68"; ctx.font = "bold 20px Arial"; ctx.fillText(`${formatNumber(value)}%`, 1210, y + 52); ctx.fillStyle = "#607086"; ctx.font = "16px Arial"; ctx.fillText(`${count} ${label.toLowerCase()} dari ${item.plan} plan`, 52, y + 76);
-  }); saveCanvas(canvas, `Capaian-PM-Regional-${filters.month || todayIso()}.png`);
+  const canvas = document.createElement("canvas"), regional = data && data.regional_summary || [], width = 1500, height = Math.max(450, 210 + regional.length * 84), colors = { pending: "#D64B55", submitted: "#E27B2B", approved: "#0B8A5B" };
+  canvas.width = width; canvas.height = height; const ctx = canvas.getContext("2d"); drawPmHeader(ctx, "Progress Preventive Management per Regional", `${monthLabel(filters.month || filters.dateFrom?.slice(0, 7))} · Plan / Submitted / Approved`, width);
+  ctx.font = "600 16px Arial"; [["Belum Submit", colors.pending], ["Submitted", colors.submitted], ["Approved", colors.approved]].forEach(([label, color], i) => { const x = 52 + i * 175; ctx.fillStyle = color; ctx.fillRect(x, 124, 14, 14); ctx.fillStyle = "#53657A"; ctx.fillText(label, x + 22, 136); });
+  regional.forEach((item, index) => { const y = 168 + index * 84, plan = Number(item.plan) || 0, pending = Number(item.pending) || 0, approved = Number(item.approved) || 0, submittedOnly = Math.max(0, Number(item.submitted || 0) - approved), widthTrack = 1120;
+    ctx.fillStyle = "#42536A"; ctx.font = "600 19px Arial"; ctx.fillText(item.regional, 52, y + 18); ctx.fillStyle = "#E8EEF4"; ctx.fillRect(52, y + 32, widthTrack, 26);
+    let cursor = 52; [[pending, colors.pending], [submittedOnly, colors.submitted], [approved, colors.approved]].forEach(([value, color]) => { const segment = plan ? widthTrack * value / plan : 0; ctx.fillStyle = color; ctx.fillRect(cursor, y + 32, segment, 26); cursor += segment; });
+    ctx.fillStyle = "#173E68"; ctx.font = "600 18px Arial"; ctx.fillText(`${approved}/${plan} approved`, 1210, y + 52); ctx.fillStyle = "#607086"; ctx.font = "16px Arial"; ctx.fillText(`${pending} belum submit · ${submittedOnly} submitted`, 52, y + 78);
+  }); saveCanvas(canvas, `Progress-PM-Regional-${filters.month || todayIso()}.png`);
 }
 function downloadPreventiveProgressImage(data, filters) {
   const status = data && data.status_options || [], rows = data && data.nop_summary || [], columns = ["Regional", "NOP", "Plan", "Approved", "Submitted", "Belum Submit", ...status], width = Math.max(1500, columns.length * 155), height = Math.max(400, 180 + rows.length * 42), canvas = document.createElement("canvas");
@@ -514,19 +515,15 @@ function downloadPreventiveProgressImage(data, filters) {
 }
 function PreventiveOperationalInsights({ data, filters, onFilter }) {
   const h = React.createElement, plan = Number(data && data.plan || 0), regional = data && data.regional_summary || [];
-  const flow = [["Plan Site", plan, "navy"], ["Submitted", Number(data && data.submitted || 0), "orange"], ["Approved", Number(data && data.approved || 0), "green"]];
-  const flowContent = h("div", { className: "pm-progress-flow" }, ...flow.map(([label, value, tone]) => h("div", { className: `pm-progress-step ${tone}`, key: label }, h("p", null, label), h("strong", null, value), h("small", null, plan ? `${formatNumber(value / plan * 100)}% dari plan` : "0% dari plan"))));
-  const metric = filters.insightMetric || "approved", metricLabel = metric === "submitted" ? "Submitted" : "Approved";
-  const regionalContent = regional.length ? h("div", { className: "preventive-regional-bars" }, ...regional.map(item => { const value = Number(metric === "submitted" ? item.achievement : item.approved_achievement) || 0, count = metric === "submitted" ? item.submitted : item.approved; return h("div", { className: "preventive-regional-row", key: item.regional },
-    h("div", { className: "preventive-status-label" }, h("span", null, item.regional), h("b", null, `${formatNumber(value)}%`)),
-    h("div", { className: "preventive-regional-track" }, h("i", { style: { width: `${value}%` } })),
-    h("small", null, `${count} ${metricLabel.toLowerCase()} dari ${item.plan} plan · ${item.pending} belum submit`)
+  const regionalContent = regional.length ? h("div", { className: "pm-regional-stacked-bars" }, ...regional.map(item => { const total = Number(item.plan) || 0, pending = Number(item.pending) || 0, approved = Number(item.approved) || 0, submittedOnly = Math.max(0, Number(item.submitted || 0) - approved); return h("div", { className: "pm-regional-stacked-row", key: item.regional },
+    h("div", { className: "preventive-status-label" }, h("span", null, item.regional), h("b", null, `${total} plan`)),
+    h("div", { className: "pm-regional-stacked-track", title: `${pending} belum submit, ${submittedOnly} submitted, ${approved} approved` }, h("i", { className: "is-pending", style: { width: `${total ? pending / total * 100 : 0}%` } }), h("i", { className: "is-submitted", style: { width: `${total ? submittedOnly / total * 100 : 0}%` } }), h("i", { className: "is-approved", style: { width: `${total ? approved / total * 100 : 0}%` } })),
+    h("small", null, `${pending} belum submit · ${submittedOnly} submitted · ${approved} approved`)
   ); })) : h("p", { className: "preventive-insight-empty" }, "Belum ada regional pada filter aktif.");
   return h("section", { className: "corporate-panel p-5 preventive-insights" },
-    h("div", { className: "preventive-insights-grid" },
-      h("div", { className: "preventive-insight-block" }, h("h3", null, "Alur Progres Operasional"), flowContent),
-      h("div", { className: "preventive-insight-block" }, h("div", { className: "flex items-center justify-between gap-2" }, h("h3", null, "Capaian per Regional"), h("button", { type: "button", className: "pm-export-button pm-export-image", onClick: () => downloadPreventiveInsightsImage(data, filters) }, h(Download, { size: 14 }), "Download Image")), h("div", { className: "mb-3" }, h("label", { className: "filter-label mb-1 block" }, "BASIS CAPAIAN"), h("select", { value: metric, onChange: e => onFilter("insightMetric", e.target.value), className: "control h-8 w-[170px] px-2 text-[9px] font-semibold" }, h("option", { value: "approved" }, "Approved"), h("option", { value: "submitted" }, "Submitted"))), regionalContent)
-    )
+    h("div", { className: "flex items-center justify-between gap-3 mb-4" }, h("div", null, h("h2", { className: "section-title" }, "PROGRESS OPERASIONAL PER REGIONAL"), h("p", { className: "mt-1 text-[10px] text-slate-400" }, "Komposisi Plan Site berdasarkan belum submit, submitted, dan approved.")), h("button", { type: "button", className: "pm-export-button pm-export-image", onClick: () => downloadPreventiveInsightsImage(data, filters) }, h(Download, { size: 14 }), "Download Image")),
+    h("div", { className: "pm-stacked-legend" }, h("span", { className: "is-pending" }, "Belum Submit"), h("span", { className: "is-submitted" }, "Submitted"), h("span", { className: "is-approved" }, "Approved")),
+    regionalContent
   );
 }
 function PreventiveDashboardCards({ data, file, date, busy, loading, filters, onFile, onDate, onUpload, onFilter, onReview, onRefresh }) {
@@ -987,8 +984,7 @@ NopKpiImprovement = class NopKpiImprovement extends React.Component {
 function monthlyBoostingPeriod(fallback) {
   const parts = {}, values = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
   values.forEach((part) => { parts[part.type] = part.value; });
-  let year = Number(parts.year), month = Number(parts.month) - 1;
-  if (!month) { month = 12; year--; }
+  const year = Number(parts.year), month = Number(parts.month);
   return `${year}-${String(month).padStart(2, "0")}` || String(fallback || "").slice(0, 7);
 }
 function monthlyPeriodLabel(period) { return new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric", timeZone: "Asia/Jakarta" }).format(new Date(`${period}-01T00:00:00Z`)); }
@@ -1028,7 +1024,7 @@ NopKpiImprovementView = function(props) {
       React.createElement("div", null, React.createElement("label", { className: "filter-label" }, "REGIONAL"), React.createElement("select", { value: region, onChange: (event) => onRegion(event.target.value), className: "control h-9 min-w-0 w-full px-3 text-[10px] font-semibold" }, React.createElement("option", { value: "" }, "All Regional"), Object.keys(config.regions).map((name) => React.createElement("option", { key: name, value: name }, name)))),
       React.createElement("div", null, React.createElement("label", { className: "filter-label" }, "NOP"), React.createElement("select", { value: nop, onChange: (event) => onNop(event.target.value), className: "control h-9 min-w-0 w-full px-3 text-[10px] font-semibold" }, React.createElement("option", { value: "" }, "All NOP Cluster"), options.map((item) => React.createElement("option", { key: `${item.regional}-${item.name}`, value: item.name }, compactNop(item.name))))),
       React.createElement("div", null, React.createElement("label", { className: "filter-label" }, "BULAN / TAHUN"), React.createElement("input", { type: "month", value: period, onChange: (event) => setPeriod(event.target.value), className: "control h-9 min-w-0 w-full px-3 text-[10px] font-semibold" })),
-      React.createElement("div", { className: "kpi-improvement-export-actions" }, React.createElement("label", { className: "filter-label" }, "EXPORT"), React.createElement("button", { type: "button", className: "btn-secondary kpi-export-all-button", disabled: exportLoading, onClick: onExportAll }, React.createElement(Download, { size: 11 }), exportLoading ? "Preparing..." : "Export Semua KPI Ticketing")))),
+      React.createElement("div", { className: "kpi-improvement-export-actions" }, React.createElement("label", { className: "filter-label" }, "EXPORT"), React.createElement("button", { type: "button", className: "pm-export-button pm-export-excel kpi-export-all-button", disabled: exportLoading, onClick: onExportAll }, React.createElement(FileSpreadsheet, { size: 14 }), exportLoading ? "Preparing..." : "Export Semua KPI Ticketing")))),
     React.createElement("p", { className: "mt-2 text-[10px] text-slate-400" }, React.createElement("b", null, "Periode Data Upload."), " Analisis memakai versi file KPIData/SWFM terbaru yang tanggal upload-nya berada pada bulan dan tahun yang dipilih. ", React.createElement("b", null, snapshotLabel || "Snapshot eKPI aktif"), "."),
     boostingError && React.createElement("p", { className: "pm-site-error", role: "alert" }, boostingError),
     boostingLoading ? React.createElement("div", { className: "kpi-nop-empty" }, React.createElement("strong", null, "Memuat data MTTR P90..."), React.createElement("p", null, "Menentukan sumber KPIData B.1-B.3 dan fallback Ticket SWFM pada bulan aktif.")) : React.createElement("div", { style: { display: "contents" } }, React.createElement("div", { className: "kpi-scrollbar preventive-card-list kpi-nop-improve-list" }, nops.map((item) => React.createElement(NopImprovementCard, { key: item.name, item, dashboard, rowLookup, periodLabel: monthlyPeriodLabel(period), onExportNop, ticketSummary: activeBoosting.ticket_summaries[item.name] || {} }))), !nops.length && React.createElement("div", { className: "kpi-nop-empty" }, React.createElement("strong", null, "Tidak ada ticket yang terdeteksi"), React.createElement("p", null, "Belum ada kombinasi NOP, komponen B, severity, dan bulan yang sesuai dengan filter aktif."))));
