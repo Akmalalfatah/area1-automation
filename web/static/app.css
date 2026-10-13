@@ -1704,7 +1704,7 @@ button { cursor: pointer; }
 .preventive-progress-table td { text-align:center; font-weight:600; }
 .preventive-progress-table .preventive-progress-nop { position:sticky; left:0; z-index:1; min-width:170px; background:#fff; text-align:left; color:#173e68; font-weight:700; }
 .preventive-progress-table tbody tr:nth-child(even) .preventive-progress-nop { background:#f7f9fc; }
-.preventive-progress-table .preventive-progress-regional { min-width:132px; background:#f2f6fa; color:#53657a; text-align:left; font-weight:700; }
+.preventive-progress-table .preventive-regional-group td { position:static; padding:10px 14px; background:#dfe7f0; color:#173e68; text-align:left; font-size:12px; font-weight:800; letter-spacing:.01em; }
 .preventive-progress-table .is-approved { background:#e9f8f1; color:#087d4b; }
 .preventive-progress-table .is-pending { background:#fff1f2; color:#bd3340; }
 .preventive-insights { overflow:hidden; }

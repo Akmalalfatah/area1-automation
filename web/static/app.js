@@ -115,10 +115,11 @@ async function uploadKpi(id, file, date, reportingType = "current") {
   form.append("reporting_type", reportingType);
   return api(`/api/runs/${id}/upload`, { method: "POST", body: form });
 }
-const getPreventiveDashboard = (filters = {}, maintenanceType = "") => {
+const preventiveQueryParams = (filters = {}, maintenanceType = "") => {
   const params = new URLSearchParams();
   if (filters.dateFrom) params.set("date_from", filters.dateFrom);
   if (filters.dateTo) params.set("date_to", filters.dateTo);
+  if (filters.regional) params.set("regional", filters.regional);
   if (filters.nop) params.set("nop", filters.nop);
   if (filters.siteId) params.set("site_id", filters.siteId);
   if (filters.search) params.set("search", filters.search);
@@ -128,9 +129,21 @@ const getPreventiveDashboard = (filters = {}, maintenanceType = "") => {
   if (filters.typePower) params.set("type_power", filters.typePower);
   if (filters.scopeItem) params.set("scope_item", filters.scopeItem);
   if (filters.scheduleState) params.set("schedule_state", filters.scheduleState);
+  if (filters.needsAttention) params.set("needs_attention", filters.needsAttention);
   if (maintenanceType || filters.maintenanceType) params.set("maintenance_type", maintenanceType || filters.maintenanceType);
+  return params;
+};
+const getPreventiveDashboard = (filters = {}, maintenanceType = "") => {
+  const params = preventiveQueryParams(filters, maintenanceType);
   return api(`/api/preventive/dashboard${params.size ? `?${params}` : ""}`);
 };
+async function getPreventiveProgressExport(filters = {}) {
+  const response = await fetch(`/api/preventive/dashboard/export.xlsx?${preventiveQueryParams(filters)}`);
+  if (!response.ok) throw new Error(`Export Excel gagal (${response.status})`);
+  const disposition = response.headers.get("content-disposition") || "";
+  const filename = (disposition.match(/filename="?([^";]+)"?/i) || [])[1] || "Progress-PM.xlsx";
+  return { blob: await response.blob(), filename };
+}
 async function uploadPreventive(file, date, page = "dashboard") {
   const form = new FormData();
   form.append("file", file);
@@ -211,7 +224,7 @@ function preventiveMonthRange(month = currentMonthIso()) {
   return { month, dateFrom: `${month}-01`, dateTo: `${month}-${String(last).padStart(2, "0")}` };
 }
 function defaultPreventiveFilters(month = currentMonthIso()) {
-  return { ...preventiveMonthRange(month), nop: "", siteId: "", search: "", status: "", pic: "", interval: "", typePower: "", scopeItem: "", scheduleState: "", maintenanceType: "" };
+  return { ...preventiveMonthRange(month), regional: "", nop: "", siteId: "", search: "", status: "", pic: "", interval: "", typePower: "", scopeItem: "", scheduleState: "", maintenanceType: "", needsAttention: "", insightMetric: "approved" };
 }
 function monthLabel(value) {
   if (!value) return "-";
@@ -474,7 +487,32 @@ function masterActiveLabel(value) {
   const text = String(value != null ? value : "").trim().toLowerCase();
   return ["true", "1", "yes", "y", "ya"].includes(text) ? "Ya" : ["false", "0", "no", "n", "tidak"].includes(text) ? "Tidak" : value;
 }
-function PreventiveOperationalInsights({ data }) {
+function saveCanvas(canvas, filename) {
+  canvas.toBlob((blob) => { if (blob) downloadBlob(blob, filename); }, "image/png");
+}
+function drawPmHeader(ctx, title, subtitle, width) {
+  ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0, 0, width, ctx.canvas.height);
+  ctx.fillStyle = "#173E68"; ctx.fillRect(0, 0, width, 16);
+  ctx.fillStyle = "#243A55"; ctx.font = "bold 30px Arial"; ctx.fillText(title, 52, 68);
+  ctx.fillStyle = "#607086"; ctx.font = "18px Arial"; ctx.fillText(subtitle, 52, 100);
+}
+function downloadPreventiveInsightsImage(data, filters) {
+  const canvas = document.createElement("canvas"), regional = data && data.regional_summary || [], metric = filters.insightMetric || "approved", label = metric === "submitted" ? "Submitted" : "Approved", width = 1500, height = Math.max(440, 180 + regional.length * 78);
+  canvas.width = width; canvas.height = height; const ctx = canvas.getContext("2d"); drawPmHeader(ctx, "Capaian Preventive Management per Regional", `${monthLabel(filters.month || filters.dateFrom?.slice(0, 7))} · ${label}`, width);
+  regional.forEach((item, index) => { const y = 150 + index * 78, value = Number(metric === "submitted" ? item.achievement : item.approved_achievement) || 0, count = metric === "submitted" ? item.submitted : item.approved;
+    ctx.fillStyle = "#42536A"; ctx.font = "bold 19px Arial"; ctx.fillText(item.regional, 52, y + 20);
+    ctx.fillStyle = "#E8EEF4"; ctx.fillRect(52, y + 34, 1120, 22); ctx.fillStyle = "#0B8A5B"; ctx.fillRect(52, y + 34, 1120 * Math.min(100, value) / 100, 22);
+    ctx.fillStyle = "#173E68"; ctx.font = "bold 20px Arial"; ctx.fillText(`${formatNumber(value)}%`, 1210, y + 52); ctx.fillStyle = "#607086"; ctx.font = "16px Arial"; ctx.fillText(`${count} ${label.toLowerCase()} dari ${item.plan} plan`, 52, y + 76);
+  }); saveCanvas(canvas, `Capaian-PM-Regional-${filters.month || todayIso()}.png`);
+}
+function downloadPreventiveProgressImage(data, filters) {
+  const status = data && data.status_options || [], rows = data && data.nop_summary || [], columns = ["Regional", "NOP", "Plan", "Approved", "Submitted", "Belum Submit", ...status], width = Math.max(1500, columns.length * 155), height = Math.max(400, 180 + rows.length * 42), canvas = document.createElement("canvas");
+  canvas.width = width; canvas.height = height; const ctx = canvas.getContext("2d"), col = width / columns.length; drawPmHeader(ctx, "Progress PM per NOP", monthLabel(filters.month || filters.dateFrom?.slice(0, 7)), width);
+  ctx.fillStyle = "#173E68"; ctx.fillRect(0, 125, width, 40); ctx.font = "bold 14px Arial"; ctx.fillStyle = "#FFFFFF"; columns.forEach((title, i) => ctx.fillText(title, i * col + 14, 151));
+  rows.forEach((item, rowIndex) => { const y = 165 + rowIndex * 42, values = [item.regional || "-", compactNop(item.nop), item.plan, item.approved, item.submitted, item.pending, ...status.map(name => item.statuses?.[name] || 0)]; ctx.fillStyle = rowIndex % 2 ? "#F6F8FB" : "#FFFFFF"; ctx.fillRect(0, y, width, 42); ctx.strokeStyle = "#D8E0EA"; ctx.strokeRect(0, y, width, 42); ctx.fillStyle = "#243A55"; ctx.font = "14px Arial"; values.forEach((value, i) => ctx.fillText(String(value), i * col + 14, y + 26)); });
+  saveCanvas(canvas, `Progress-PM-per-NOP-${filters.month || todayIso()}.png`);
+}
+function PreventiveOperationalInsights({ data, filters, onFilter }) {
   const h = React.createElement, plan = Number(data && data.plan || 0), statuses = data && data.status_summary || {}, regional = data && data.regional_summary || [];
   const statusRows = Object.entries(statuses).filter(([, count]) => Number(count) > 0).sort((a, b) => Number(b[1]) - Number(a[1]));
   const colors = ["#173E68", "#0B8A5B", "#E27B2B", "#D64B55", "#6B7D95"];
@@ -485,16 +523,17 @@ function PreventiveOperationalInsights({ data }) {
       h("div", { className: "preventive-status-track" }, h("i", { style: { width: `${width}%`, background: colors[index % colors.length] } }))
     );
   })) : h("p", { className: "preventive-insight-empty" }, "Belum ada status PM pada filter aktif.");
-  const regionalContent = regional.length ? h("div", { className: "preventive-regional-bars" }, ...regional.map(item => h("div", { className: "preventive-regional-row", key: item.regional },
-    h("div", { className: "preventive-status-label" }, h("span", null, item.regional), h("b", null, `${formatNumber(item.approved_achievement)}%`)),
-    h("div", { className: "preventive-regional-track" }, h("i", { style: { width: `${item.approved_achievement}%` } })),
-    h("small", null, `${item.approved} approved dari ${item.plan} plan · ${item.pending} belum submit`)
-  ))) : h("p", { className: "preventive-insight-empty" }, "Belum ada regional pada filter aktif.");
+  const metric = filters.insightMetric || "approved", metricLabel = metric === "submitted" ? "Submitted" : "Approved";
+  const regionalContent = regional.length ? h("div", { className: "preventive-regional-bars" }, ...regional.map(item => { const value = Number(metric === "submitted" ? item.achievement : item.approved_achievement) || 0, count = metric === "submitted" ? item.submitted : item.approved; return h("div", { className: "preventive-regional-row", key: item.regional },
+    h("div", { className: "preventive-status-label" }, h("span", null, item.regional), h("b", null, `${formatNumber(value)}%`)),
+    h("div", { className: "preventive-regional-track" }, h("i", { style: { width: `${value}%` } })),
+    h("small", null, `${count} ${metricLabel.toLowerCase()} dari ${item.plan} plan · ${item.pending} belum submit`)
+  ); })) : h("p", { className: "preventive-insight-empty" }, "Belum ada regional pada filter aktif.");
   return h("section", { className: "corporate-panel p-5 preventive-insights" },
-    h("div", { className: "preventive-progress-heading" }, h("div", null, h("h2", { className: "section-title" }, "RINGKASAN OPERASIONAL PM"), h("p", null, "Distribusi status dan progres penyelesaian per regional pada filter aktif.")), h("strong", null, `${plan} plan`)),
+    h("div", { className: "preventive-progress-heading" }, h("div", null, h("h2", { className: "section-title" }, "RINGKASAN OPERASIONAL PM"), h("p", null, "Progres operasional berdasarkan filter Regional, NOP, dan Status PM aktif.")), h("strong", null, `${plan} plan`)),
     h("div", { className: "preventive-insights-grid" },
       h("div", { className: "preventive-insight-block" }, h("h3", null, "Distribusi Status PM"), statusContent),
-      h("div", { className: "preventive-insight-block" }, h("h3", null, "Capaian per Regional"), regionalContent)
+      h("div", { className: "preventive-insight-block" }, h("div", { className: "flex items-center justify-between gap-2" }, h("h3", null, "Capaian per Regional"), h("button", { type: "button", className: "btn-secondary h-8 px-3 text-[9px] font-semibold", onClick: () => downloadPreventiveInsightsImage(data, filters) }, "DOWNLOAD IMAGE")), h("div", { className: "mb-3" }, h("label", { className: "filter-label mb-1 block" }, "BASIS CAPAIAN"), h("select", { value: metric, onChange: e => onFilter("insightMetric", e.target.value), className: "control h-8 w-[170px] px-2 text-[9px] font-semibold" }, h("option", { value: "approved" }, "Approved"), h("option", { value: "submitted" }, "Submitted"))), regionalContent)
     )
   );
 }
@@ -531,12 +570,20 @@ function PreventiveDashboardCards({ data, file, date, busy, loading, filters, on
     { className: "preventive-filter-row" },
     h("div", null, h("label", { className: "filter-label mb-1 block" }, "BULAN / TAHUN"), h("input", { type: "month", value: filters.month || filters.dateFrom?.slice(0, 7) || currentMonthIso(), onChange: (event) => onFilter("month", event.target.value), className: "control h-10 w-[165px] px-3 text-[10px] font-semibold" })),
     h("div", null, h("label", { className: "filter-label mb-1 block" }, "JENIS PM"), h("select", { value: filters.maintenanceType || "", onChange: (event) => onFilter("maintenanceType", event.target.value), className: "control h-10 w-[155px] px-3 text-[10px] font-semibold" }, h("option", { value: "" }, "PM Site & Genset"), h("option", { value: "site" }, "PM Site"), h("option", { value: "genset" }, "PM Genset"))),
+    h("div", null, h("label", { className: "filter-label mb-1 block" }, "REGIONAL"), h("select", { value: filters.regional || "", onChange: (event) => onFilter("regional", event.target.value), className: "control h-10 w-[180px] px-3 text-[10px] font-semibold" }, h("option", { value: "" }, "All Regional"), ...((data == null ? void 0 : data.regional_options) || []).map(item => h("option", { key: item, value: item }, item)))),
+    h("div", null, h("label", { className: "filter-label mb-1 block" }, "KEBUTUHAN PERBAIKAN"), h("select", { value: filters.needsAttention || "", onChange: (event) => onFilter("needsAttention", event.target.value), className: "control h-10 w-[190px] px-3 text-[10px] font-semibold" }, h("option", { value: "" }, "Semua Kondisi"), h("option", { value: "yes" }, "Perlu Tindak Lanjut"), h("option", { value: "no" }, "Tidak Ada Indikasi"))),
     h("div", null, h("label", { className: "filter-label mb-1 block" }, "NOP"), h("select", { value: filters.nop, onChange: (event) => onFilter("nop", event.target.value), className: "control h-10 w-[180px] px-3 text-[10px] font-semibold" }, h("option", { value: "" }, "All NOP"), ...(data && data.nop_options || []).map((item) => h("option", { key: item, value: item }, compactNop(item))))),
     h("div", null, h("label", { className: "filter-label mb-1 block" }, "STATUS PM"), h("select", { value: filters.status || "", onChange: (event) => onFilter("status", event.target.value), className: "control h-10 w-[155px] px-3 text-[10px] font-semibold", "aria-label": "Status PM Dashboard" }, h("option", { value: "" }, "All Status"), ...((data == null ? void 0 : data.status_options) || []).map((status) => h("option", { key: status, value: status }, status)))),
     h("div", { className: "preventive-filter-search" }, h("label", { className: "filter-label mb-1 block" }, "SEARCH"), h("input", { type: "search", value: filters.search, onChange: (event) => onFilter("search", event.target.value), placeholder: "Cari Site ID, Site Name, NOP, atau Notes", className: "control h-10 w-full px-3 text-[10px]" }))
   );
   const statuses = (data == null ? void 0 : data.status_options) || [], nopSummary = (data == null ? void 0 : data.nop_summary) || [];
-  const progressTable = h("section", { className: "corporate-panel p-5 preventive-progress-panel" }, h("div", { className: "preventive-progress-heading" }, h("div", null, h("h2", { className: "section-title" }, "PROGRES PM PER NOP"), h("p", null, `Rekap plan ${monthLabel(filters.month || filters.dateFrom?.slice(0, 7))} berdasarkan status PM.`)), h("strong", null, `${nopSummary.length} NOP`)), h("div", { className: "preventive-progress-scroll kpi-scrollbar" }, h("table", { className: "preventive-table preventive-progress-table" }, h("thead", { className: "bg-[#173E68] text-white" }, h("tr", null, ...["REGIONAL", "NOP", "PLAN SITE", "APPROVED", "SUBMITTED", "BELUM SUBMIT", ...statuses].map(label => h("th", { key: label }, label)))), h("tbody", null, ...nopSummary.map(item => h("tr", { key: `${item.regional}-${item.nop}` }, h("td", { className: "preventive-progress-regional" }, item.regional || "-"), h("td", { className: "preventive-progress-nop" }, compactNop(item.nop)), h("td", null, item.plan), h("td", { className: "is-approved" }, item.approved), h("td", null, item.submitted), h("td", { className: "is-pending" }, item.pending), ...statuses.map(status => h("td", { key: status }, item.statuses?.[status] || 0))))))));
+  const regionalGroups = nopSummary.reduce((groups, item) => { const regional = item.regional || "Belum ditentukan"; (groups[regional] ||= []).push(item); return groups; }, {});
+  const columns = ["NOP", "PLAN SITE", "APPROVED", "SUBMITTED", "BELUM SUBMIT", ...statuses];
+  const progressRows = Object.entries(regionalGroups).flatMap(([regional, items]) => [
+    h("tr", { className: "preventive-regional-group", key: `regional-${regional}` }, h("td", { colSpan: columns.length }, regional)),
+    ...items.map(item => h("tr", { key: `${regional}-${item.nop}` }, h("td", { className: "preventive-progress-nop" }, compactNop(item.nop)), h("td", null, item.plan), h("td", { className: "is-approved" }, item.approved), h("td", null, item.submitted), h("td", { className: "is-pending" }, item.pending), ...statuses.map(status => h("td", { key: status }, item.statuses?.[status] || 0))))
+  ]);
+  const progressTable = h("section", { className: "corporate-panel p-5 preventive-progress-panel" }, h("div", { className: "preventive-progress-heading" }, h("div", null, h("h2", { className: "section-title" }, "PROGRES PM PER NOP"), h("p", null, `Rekap plan ${monthLabel(filters.month || filters.dateFrom?.slice(0, 7))} berdasarkan status PM.`)), h("div", { className: "flex items-center gap-2" }, h("button", { type: "button", className: "btn-secondary h-8 px-3 text-[9px] font-semibold", onClick: async () => { try { const result = await getPreventiveProgressExport(filters); downloadBlob(result.blob, result.filename); } catch (error) { window.alert(error.message); } } }, "DOWNLOAD EXCEL"), h("button", { type: "button", className: "btn-secondary h-8 px-3 text-[9px] font-semibold", onClick: () => downloadPreventiveProgressImage(data, filters) }, "DOWNLOAD IMAGE"), h("strong", null, `${nopSummary.length} NOP`))), h("div", { className: "preventive-progress-scroll kpi-scrollbar" }, h("table", { className: "preventive-table preventive-progress-table" }, h("thead", { className: "bg-[#173E68] text-white" }, h("tr", null, ...columns.map(label => h("th", { key: label }, label)))), h("tbody", null, ...progressRows))));
   const cards = visibleRows.length ? visibleRows.map((row, index) => {
     var _a, _b;
     const key = `${row.site_id}-${row.schedule_date}-${row.ticket_no}-${index}`;
@@ -566,7 +613,7 @@ function PreventiveDashboardCards({ data, file, date, busy, loading, filters, on
     "div",
     { className: "space-y-4" },
     summary,
-    h(PreventiveOperationalInsights, { data }),
+    h(PreventiveOperationalInsights, { data, filters, onFilter }),
     progressTable,
     h(
       "section",
@@ -1506,6 +1553,7 @@ class App extends React.Component {
     __publicField(this, "changePreventiveFilter", (field, value) => {
       const filters = field === "month" ? { ...this.state.preventiveFilters, ...preventiveMonthRange(value) } : { ...this.state.preventiveFilters, [field]: value };
       if (field === "nop") filters.siteId = "";
+      if (field === "regional") { filters.nop = ""; filters.siteId = ""; }
       if (field === "dateFrom" && value > filters.dateTo) filters.dateTo = value;
       if (field === "dateTo" && value < filters.dateFrom) filters.dateFrom = value;
       this.setState({ preventiveFilters: filters });

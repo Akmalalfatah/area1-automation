@@ -123,7 +123,7 @@ export async function siteData({includeKpiB13=false,includePm=true}={}){
 }
 
 const uploadMonth=value=>String(value||'').slice(0,7)
-const sourceRowsForUploads=async uploads=>{
+const sourceRowsForUploads=async (uploads,{period='',includeKpiB13=true}={})=>{
   const [punchlistNotes,evaluations]=await Promise.all([
     getPool().query('SELECT site_id,note,updated_at FROM site_punchlist_notes').then(([rows])=>rows),
     getPool().query('SELECT * FROM pm_site_evaluations').then(([rows])=>rows)
@@ -131,15 +131,50 @@ const sourceRowsForUploads=async uploads=>{
   // Peningkatan KPI tidak membutuhkan data PM. Hindari membaca snapshot PM
   // yang besar saat hanya kalkulasi B1-B3/SWFM dijalankan.
   const data={pm:[],evaluations,punchlist_notes:punchlistNotes,sources:uploads.map(({dataset,...meta})=>meta),quality:[],read_only:false}
-  if(!uploads.length)return data
-  const ids=uploads.map(upload=>upload.source_upload_id)
-  const [records]=await getPool().query('SELECT source_upload_id,payload FROM pm_site_source_upload_rows WHERE source_upload_id IN (?) ORDER BY source_upload_id,row_no',[ids])
-  const rowsByUpload=new Map(ids.map(id=>[id,[]]))
-  for(const record of records)rowsByUpload.get(record.source_upload_id)?.push(typeof record.payload==='string'?JSON.parse(record.payload):record.payload)
-  for(const upload of uploads){
-    const dataset=typeof upload.dataset==='string'?JSON.parse(upload.dataset):upload.dataset
-    data[upload.source_kind]=rowsByUpload.get(upload.source_upload_id)||[]
-    data.quality.push(...(dataset.issues||[]).map(issue=>({...issue,source:upload.source_kind})))
+  if(uploads.length){
+    const ids=uploads.map(upload=>upload.source_upload_id)
+    const [records]=await getPool().query('SELECT source_upload_id,payload FROM pm_site_source_upload_rows WHERE source_upload_id IN (?) ORDER BY source_upload_id,row_no',[ids])
+    const rowsByUpload=new Map(ids.map(id=>[id,[]]))
+    for(const record of records)rowsByUpload.get(record.source_upload_id)?.push(typeof record.payload==='string'?JSON.parse(record.payload):record.payload)
+    for(const upload of uploads){
+      const dataset=typeof upload.dataset==='string'?JSON.parse(upload.dataset):upload.dataset
+      data[upload.source_kind]=rowsByUpload.get(upload.source_upload_id)||[]
+      data.quality.push(...(dataset.issues||[]).map(issue=>({...issue,source:upload.source_kind})))
+    }
+  }
+  // Kompatibilitas data yang diimpor sebelum penyimpanan snapshot per-upload
+  // dibuat. Fallback hanya berlaku bila tanggal upload sumber aktif tepat pada
+  // bulan pilihan, sehingga data antarbulan tetap tidak tercampur.
+  if(/^\d{4}-\d{2}$/.test(period)){
+    const [year,month]=period.split('-').map(Number),monthStart=`${period}-01`,monthEnd=new Date(Date.UTC(year,month,1)).toISOString().slice(0,10)
+    const [legacySources]=await getPool().query('SELECT source_kind,filename,upload_date,dataset FROM pm_site_sources WHERE upload_date>=? AND upload_date<?',[monthStart,monthEnd])
+    const fallbackSources=legacySources.filter(source=>includeKpiB13||!kpiB13SourceKinds.includes(source.source_kind)).filter(source=>!(data[source.source_kind]||[]).length)
+    if(fallbackSources.length){
+      const kinds=fallbackSources.map(source=>source.source_kind)
+      const [legacyRows]=await getPool().query('SELECT source_kind,payload FROM pm_site_source_rows WHERE source_kind IN (?) ORDER BY source_kind,row_no',[kinds])
+      const rowsByKind=new Map(kinds.map(kind=>[kind,[]]))
+      for(const row of legacyRows)rowsByKind.get(row.source_kind)?.push(typeof row.payload==='string'?JSON.parse(row.payload):row.payload)
+      for(const source of fallbackSources){
+        const dataset=typeof source.dataset==='string'?JSON.parse(source.dataset):source.dataset
+        data[source.source_kind]=rowsByKind.get(source.source_kind)||[]
+        if(!data.sources.some(item=>item.source_kind===source.source_kind))data.sources.push({source_kind:source.source_kind,filename:source.filename,upload_date:source.upload_date})
+        data.quality.push(...(dataset.issues||[]).map(issue=>({...issue,source:source.source_kind})))
+      }
+    }
+  }
+  // Master Site adalah backbone. Snapshot lama yang dibuat sebelum tabel snapshot
+  // tersedia dapat tidak memiliki baris master; gunakan Master aktif sebagai fallback.
+  if(!(data.master||[]).length){
+    const [[masterSource],[masterRows]]=await Promise.all([
+      getPool().query("SELECT filename,upload_date,dataset FROM pm_site_sources WHERE source_kind='master' LIMIT 1"),
+      getPool().query("SELECT payload FROM pm_site_source_rows WHERE source_kind='master' ORDER BY row_no")
+    ])
+    if(masterSource){
+      const dataset=typeof masterSource.dataset==='string'?JSON.parse(masterSource.dataset):masterSource.dataset
+      data.master=masterRows.map(row=>typeof row.payload==='string'?JSON.parse(row.payload):row.payload)
+      if(!data.sources.some(source=>source.source_kind==='master'))data.sources.push({source_kind:'master',filename:masterSource.filename,upload_date:masterSource.upload_date})
+      data.quality.push(...(dataset.issues||[]).map(issue=>({...issue,source:'master'})))
+    }
   }
   return data
 }
@@ -168,7 +203,7 @@ export async function siteDataForUploadMonth(period,{includeKpiB13=true}={}){
     if((!includeKpiB13&&kpiB13SourceKinds.includes(upload.source_kind))||seen.has(upload.source_kind)||(!isReference&&uploadPeriod(upload)!==selectedPeriod))continue
     seen.add(upload.source_kind);selected.push(upload)
   }
-  return{data:await sourceRowsForUploads(selected),historical:true,available_periods}
+  return{data:await sourceRowsForUploads(selected,{period:selectedPeriod,includeKpiB13}),historical:true,available_periods}
 }
 
 const milliseconds=value=>Date.parse(value?.length===10?value+'T00:00:00Z':value+'Z')
@@ -226,7 +261,7 @@ export function analyzeSite(pm,data,today=new Date().toISOString().slice(0,10)){
   if(!pm.last_maintenance)issues.push('Last Maintenance belum tersedia; korelasi belum dapat dihitung.')
   for(const field of ['class_site','nop'])if(master?.[field]&&pm[field]&&normalizeSite(master[field])!==normalizeSite(pm[field]))issues.push(`${field==='nop'?'NOP':'Class Site'} historis PM berbeda dari master.`)
   const missingSources=['master','swfm','inap','ggr'].filter(source=>!Object.hasOwn(data,source))
-  if(missingSources.length)issues.push(`Sumber belum diimpor: ${missingSources.join(', ')}.`)
+  if(missingSources.length)issues.push(`Sumber tidak tersedia pada snapshot periode aktif: ${missingSources.join(', ')}.`)
   if(incidents.some(row=>row.time_confirmation))issues.push('Urutan waktu hari 0 perlu konfirmasi karena maintenance hanya memiliki tanggal.')
   const evaluation=index.evaluations.get(`${site}|${pm.ticket_no}`)||null,punchlist=index.punchlists.get(site)||null
   const distributions={};for(const row of incidents){const item=distributions[row.category]||{category:row.category,count:0,validated:0,provisional:0};item.count++;item[row.validated?'validated':'provisional']++;distributions[row.category]=item}

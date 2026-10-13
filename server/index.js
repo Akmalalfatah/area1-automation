@@ -70,7 +70,9 @@ const preventiveSourceData=async query=>{
   snapshot.data.pm=await loadPreventiveRows({dateFrom:query.date_from,dateTo:query.date_to})
   return snapshot.data
 }
-app.get('/api/preventive/dashboard',asyncHandler(async(req,res)=>{const rows=await loadPreventiveRows({dateFrom:req.query.date_from,dateTo:req.query.date_to}),payload=buildPreventiveDashboard(rows,req.query.date_from,req.query.date_to,req.query.nop,req.query.site_id,req.query.search,req.query.maintenance_type,req.query.status,req.query.pic,req.query.interval,req.query.type_power,req.query.scope_item,req.query.schedule_state);const source=await preventiveSourceData(req.query);payload.rows=enrichWorkConditions(enrichDashboardReview(payload.rows,source),source);payload.latest_upload=(await preventiveUploadHistory(req.query.maintenance_type||'dashboard',true))[0]||null;res.json(payload)}))
+const preventiveDashboardPayload=async query=>{const rows=await loadPreventiveRows({dateFrom:query.date_from,dateTo:query.date_to}),source=await preventiveSourceData(query),reviewedRows=enrichWorkConditions(enrichDashboardReview(rows,source),source),payload=buildPreventiveDashboard(reviewedRows,query.date_from,query.date_to,query.nop,query.site_id,query.search,query.maintenance_type,query.status,query.pic,query.interval,query.type_power,query.scope_item,query.schedule_state,query.needs_attention,query.regional);payload.rows=enrichWorkConditions(enrichDashboardReview(payload.rows,source),source);payload.latest_upload=(await preventiveUploadHistory(query.maintenance_type||'dashboard',true))[0]||null;return payload}
+app.get('/api/preventive/dashboard/export.xlsx',asyncHandler(async(req,res)=>{const payload=await preventiveDashboardPayload(req.query),workbook=buildPreventiveProgressWorkbook(payload,req.query),buffer=await workbook.xlsx.writeBuffer(),period=String(req.query.date_from||'preventive').slice(0,7);res.set({'content-type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','content-disposition':`attachment; filename="Progress-PM-${period}.xlsx"`});res.send(Buffer.from(buffer))}))
+app.get('/api/preventive/dashboard',asyncHandler(async(req,res)=>res.json(await preventiveDashboardPayload(req.query))))
 
 app.get('/api/pm-genset/detail',asyncHandler(async(req,res)=>{const data=await gensetData({dateFrom:req.query.date_from,dateTo:req.query.date_to}),pm=data.pm?.findLast(row=>row.maintenance_kind==='genset'&&workOrderKey(row)===req.query.id);if(!pm)throw new HttpError(404,'Pekerjaan PM Genset tidak ditemukan.');res.json(analyzeGenset(pm,data,req.query.window_days?{windowDays:Number(req.query.window_days)}:{}))}))
 app.put('/api/pm-genset/evaluation',asyncHandler(async(req,res)=>{const data=await gensetData({dateFrom:req.body.date_from,dateTo:req.body.date_to}),pm=data.pm?.findLast(row=>row.maintenance_kind==='genset'&&workOrderKey(row)===req.body.id);if(!pm)throw new HttpError(404,'Pekerjaan PM Genset tidak ditemukan.');res.json(await saveGensetEvaluation(pm,req.body))}))
@@ -107,6 +109,18 @@ function boostingPeriod(query,fallbackDate){
   const year=String(query.year||String(fallbackDate||'').slice(0,4)).trim(),month=String(query.month||String(fallbackDate||'').slice(5,7)).trim().padStart(2,'0'),period=`${year}-${month}`
   if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(period))throw new HttpError(400,'Bulan Peningkatan KPI harus berformat YYYY-MM.')
   return period
+}
+function buildPreventiveProgressWorkbook(payload,query){
+  const workbook=new ExcelJS.Workbook(),summary=workbook.addWorksheet('Ringkasan PM'),progress=workbook.addWorksheet('Progress per NOP'),period=`${payload.period_start||'-'} s.d. ${payload.period_end||'-'}`
+  summary.columns=[{width:28},{width:24}]
+  summary.addRow(['RINGKASAN PREVENTIVE MANAGEMENT','']);summary.mergeCells('A1:B1')
+  summary.addRows([['Periode',period],['Regional',query.regional||'Semua Regional'],['NOP',query.nop||'Semua NOP'],['Status PM',query.status||'Semua Status'],['Jenis PM',query.maintenance_type||'PM Site & Genset'],[],['Plan Site',payload.plan],['Approved',payload.approved],['Submitted',payload.submitted],['Belum Submit',payload.pending]])
+  const statusColumns=payload.status_options||[],headers=['Regional','NOP','Plan Site','Approved','Submitted','Belum Submit',...statusColumns]
+  progress.columns=headers.map((header,index)=>({header,key:`c${index}`,width:index<2?24:16}))
+  for(const item of payload.nop_summary||[])progress.addRow([item.regional||'Belum ditentukan',item.nop,item.plan,item.approved,item.submitted,item.pending,...statusColumns.map(status=>item.statuses?.[status]||0)])
+  for(const sheet of [summary,progress]){sheet.views=[{state:'frozen',ySplit:sheet===progress?1:1}];sheet.getRow(1).font={bold:true,color:{argb:'FFFFFFFF'},size:12};sheet.getRow(1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF173E68'}};sheet.getRow(1).alignment={vertical:'middle'};sheet.getRow(1).height=24;sheet.eachRow((row,rowNumber)=>{row.eachCell(cell=>{cell.border={bottom:{style:'thin',color:{argb:'FFD8E0EA'}}};if(rowNumber>1)cell.alignment={vertical:'middle'}})})}
+  progress.autoFilter={from:'A1',to:{row:Math.max(progress.rowCount,1),column:headers.length}}
+  return workbook
 }
 function asyncHandler(fn){return(req,res,next)=>databaseReady.then(()=>fn(req,res,next)).catch(next)}
 function numberToColumn(number){let result='';while(number){number--;result=String.fromCharCode(65+number%26)+result;number=Math.floor(number/26)}return result}
