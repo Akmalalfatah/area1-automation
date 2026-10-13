@@ -193,6 +193,8 @@
       const id = `genset|${String(row.ticket_no || "").trim() || `${String(row.site_id).trim().toUpperCase()}|${row.schedule_date}|${row.scope_item_name || ""}`}`;
       try {
         const params = new URLSearchParams({ id });
+        if (this.props.filters?.dateFrom) params.set("date_from", this.props.filters.dateFrom);
+        if (this.props.filters?.dateTo) params.set("date_to", this.props.filters.dateTo);
         if (windowDays !== null) params.set("window_days", windowDays);
         const detail = await request("/api/pm-genset/detail?" + params);
         if (token === this.sequence) this.setState({ detail, windowDays: detail.rules.windowDays }, () => window.scrollTo({ top: 0, behavior: "auto" }));

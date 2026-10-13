@@ -122,10 +122,13 @@ export async function siteData({includeKpiB13=false,includePm=true}={}){
 
 const uploadMonth=value=>String(value||'').slice(0,7)
 const sourceRowsForUploads=async uploads=>{
-  const [punchlistNotes]=await getPool().query('SELECT site_id,note,updated_at FROM site_punchlist_notes')
+  const [punchlistNotes,evaluations]=await Promise.all([
+    getPool().query('SELECT site_id,note,updated_at FROM site_punchlist_notes').then(([rows])=>rows),
+    getPool().query('SELECT * FROM pm_site_evaluations').then(([rows])=>rows)
+  ])
   // Peningkatan KPI tidak membutuhkan data PM. Hindari membaca snapshot PM
   // yang besar saat hanya kalkulasi B1-B3/SWFM dijalankan.
-  const data={pm:[],evaluations:[],punchlist_notes:punchlistNotes,sources:uploads.map(({dataset,...meta})=>meta),quality:[],read_only:false}
+  const data={pm:[],evaluations,punchlist_notes:punchlistNotes,sources:uploads.map(({dataset,...meta})=>meta),quality:[],read_only:false}
   if(!uploads.length)return data
   const ids=uploads.map(upload=>upload.source_upload_id)
   const [records]=await getPool().query('SELECT source_upload_id,payload FROM pm_site_source_upload_rows WHERE source_upload_id IN (?) ORDER BY source_upload_id,row_no',[ids])
@@ -141,21 +144,26 @@ const sourceRowsForUploads=async uploads=>{
 
 // Mengambil snapshot terbaru berdasarkan bulan pada tanggal saat file diunggah.
 // Isi Date Occurred di dalam file tidak dipakai untuk memilih versi upload.
-export async function siteDataForUploadMonth(period){
-  if(!databaseEnabled)return{data:await siteData({includeKpiB13:true}),historical:false,available_periods:[]}
-  const [allUploads]=await getPool().query('SELECT source_upload_id,source_kind,filename,upload_date,dataset,updated_at FROM pm_site_source_uploads ORDER BY upload_date DESC,updated_at DESC')
-  if(!allUploads.length)return{data:await siteData({includeKpiB13:true}),historical:false,available_periods:[]}
+export async function siteDataForUploadMonth(period,{includeKpiB13=true}={}){
+  if(!databaseEnabled)return{data:await siteData({includeKpiB13}),historical:false,available_periods:[]}
+  const [periodRows]=await getPool().query("SELECT DISTINCT DATE_FORMAT(upload_date,'%Y-%m') AS period FROM pm_site_source_uploads WHERE upload_date IS NOT NULL ORDER BY period DESC")
+  const available_periods=periodRows.map(row=>String(row.period||'')).filter(value=>/^\d{4}-\d{2}$/.test(value))
+  if(!available_periods.length)return{data:await siteData({includeKpiB13}),historical:false,available_periods:[]}
+  const selectedPeriod=/^\d{4}-\d{2}$/.test(String(period||''))?period:available_periods[0]
+  const [year,month]=selectedPeriod.split('-').map(Number),monthStart=`${selectedPeriod}-01`,monthEnd=new Date(Date.UTC(year,month,1)).toISOString().slice(0,10)
+  // Metadata bulan lain hanya dipakai untuk mengisi dropdown di atas. Isi file/payload
+  // yang dibaca di bawah ini eksklusif bulan terpilih; Master Site terbaru hanyalah referensi.
+  const [candidateUploads]=await getPool().query('SELECT source_upload_id,source_kind,filename,upload_date,dataset,updated_at FROM pm_site_source_uploads WHERE (upload_date>=? AND upload_date<?) OR source_kind=? ORDER BY upload_date DESC,updated_at DESC',[monthStart,monthEnd,'master'])
   const uploadPeriod=upload=>{
     const date=upload.upload_date
     if(date instanceof Date)return date.toISOString().slice(0,7)
     const value=String(date||'')
     return /^\d{4}-\d{2}/.test(value)?value.slice(0,7):''
   }
-  const available_periods=[...new Set(allUploads.map(uploadPeriod).filter(value=>/^\d{4}-\d{2}$/.test(value)))].sort().reverse()
   const selected=[],seen=new Set()
-  for(const upload of allUploads){
+  for(const upload of candidateUploads){
     const isReference=upload.source_kind==='master'
-    if(seen.has(upload.source_kind)||(!isReference&&uploadPeriod(upload)!==period))continue
+    if((!includeKpiB13&&kpiB13SourceKinds.includes(upload.source_kind))||seen.has(upload.source_kind)||(!isReference&&uploadPeriod(upload)!==selectedPeriod))continue
     seen.add(upload.source_kind);selected.push(upload)
   }
   return{data:await sourceRowsForUploads(selected),historical:true,available_periods}

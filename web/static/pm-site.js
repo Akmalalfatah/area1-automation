@@ -86,7 +86,7 @@
       this.state = { form: { ...emptyEvaluation, priority: detail.priority, ...detail.evaluation || {}, target_date: ((_b = (_a = detail.evaluation) == null ? void 0 : _a.target_date) == null ? void 0 : _b.slice(0, 10)) || "" }, busy: false, error: "", notice: "" };
     }
     render() {
-      const { detail, onSaved } = this.props;
+      const { detail, onSaved, period } = this.props;
       const { form, busy, error, notice } = this.state;
       const setForm = (value) => this.setState((current) => ({ form: typeof value === "function" ? value(current.form) : value }));
       const setBusy = (busy2) => this.setState({ busy: busy2 }), setError = (error2) => this.setState({ error: error2 }), setNotice = (notice2) => this.setState({ notice: notice2 });
@@ -99,7 +99,7 @@
         setNotice("");
         try {
           const value = reviewed ? { ...form, evaluation_status: "Sedang ditindaklanjuti" } : form;
-          const saved = await request("/api/pm-site/evaluation", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...value, id: `site|${detail.pm.ticket_no || `${detail.pm.site_id.trim().toUpperCase()}|${detail.pm.schedule_date}|${detail.pm.scope_item_name || ""}`}` }) });
+          const saved = await request("/api/pm-site/evaluation", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...value, id: `site|${detail.pm.ticket_no || `${detail.pm.site_id.trim().toUpperCase()}|${detail.pm.schedule_date}|${detail.pm.scope_item_name || ""}`}`, ...period }) });
           setForm({ ...saved, target_date: ((_a = saved.target_date) == null ? void 0 : _a.slice(0, 10)) || "" });
           setNotice("Evaluasi tersimpan di MySQL.");
           onSaved(saved);
@@ -244,7 +244,7 @@
         setLoading(true);
         setError("");
         try {
-          setDetail(await request(`/api/pm-site/detail?${new URLSearchParams({ id })}`));
+          setDetail(await request(`/api/pm-site/detail?${new URLSearchParams({ id, date_from: local.date_from, date_to: local.date_to })}`));
           window.scrollTo({ top: 0 });
         } catch (failure) {
           setError(failure.message);
@@ -254,7 +254,7 @@
       }
       const change = (name, value) => setLocal((current) => name === "month" ? { ...current, ...monthRange(value) } : { ...current, [name]: value });
       const select = (label, name, values) => /* @__PURE__ */ R.createElement("label", { key: name, className: "pm-site-form-field" }, /* @__PURE__ */ R.createElement("span", { className: "filter-label" }, label), /* @__PURE__ */ R.createElement("select", { className: "control h-10 px-3 text-[10px] font-semibold", value: local[name], onChange: (event) => change(name, event.target.value) }, /* @__PURE__ */ R.createElement("option", { value: "" }, "Semua"), values.map((value) => /* @__PURE__ */ R.createElement("option", { key: typeof value === "string" ? value : value[0], value: typeof value === "string" ? value : value[0] }, typeof value === "string" ? value : value[1]))));
-      if (detail) return /* @__PURE__ */ R.createElement("div", { className: "pm-site-module" }, error && /* @__PURE__ */ R.createElement("p", { role: "alert", className: "pm-site-error" }, error), /* @__PURE__ */ R.createElement(Detail, { key: detail.pm.ticket_no, detail, SummaryCard, back: () => {
+      if (detail) return /* @__PURE__ */ R.createElement("div", { className: "pm-site-module" }, error && /* @__PURE__ */ R.createElement("p", { role: "alert", className: "pm-site-error" }, error), /* @__PURE__ */ R.createElement(Detail, { key: detail.pm.ticket_no, detail, SummaryCard, period: { date_from: local.date_from, date_to: local.date_to }, back: () => {
         setDetail(null);
         setRevision((value) => value + 1);
       }, onPunchlistSaved: (saved) => setDetail((current) => ({ ...current, punchlist_note: saved.note || "", punchlist_updated_at: saved.updated_at || null })) }));

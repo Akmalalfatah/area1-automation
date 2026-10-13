@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs'
-import {siteData,normalizeSite,sourceDate} from './pm-site.js'
-import {databaseEnabled,getPool} from './db.js'
+import {siteData,siteDataForUploadMonth,normalizeSite,sourceDate} from './pm-site.js'
+import {databaseEnabled,getPool,loadPreventiveRows} from './db.js'
 import {workOrderKey} from './preventive.js'
 
 // Coverage is declared by the data owner; observed dates alone do not prove completeness.
@@ -95,7 +95,15 @@ export function analyzeGenset(pm,data,options={}){
   const evaluation=(data.genset_evaluations||[]).find(row=>normalizeSite(row.site_id)===site&&row.pm_ticket_no===pm.ticket_no&&String(row.pm_period).slice(0,10)===pm.schedule_date)||null
   return {id:workOrderKey(pm),pm,master,anchor:anchor||null,anchor_label:closed?'setelah PM selesai':'setelah submission PM',date_only:dateOnly,rules:{windowDays:rules.windowDays,nearHours:rules.nearHours,earlyDays:rules.earlyDays},windows:anchor?{before_start:iso(beforeStart),before_end:iso(beforeEnd),after_start:iso(afterStart),after_end:iso(afterEnd)}:null,coverage,events,metrics,related,timeline_related,priority,status,reasons,missing,read_only:!!data.read_only,evaluation,reliability:{first_ggr_days:ag.length?(time(ag[0].occurred_at)-at)/DAY:null,average_gap_days:gaps.length?gaps.reduce((a,b)=>a+b,0)/gaps.length:null,longest_minutes:durations.length&&durations.length===ag.length?Math.max(...durations):null,days_since_last:ag.length?Math.max(0,(now-time(ag.at(-1).occurred_at))/DAY):null},evidence:{ggr:ag.length,related_power:relatedTickets.length,out_sla:out},facts:[anchor?`${ggrAvailable?ag.length:'Data GGR belum tersedia'} GGR dan ${ticketAvailable?ap.length:'data ticket belum tersedia'} ticket Power tercatat ${closed?'setelah PM selesai':'setelah submission PM'} dalam jendela ${rules.windowDays} hari.`:'Acuan PM belum tersedia.',anchor&&ggrAvailable&&ticketAvailable?`${relatedTickets.length} ticket Power cocok secara Site ID dan waktu; hubungan sebab-akibat membutuhkan verifikasi.`:'Keterkaitan GGR dan ticket belum dapat dievaluasi.'],unavailable:[...missing,'Checklist PM, load test, baterai starter, jam operasi genset, serta bahan bakar belum tersedia pada sumber.'],actions:risk?['Periksa checklist PM dan RCA ticket terkait.','Verifikasi kesiapan baterai starter, bahan bakar, dan load test di lapangan.']:['Konfirmasi cakupan sumber dan lengkapi bukti pemeriksaan genset.']}
 }
-export async function gensetData(){const data=await siteData();if(databaseEnabled){const [rows]=await getPool().query('SELECT * FROM pm_genset_evaluations');data.genset_evaluations=rows}return data}
+export async function gensetData({dateFrom,dateTo}={}){
+  const period=String(dateFrom||dateTo||'').slice(0,7)
+  const data=/^\d{4}-\d{2}$/.test(period)
+    ?(await siteDataForUploadMonth(period,{includeKpiB13:false})).data
+    :await siteData()
+  if(/^\d{4}-\d{2}$/.test(period))data.pm=await loadPreventiveRows({dateFrom,dateTo})
+  if(databaseEnabled){const [rows]=await getPool().query('SELECT * FROM pm_genset_evaluations');data.genset_evaluations=rows}
+  return data
+}
 export const gensetEvaluationStatuses=['Belum dievaluasi','Perlu ditinjau','Terverifikasi bermasalah','Tidak berkaitan dengan PM','Menunggu verifikasi lapangan','Selesai dievaluasi']
 export function validateGensetEvaluation(input){
   if(!gensetEvaluationStatuses.includes(input.evaluation_status))throw Object.assign(new Error('Status evaluasi tidak valid.'),{status:422})
