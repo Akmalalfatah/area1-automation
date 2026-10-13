@@ -52,13 +52,13 @@ export async function parseKpiB13(buffer,expectedRegion=null){
   return {rows,row_count:rows.length,issues,sheet:sheet.name,regional:expectedRegion,periods:[...new Set(rows.map(row=>row.period).filter(Boolean))].sort()}
 }
 
-export function buildKpiB13Summaries(rows,nopNames,period){
+export function buildKpiB13Summaries(rows,nopNames,period=null){
   // Gunakan canonical NOP untuk setiap row maupun filter, bukan string mentah.
   // Ini mencegah "RANTAU  PRAPAT" atau "NOP Rantau Prapat" dianggap NOP lain.
   const aliases=new Map(nopNames.map(nop=>[nopKey(nop),nop])),grouped=new Map()
   for(const row of rows||[]){
     const nop=aliases.get(nopKey(row.nop)),code=normalizeComponent(row.component),level=severity(row.severity)
-    if(!nop||!code||!level||String(row.occurred_at||'').slice(0,7)!==period)continue
+    if(!nop||!code||!level||(period&&String(row.occurred_at||'').slice(0,7)!==period))continue
     const id=`${nop}|${code}|${level}`
     if(!grouped.has(id))grouped.set(id,[])
     grouped.get(id).push({...row,nop,component:code,severity:level})

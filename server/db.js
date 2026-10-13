@@ -30,6 +30,19 @@ export async function initDb(serverDir){
   for(const statement of sql.split(/;\s*(?:\r?\n|$)/).map(x=>x.trim()).filter(Boolean))await getPool().query(statement)
   const [ordering]=await getPool().query("SHOW COLUMNS FROM application_upload_history LIKE 'history_order'")
   if(!ordering.length)await getPool().query('ALTER TABLE application_upload_history ADD COLUMN history_order BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE')
+  for(const [table,column] of [['pm_site_source_uploads','archived_at'],['preventive_uploads','archived_at']]){
+    const [existing]=await getPool().query(`SHOW COLUMNS FROM ${table} LIKE ?`,[column])
+    if(!existing.length)await getPool().query(`ALTER TABLE ${table} ADD COLUMN ${column} TIMESTAMP NULL DEFAULT NULL`)
+  }
+  for(const [table,name,columns] of [['pm_site_source_uploads','idx_pm_site_source_uploads_archive','archived_at,upload_date'],['preventive_uploads','idx_preventive_uploads_archive','archived_at,upload_date']]){
+    const [indexes]=await getPool().query(`SHOW INDEX FROM ${table} WHERE Key_name=?`,[name])
+    if(!indexes.length)await getPool().query(`CREATE INDEX ${name} ON ${table} (${columns})`)
+  }
+  const currentMonth=new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',timeZone:'Asia/Jakarta'}).format(new Date()).slice(0,7)+'-01'
+  await Promise.all([
+    getPool().query('UPDATE pm_site_source_uploads SET archived_at=COALESCE(archived_at,CURRENT_TIMESTAMP) WHERE upload_date<?',[currentMonth]),
+    getPool().query('UPDATE preventive_uploads SET archived_at=COALESCE(archived_at,CURRENT_TIMESTAMP) WHERE upload_date<?',[currentMonth])
+  ])
 }
 
 export async function saveHistory(runId,dataset,upload){
@@ -92,7 +105,7 @@ async function savePreventiveUploadImpl(uploadId,uploadDate,filename,dataset){
     const insertValues=[uploadId,uploadDate,filename,json(dataset)];
     const [[limits]]=await connection.query('SELECT @@SESSION.max_allowed_packet AS packet');
     assertPreventivePacketSize(Buffer.byteLength(connection.format(insertSql,insertValues),'utf8')+1,Number(limits.packet));
-    await connection.beginTransaction();const kind=dataset.maintenance_kind;const page=dataset.upload_page||kind;const predicate="upload_date=? AND upload_id<>? AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(dataset,'$.upload_page')),COALESCE(JSON_UNQUOTE(JSON_EXTRACT(dataset,'$.maintenance_kind')),CASE WHEN LOWER(filename) LIKE '%genset%' THEN 'genset' ELSE 'site' END))=? AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(dataset,'$.maintenance_kind')),CASE WHEN LOWER(filename) LIKE '%genset%' THEN 'genset' WHEN LOWER(filename) LIKE '%punchlist%' THEN 'punchlist' ELSE 'site' END)=?";const [[count]]=await connection.query(`SELECT COUNT(*) AS count FROM preventive_uploads WHERE ${predicate}`,[uploadDate,uploadId,page,kind]);await connection.query(`DELETE FROM preventive_uploads WHERE ${predicate}`,[uploadDate,uploadId,page,kind]);await connection.query(insertSql,insertValues);await connection.query('INSERT INTO application_upload_history(upload_id,page,filename,upload_date,row_count) VALUES(?,?,?,?,?)',[uploadId,page,filename,uploadDate,dataset.row_count||0]);await connection.commit();return Number(count.count)}catch(error){await connection.rollback().catch(()=>{});throw error}finally{connection.release()}
+    await connection.beginTransaction();const kind=dataset.maintenance_kind;const page=dataset.upload_page||kind;const predicate="upload_date=? AND upload_id<>? AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(dataset,'$.upload_page')),COALESCE(JSON_UNQUOTE(JSON_EXTRACT(dataset,'$.maintenance_kind')),CASE WHEN LOWER(filename) LIKE '%genset%' THEN 'genset' ELSE 'site' END))=? AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(dataset,'$.maintenance_kind')),CASE WHEN LOWER(filename) LIKE '%genset%' THEN 'genset' WHEN LOWER(filename) LIKE '%punchlist%' THEN 'punchlist' ELSE 'site' END)=?";const [[count]]=await connection.query(`SELECT COUNT(*) AS count FROM preventive_uploads WHERE ${predicate}`,[uploadDate,uploadId,page,kind]);await connection.query(`DELETE FROM preventive_uploads WHERE ${predicate}`,[uploadDate,uploadId,page,kind]);await connection.query(insertSql,insertValues);const currentMonth=new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',timeZone:'Asia/Jakarta'}).format(new Date()).slice(0,7)+'-01';await connection.query('UPDATE preventive_uploads SET archived_at=COALESCE(archived_at,CURRENT_TIMESTAMP) WHERE upload_date<?',[currentMonth]);await connection.query('INSERT INTO application_upload_history(upload_id,page,filename,upload_date,row_count) VALUES(?,?,?,?,?)',[uploadId,page,filename,uploadDate,dataset.row_count||0]);await connection.commit();return Number(count.count)}catch(error){await connection.rollback().catch(()=>{});throw error}finally{connection.release()}
 }
 
 async function localPreventiveUploads(includeInactive=false){
@@ -120,5 +133,25 @@ export async function applicationUploadHistory(page){
   const historical=isSource?legacy.filter(row=>!logged.some(item=>item.filename===row.filename&&iso(item.upload_date)===iso(row.upload_date))):legacy
   return [...new Map([...historical,...logged].map(row=>[row.upload_id,{...row,upload_date:iso(row.upload_date)}])).values()].sort((a,b)=>String(b.updated_at).localeCompare(String(a.updated_at))||Number(b.history_order||0)-Number(a.history_order||0))
 }
-export async function loadPreventiveRows(){const records=databaseEnabled?(await getPool().query('SELECT filename,dataset,upload_date,updated_at FROM preventive_uploads ORDER BY upload_date,updated_at'))[0]:await localPreventiveUploads();return records.flatMap(record=>{const dataset=typeof record.dataset==='string'?JSON.parse(record.dataset):record.dataset;const filename=String(record.filename||'').toLowerCase(),maintenance_kind=dataset?.maintenance_kind||(filename.includes('genset')?'genset':filename.includes('punchlist')?'punchlist':'site');return(dataset?.rows||[]).map(row=>({...row,maintenance_kind:row.maintenance_kind||maintenance_kind,_upload_date:iso(record.upload_date),_updated_at:record.updated_at?.toISOString?.()||record.updated_at}))})}
+const monthList=(dateFrom,dateTo)=>{
+  const format=date=>new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',timeZone:'Asia/Jakarta'}).format(date).slice(0,7)
+  const start=/^\d{4}-\d{2}/.test(String(dateFrom||''))?String(dateFrom).slice(0,7):format(new Date())
+  const end=/^\d{4}-\d{2}/.test(String(dateTo||''))?String(dateTo).slice(0,7):start
+  const months=[],cursor=new Date(`${start}-01T00:00:00Z`),last=new Date(`${end}-01T00:00:00Z`)
+  while(cursor<=last&&months.length<24){months.push(cursor.toISOString().slice(0,7));cursor.setUTCMonth(cursor.getUTCMonth()+1)}
+  return months
+}
+export async function loadPreventiveRows({dateFrom,dateTo}={}){
+  let records
+  if(databaseEnabled){
+    const months=monthList(dateFrom,dateTo),start=`${months[0]}-01`,next=new Date(`${months.at(-1)}-01T00:00:00Z`);next.setUTCMonth(next.getUTCMonth()+1)
+    const [metadata]=await getPool().query("SELECT id,filename,upload_date,updated_at,JSON_UNQUOTE(JSON_EXTRACT(dataset,'$.maintenance_kind')) AS maintenance_kind,JSON_UNQUOTE(JSON_EXTRACT(dataset,'$.upload_page')) AS upload_page FROM preventive_uploads WHERE upload_date>=? AND upload_date<? ORDER BY upload_date DESC,updated_at DESC",[start,next.toISOString().slice(0,10)])
+    const selected=[],seen=new Set()
+    for(const record of metadata){const period=iso(record.upload_date).slice(0,7),filename=String(record.filename||'').toLowerCase(),kind=record.maintenance_kind||(filename.includes('genset')?'genset':filename.includes('punchlist')?'punchlist':'site'),page=record.upload_page||kind,key=`${period}|${page}|${kind}`;if(seen.has(key))continue;seen.add(key);selected.push(record)}
+    if(!selected.length)return []
+    const [rows]=await getPool().query('SELECT id,filename,dataset,upload_date,updated_at FROM preventive_uploads WHERE id IN (?)',[selected.map(record=>record.id)])
+    const order=new Map(selected.map((record,index)=>[record.id,index]));records=rows.sort((a,b)=>order.get(a.id)-order.get(b.id))
+  }else records=await localPreventiveUploads()
+  return records.flatMap(record=>{const dataset=typeof record.dataset==='string'?JSON.parse(record.dataset):record.dataset;const filename=String(record.filename||'').toLowerCase(),maintenance_kind=dataset?.maintenance_kind||(filename.includes('genset')?'genset':filename.includes('punchlist')?'punchlist':'site');return(dataset?.rows||[]).map(row=>({...row,maintenance_kind:row.maintenance_kind||maintenance_kind,_upload_date:iso(record.upload_date),_updated_at:record.updated_at?.toISOString?.()||record.updated_at}))})
+}
 export async function latestPreventiveUpload(){const rows=databaseEnabled?(await getPool().query('SELECT upload_id,upload_date,filename,dataset,updated_at FROM preventive_uploads ORDER BY upload_date DESC,updated_at DESC LIMIT 1'))[0]:await localPreventiveUploads();const row=rows.sort((a,b)=>String(b.upload_date).localeCompare(String(a.upload_date))||String(b.updated_at).localeCompare(String(a.updated_at)))[0];if(!row)return null;const dataset=typeof row.dataset==='string'?JSON.parse(row.dataset):row.dataset;return{upload_id:row.upload_id,upload_date:iso(row.upload_date),filename:row.filename,row_count:dataset?.row_count||0,data_month:dataset?.data_month,date_start:dataset?.date_start,date_end:dataset?.date_end,updated_at:row.updated_at?.toISOString?.()||row.updated_at}}

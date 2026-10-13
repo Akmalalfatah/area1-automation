@@ -1694,6 +1694,18 @@ button { cursor: pointer; }
 .preventive-card-label { font-size: 8px; line-height: 1.2; font-weight: 600; letter-spacing: .08em; color: #8090a2; }
 .preventive-filter-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px; }
 .preventive-filter-search { min-width: 250px; flex: 1; margin-left: auto; }
+.preventive-progress-panel { overflow:hidden; }
+.preventive-progress-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:14px; }
+.preventive-progress-heading p { margin:4px 0 0; color:#718196; font-size:10px; }
+.preventive-progress-heading strong { flex:none; border-left:4px solid #e27b2b; background:#f5f8fc; padding:10px 14px; color:#173e68; font-size:13px; }
+.preventive-progress-scroll { max-width:100%; overflow:auto; border:1px solid #cbd5e1; }
+.preventive-progress-table { width:max-content; min-width:100%; border-collapse:separate; border-spacing:0; font-size:10px; }
+.preventive-progress-table th { position:sticky; top:0; z-index:1; background:#173e68; text-align:center; }
+.preventive-progress-table td { text-align:center; font-weight:600; }
+.preventive-progress-table .preventive-progress-nop { position:sticky; left:0; z-index:1; min-width:170px; background:#fff; text-align:left; color:#173e68; font-weight:700; }
+.preventive-progress-table tbody tr:nth-child(even) .preventive-progress-nop { background:#f7f9fc; }
+.preventive-progress-table .is-approved { background:#e9f8f1; color:#087d4b; }
+.preventive-progress-table .is-pending { background:#fff1f2; color:#bd3340; }
 .corporate-panel .punchlist-filter-grid { display:grid!important; grid-template-columns:minmax(320px,1fr) repeat(3,minmax(175px,220px))!important; align-items:end!important; gap:12px!important; border-bottom:1px solid #e2e8f0; padding-bottom:16px; }
 .punchlist-filter-search, .punchlist-filter-field { min-width:0; }
 .punchlist-filter-grid .control { min-width:0; }
@@ -1966,4 +1978,6 @@ button { cursor: pointer; }
   .kpi-capture::before { content:'Geser tabel ke samping untuk melihat NOP dan periode lainnya'; display:block; padding:7px 9px; background:#f3f6f9; color:#64758a; font-size:9px; font-weight:600; }
   .kpi-nop-title, .kpi-b-tab-heading strong, .kpi-affected-sites li { overflow-wrap:anywhere; }
   .corporate-panel[aria-label="Rekap distribusi kategori KPI"] > .grid { grid-template-columns:1fr!important; }
+  .preventive-progress-heading { flex-direction:column; }
+  .preventive-progress-table .preventive-progress-nop { min-width:128px; }
 }

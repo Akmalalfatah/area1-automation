@@ -128,7 +128,7 @@ const getPreventiveDashboard = (filters = {}, maintenanceType = "") => {
   if (filters.typePower) params.set("type_power", filters.typePower);
   if (filters.scopeItem) params.set("scope_item", filters.scopeItem);
   if (filters.scheduleState) params.set("schedule_state", filters.scheduleState);
-  if (maintenanceType) params.set("maintenance_type", maintenanceType);
+  if (maintenanceType || filters.maintenanceType) params.set("maintenance_type", maintenanceType || filters.maintenanceType);
   return api(`/api/preventive/dashboard${params.size ? `?${params}` : ""}`);
 };
 async function uploadPreventive(file, date, page = "dashboard") {
@@ -203,6 +203,15 @@ function currentMonthIso() {
 }
 function firstDayOfCurrentMonth() {
   return `${currentMonthIso()}-01`;
+}
+function preventiveMonthRange(month = currentMonthIso()) {
+  if (!/^\d{4}-\d{2}$/.test(String(month))) return { month: currentMonthIso(), dateFrom: firstDayOfCurrentMonth(), dateTo: todayIso() };
+  const [year, value] = month.split("-").map(Number);
+  const last = new Date(Date.UTC(year, value, 0)).getUTCDate();
+  return { month, dateFrom: `${month}-01`, dateTo: `${month}-${String(last).padStart(2, "0")}` };
+}
+function defaultPreventiveFilters(month = currentMonthIso()) {
+  return { ...preventiveMonthRange(month), nop: "", siteId: "", search: "", status: "", pic: "", interval: "", typePower: "", scopeItem: "", scheduleState: "", maintenanceType: "" };
 }
 function monthLabel(value) {
   if (!value) return "-";
@@ -488,20 +497,22 @@ function PreventiveDashboardCards({ data, file, date, busy, loading, filters, on
   const summary = h(
     "div",
     { className: "grid grid-cols-4 gap-4" },
-    h(PreventiveSummaryCard, { label: "PLAN SITE", value: data && data.plan != null ? data.plan : 0, detail: `${shortDate(filters.dateFrom)} sampai ${shortDate(filters.dateTo)}`, tone: "navy" }),
-    h(PreventiveSummaryCard, { label: "SUBMITTED", value: data && data.submitted != null ? data.submitted : 0, detail: "Site unik dengan Submitted Date terisi", tone: "green" }),
-    h(PreventiveSummaryCard, { label: "ACHIEVEMENT", value: `${formatNumber(data && data.achievement != null ? data.achievement : 0)}%`, detail: "Submitted dibanding Plan pada filter aktif", tone: "orange" }),
+    h(PreventiveSummaryCard, { label: "PLAN SITE", value: data && data.plan != null ? data.plan : 0, detail: monthLabel(filters.month || filters.dateFrom?.slice(0, 7)), tone: "navy" }),
+    h(PreventiveSummaryCard, { label: "APPROVED", value: data && data.approved != null ? data.approved : 0, detail: `${formatNumber(data && data.approved_achievement != null ? data.approved_achievement : 0)}% plan berhasil di-approve`, tone: "green" }),
+    h(PreventiveSummaryCard, { label: "SUBMITTED", value: data && data.submitted != null ? data.submitted : 0, detail: `${formatNumber(data && data.achievement != null ? data.achievement : 0)}% dari Plan Site`, tone: "orange" }),
     h(PreventiveSummaryCard, { label: "BELUM SUBMIT", value: data && data.pending != null ? data.pending : 0, detail: "Site plan yang belum memiliki Submitted Date", tone: "red" })
   );
   const filtersBar = h(
     "div",
     { className: "preventive-filter-row" },
-    h("div", { className: "preventive-filter-search" }, h("label", { className: "filter-label mb-1 block" }, "SEARCH"), h("input", { type: "search", value: filters.search, onChange: (event) => onFilter("search", event.target.value), placeholder: "Cari Site ID, Site Name, NOP, atau Notes", className: "control h-10 w-full px-3 text-[10px]" })),
-    h("div", null, h("label", { className: "filter-label mb-1 block" }, "DATE FROM"), h("input", { type: "date", value: filters.dateFrom, onChange: (event) => onFilter("dateFrom", event.target.value), className: "control h-10 w-[155px] px-3 text-[10px] font-semibold" })),
-    h("div", null, h("label", { className: "filter-label mb-1 block" }, "DATE TO"), h("input", { type: "date", value: filters.dateTo, onChange: (event) => onFilter("dateTo", event.target.value), className: "control h-10 w-[155px] px-3 text-[10px] font-semibold" })),
+    h("div", null, h("label", { className: "filter-label mb-1 block" }, "BULAN / TAHUN"), h("input", { type: "month", value: filters.month || filters.dateFrom?.slice(0, 7) || currentMonthIso(), onChange: (event) => onFilter("month", event.target.value), className: "control h-10 w-[165px] px-3 text-[10px] font-semibold" })),
+    h("div", null, h("label", { className: "filter-label mb-1 block" }, "JENIS PM"), h("select", { value: filters.maintenanceType || "", onChange: (event) => onFilter("maintenanceType", event.target.value), className: "control h-10 w-[155px] px-3 text-[10px] font-semibold" }, h("option", { value: "" }, "PM Site & Genset"), h("option", { value: "site" }, "PM Site"), h("option", { value: "genset" }, "PM Genset"))),
     h("div", null, h("label", { className: "filter-label mb-1 block" }, "NOP"), h("select", { value: filters.nop, onChange: (event) => onFilter("nop", event.target.value), className: "control h-10 w-[180px] px-3 text-[10px] font-semibold" }, h("option", { value: "" }, "All NOP"), ...(data && data.nop_options || []).map((item) => h("option", { key: item, value: item }, compactNop(item))))),
-    h("div", null, h("label", { className: "filter-label mb-1 block" }, "STATUS PM"), h("select", { value: filters.status || "", onChange: (event) => onFilter("status", event.target.value), className: "control h-10 w-[155px] px-3 text-[10px] font-semibold", "aria-label": "Status PM Dashboard" }, h("option", { value: "" }, "All Status"), ...((data == null ? void 0 : data.status_options) || []).map((status) => h("option", { key: status, value: status }, status))))
+    h("div", null, h("label", { className: "filter-label mb-1 block" }, "STATUS PM"), h("select", { value: filters.status || "", onChange: (event) => onFilter("status", event.target.value), className: "control h-10 w-[155px] px-3 text-[10px] font-semibold", "aria-label": "Status PM Dashboard" }, h("option", { value: "" }, "All Status"), ...((data == null ? void 0 : data.status_options) || []).map((status) => h("option", { key: status, value: status }, status)))),
+    h("div", { className: "preventive-filter-search" }, h("label", { className: "filter-label mb-1 block" }, "SEARCH"), h("input", { type: "search", value: filters.search, onChange: (event) => onFilter("search", event.target.value), placeholder: "Cari Site ID, Site Name, NOP, atau Notes", className: "control h-10 w-full px-3 text-[10px]" }))
   );
+  const statuses = (data == null ? void 0 : data.status_options) || [], nopSummary = (data == null ? void 0 : data.nop_summary) || [];
+  const progressTable = h("section", { className: "corporate-panel p-5 preventive-progress-panel" }, h("div", { className: "preventive-progress-heading" }, h("div", null, h("h2", { className: "section-title" }, "PROGRES PM PER NOP"), h("p", null, `Rekap plan ${monthLabel(filters.month || filters.dateFrom?.slice(0, 7))} berdasarkan status PM.`)), h("strong", null, `${nopSummary.length} NOP`)), h("div", { className: "preventive-progress-scroll kpi-scrollbar" }, h("table", { className: "preventive-table preventive-progress-table" }, h("thead", { className: "bg-[#173E68] text-white" }, h("tr", null, ...["NOP", "PLAN SITE", "APPROVED", "SUBMITTED", "BELUM SUBMIT", ...statuses].map(label => h("th", { key: label }, label)))), h("tbody", null, ...nopSummary.map(item => h("tr", { key: item.nop }, h("td", { className: "preventive-progress-nop" }, compactNop(item.nop)), h("td", null, item.plan), h("td", { className: "is-approved" }, item.approved), h("td", null, item.submitted), h("td", { className: "is-pending" }, item.pending), ...statuses.map(status => h("td", { key: status }, item.statuses?.[status] || 0))))))));
   const cards = visibleRows.length ? visibleRows.map((row, index) => {
     var _a, _b;
     const key = `${row.site_id}-${row.schedule_date}-${row.ticket_no}-${index}`;
@@ -531,6 +542,7 @@ function PreventiveDashboardCards({ data, file, date, busy, loading, filters, on
     "div",
     { className: "space-y-4" },
     summary,
+    progressTable,
     h(
       "section",
       { className: "corporate-panel p-5" },
@@ -560,7 +572,7 @@ function PreventiveRoutinePage({ data, file, date, busy, loading, filters, onFil
     h(ChevronRight, { size: 15, className: "preventive-card-chevron" })
   )));
   const routineSelect = (label, field, items, placeholder, width) => h("div", null, h("label", { className: "filter-label mb-1 block" }, label), h("select", { value: filters[field] || "", onChange: (e) => onFilter(field, e.target.value), className: `control h-10 ${width} px-3 text-[10px] font-semibold` }, h("option", { value: "" }, placeholder), ...items.map((item) => h("option", { key: item, value: item }, field === "nop" ? compactNop(item) : { overdue: "Terlambat", upcoming: "Belum Jatuh Tempo", submitted: "Submitted" }[item] || item))));
-  const dateRow = h("div", { className: "preventive-filter-row preventive-date-filters" }, h("div", null, h("label", { className: "filter-label mb-1 block" }, "DATE FROM"), h("input", { type: "date", value: filters.dateFrom, onChange: (e) => onFilter("dateFrom", e.target.value), className: "control h-10 w-[155px] px-3 text-[10px] font-semibold" })), h("div", null, h("label", { className: "filter-label mb-1 block" }, "DATE TO"), h("input", { type: "date", value: filters.dateTo, onChange: (e) => onFilter("dateTo", e.target.value), className: "control h-10 w-[155px] px-3 text-[10px] font-semibold" })));
+  const dateRow = h("div", { className: "preventive-filter-row preventive-date-filters" }, h("div", null, h("label", { className: "filter-label mb-1 block" }, "BULAN / TAHUN"), h("input", { type: "month", value: filters.month || filters.dateFrom?.slice(0, 7) || currentMonthIso(), onChange: (e) => onFilter("month", e.target.value), className: "control h-10 w-[165px] px-3 text-[10px] font-semibold" })));
   const operationalFilters = kind === "genset" ? [routineSelect("TYPE POWER", "typePower", data && data.type_power_options || [], "All Type Power", "w-[180px]"), routineSelect("SCOPE ITEM", "scopeItem", data && data.scope_item_options || [], "All Scope Item", "w-[210px]")] : [routineSelect("INTERVAL", "interval", data && data.interval_options || [], "All Interval", "w-[130px]"), routineSelect("KETERLAMBATAN", "scheduleState", ["overdue", "upcoming", "submitted"], "All Schedule", "w-[170px]")];
   const operationalRow = h("div", { className: "preventive-filter-row border-b-0 pb-0" }, routineSelect("NOP", "nop", data && data.nop_options || [], "All NOP", "w-[170px]"), routineSelect("STATUS PM", "status", data && data.status_options || [], "All Status", "w-[150px]"), routineSelect("PIC", "pic", data && data.pic_options || [], "All PIC", "w-[170px]"), ...operationalFilters);
   const filtersBar = h("div", { className: "space-y-3 border-b border-slate-200 pb-4" }, dateRow, operationalRow);
@@ -867,7 +879,7 @@ NopImprovementCard = class NopImprovementCard extends React.Component {
       React.createElement("summary", { className: "preventive-card-head kpi-nop-improve-head" },
         React.createElement("div", { className: "preventive-card-section" }, React.createElement("p", { className: "preventive-card-label" }, "REGIONAL"), React.createElement("p", { className: "pm-site-work-value" }, item.region)),
         React.createElement("div", { className: "preventive-card-section with-divider" }, React.createElement("p", { className: "preventive-card-label" }, "NOP"), React.createElement("p", { className: "pm-site-work-value" }, compactNop(item.name))),
-        React.createElement("div", { className: "preventive-card-section with-divider" }, React.createElement("p", { className: "preventive-card-label" }, "PERIODE MTTR"), React.createElement("p", { className: "pm-site-work-value" }, periodLabel || "Belum dipilih")),
+        React.createElement("div", { className: "preventive-card-section with-divider" }, React.createElement("p", { className: "preventive-card-label" }, "PERIODE UPLOAD"), React.createElement("p", { className: "pm-site-work-value" }, periodLabel || "Belum dipilih")),
         React.createElement("div", { className: "preventive-card-section with-divider" }, React.createElement("p", { className: "preventive-card-label" }, "TICKET DIANALISIS"), React.createElement("p", { className: "pm-site-work-value" }, React.createElement("span", { className: "kpi-num" }, Number(ticketSummary.source_rows || 0)), " ticket")), React.createElement(ChevronRight, { size: 15, className: "preventive-card-chevron" })),
       React.createElement("div", { className: "preventive-card-details kpi-nop-improve-details" }, React.createElement("div", { className: "mb-3 flex items-center justify-between gap-3" }, React.createElement("p", { className: "text-[10px] text-slate-500" }, "Skor eKPI snapshot: ", React.createElement("b", { className: "kpi-num" }, formatNumber(item.values.kpi_score), "%"), " ", React.createElement("span", { className: "kpi-category-tag", style: { background: CATEGORY_COLORS[String(item.values.category || "")] || "#64748B" } }, item.values.category || "-")), React.createElement("button", { type: "button", className: "btn-secondary kpi-nop-export-button", onClick: () => onExportNop?.(item.name) }, React.createElement(Download, { size: 11 }), "Export Excel NOP")), React.createElement("nav", { className: "kpi-b-tabs", role: "tablist", "aria-label": "Komponen Ticketing Activity & Alarm Handling" }, Object.keys(B_IMPROVEMENT_LABELS).map((key) => React.createElement("button", { key, role: "tab", "aria-selected": activeCode === key, type: "button", className: activeCode === key ? "is-active" : "", onClick: () => this.setState({ activeCode: key }) }, key.replace("_", ".")))), React.createElement("div", { className: "kpi-b-tab-heading" }, React.createElement("span", null, activeCode.replace("_", ".")), React.createElement("strong", null, activeMeta.label), React.createElement("small", null, "Skor eKPI snapshot ", React.createElement("b", { className: "kpi-num" }, formatNumber(item.values?.[activeCode])), " dari bobot ", React.createElement("b", { className: "kpi-num" }, formatWeight(activeRow.weight)))), React.createElement("div", { className: "kpi-b-component-body" }, React.createElement(ComponentBBody, { code: activeCode, label: activeMeta.label, weight: activeRow.weight, score: item.values?.[activeCode], mttr: activeMeta.mttr, ticketSummary, nop: item.name }))));
   }
@@ -945,13 +957,13 @@ NopKpiImprovementView = function(props) {
   const activeBoosting = boosting || { ticket_summaries: {}, available_periods: [] }, nops = [...latest.values()].filter((item) => Number((activeBoosting.ticket_summaries[item.name] || {}).source_rows) > 0), periods = [...new Set(activeBoosting.available_periods || [])].filter((value) => /^\d{4}-\d{2}$/.test(value)).sort().reverse();
   return React.createElement("section", { className: "corporate-panel kpi-nop-detail" },
     React.createElement("button", { type: "button", className: "pm-site-back kpi-improvement-back", onClick: onBack }, React.createElement("span", { "aria-hidden": true }, "←"), " Kembali ke KPI Table"),
-    React.createElement("div", { className: "kpi-nop-detail-head" }, React.createElement("div", null, React.createElement("p", { className: "pm-site-eyebrow" }, "PENINGKATAN KPI NOP"), React.createElement("h2", null, "Evaluasi KPI Ticketing Activity & Alarm Handling B.1 - B.3"), React.createElement("p", null, "Pilih Bulan/Tahun untuk menghitung MTTR P90 dari seluruh ticket pada bulan tersebut.")), React.createElement("div", { className: "kpi-nop-count" }, React.createElement("strong", { className: "kpi-num" }, nops.length), React.createElement("span", null, "NOP ditampilkan"))),
+    React.createElement("div", { className: "kpi-nop-detail-head" }, React.createElement("div", null, React.createElement("p", { className: "pm-site-eyebrow" }, "PENINGKATAN KPI NOP"), React.createElement("h2", null, "Evaluasi KPI Ticketing Activity & Alarm Handling B.1 - B.3"), React.createElement("p", null, "Pilih Bulan/Tahun untuk memakai versi file data yang diunggah pada bulan tersebut.")), React.createElement("div", { className: "kpi-nop-count" }, React.createElement("strong", { className: "kpi-num" }, nops.length), React.createElement("span", null, "NOP ditampilkan"))),
     React.createElement("div", { className: "kpi-improvement-filters" }, React.createElement("div", { className: "kpi-improvement-filter-monthly-row" },
       React.createElement("div", null, React.createElement("label", { className: "filter-label" }, "REGIONAL"), React.createElement("select", { value: region, onChange: (event) => onRegion(event.target.value), className: "control h-9 min-w-0 w-full px-3 text-[10px] font-semibold" }, React.createElement("option", { value: "" }, "All Regional"), Object.keys(config.regions).map((name) => React.createElement("option", { key: name, value: name }, name)))),
       React.createElement("div", null, React.createElement("label", { className: "filter-label" }, "NOP"), React.createElement("select", { value: nop, onChange: (event) => onNop(event.target.value), className: "control h-9 min-w-0 w-full px-3 text-[10px] font-semibold" }, React.createElement("option", { value: "" }, "All NOP Cluster"), options.map((item) => React.createElement("option", { key: `${item.regional}-${item.name}`, value: item.name }, compactNop(item.name))))),
       React.createElement("div", null, React.createElement("label", { className: "filter-label" }, "BULAN / TAHUN"), React.createElement("select", { value: period, onChange: (event) => setPeriod(event.target.value), className: "control h-9 min-w-0 w-full px-3 text-[10px] font-semibold" }, periods.map((value) => React.createElement("option", { key: value, value }, monthlyPeriodLabel(value))))),
       React.createElement("div", { className: "kpi-improvement-export-actions" }, React.createElement("label", { className: "filter-label" }, "EXPORT"), React.createElement("button", { type: "button", className: "btn-secondary kpi-export-all-button", disabled: exportLoading, onClick: onExportAll }, React.createElement(Download, { size: 11 }), exportLoading ? "Preparing..." : "Export Semua KPI Ticketing")))),
-    React.createElement("p", { className: "mt-2 text-[10px] text-slate-400" }, React.createElement("b", null, "Periode Ticket (Date Occurred)."), " Analisis hanya memakai ticket yang terjadi pada bulan dan tahun yang dipilih. ", React.createElement("b", null, snapshotLabel || "Snapshot eKPI aktif"), "."),
+    React.createElement("p", { className: "mt-2 text-[10px] text-slate-400" }, React.createElement("b", null, "Periode Data Upload."), " Analisis memakai versi file KPIData/SWFM terbaru yang tanggal upload-nya berada pada bulan dan tahun yang dipilih. ", React.createElement("b", null, snapshotLabel || "Snapshot eKPI aktif"), "."),
     boostingError && React.createElement("p", { className: "pm-site-error", role: "alert" }, boostingError),
     boostingLoading ? React.createElement("div", { className: "kpi-nop-empty" }, React.createElement("strong", null, "Memuat data MTTR P90..."), React.createElement("p", null, "Menentukan sumber KPIData B.1-B.3 dan fallback Ticket SWFM pada bulan aktif.")) : React.createElement("div", { style: { display: "contents" } }, React.createElement("div", { className: "kpi-scrollbar preventive-card-list kpi-nop-improve-list" }, nops.map((item) => React.createElement(NopImprovementCard, { key: item.name, item, dashboard, rowLookup, periodLabel: monthlyPeriodLabel(period), onExportNop, ticketSummary: activeBoosting.ticket_summaries[item.name] || {} }))), !nops.length && React.createElement("div", { className: "kpi-nop-empty" }, React.createElement("strong", null, "Tidak ada ticket yang terdeteksi"), React.createElement("p", null, "Belum ada kombinasi NOP, komponen B, severity, dan bulan yang sesuai dengan filter aktif."))));
 };
@@ -1424,7 +1436,7 @@ class App extends React.Component {
       window.history.replaceState({}, "", page === "data-upload" ? `${window.location.pathname}?page=data-upload` : window.location.pathname);
       window.dispatchEvent(new Event("app:navigate"));
       clearTimeout(this.preventiveSearchTimer);
-      const filters = preserveFilters ? this.state.preventiveFilters : { dateFrom: firstDayOfCurrentMonth(), dateTo: todayIso(), nop: "", siteId: "", search: "", status: "", pic: "", interval: "", typePower: "", scopeItem: "", scheduleState: "" };
+      const filters = preserveFilters ? this.state.preventiveFilters : defaultPreventiveFilters();
       this.setState({ preventiveFilters: filters, navigationRevision: (this.state.navigationRevision || 0) + 1, activePage: page, preventiveOpen: isPreventive || this.state.preventiveOpen, preventiveFile: null, preventiveDate: "", preventiveData: isPreventive ? null : this.state.preventiveData, pageError: "", notice: "" });
       if (page === "preventive-dashboard" || page === "preventive-genset" || page === "preventive-site") await this.refreshPreventive(filters, page === "preventive-genset" ? "genset" : page === "preventive-site" ? "site" : "");
     });
@@ -1440,7 +1452,7 @@ class App extends React.Component {
         let activeFilters = filters;
         let preventiveData = await getPreventiveDashboard(activeFilters, scope);
         if ((!this.state.preventiveData || this.state.preventiveScope !== scope) && preventiveData.plan === 0 && ((_a = preventiveData.latest_upload) == null ? void 0 : _a.date_start)) {
-          activeFilters = { ...activeFilters, dateFrom: preventiveData.latest_upload.date_start, dateTo: preventiveData.latest_upload.date_end || preventiveData.latest_upload.date_start };
+          activeFilters = { ...activeFilters, ...preventiveMonthRange(preventiveData.latest_upload.date_start.slice(0, 7)) };
           preventiveData = await getPreventiveDashboard(activeFilters, scope);
         }
         if (id === this.preventiveRequestId) this.setState({ preventiveData, preventiveFilters: activeFilters, preventiveScope: scope });
@@ -1456,7 +1468,7 @@ class App extends React.Component {
       this.setState({ preventiveBusy: true, pageError: "", notice: "" });
       try {
         const result = await uploadPreventive(preventiveFile, preventiveDate, this.state.activePage === "preventive-genset" ? "genset" : this.state.activePage === "preventive-site" ? "site" : "dashboard");
-        const nextFilters = { ...preventiveFilters, dateFrom: result.date_start || preventiveFilters.dateFrom, dateTo: result.date_end || preventiveFilters.dateTo, nop: "", siteId: "", search: "", status: "", pic: "", interval: "", typePower: "", scopeItem: "", scheduleState: "" };
+        const nextFilters = { ...defaultPreventiveFilters((result.date_start || preventiveFilters.dateFrom).slice(0, 7)), maintenanceType: preventiveFilters.maintenanceType || "" };
         this.setState({ preventiveFilters: nextFilters });
         await this.refreshPreventive(nextFilters, this.state.preventiveScope);
         this.setState({ preventiveFile: null, preventiveDate: "", notice: result.replaced_upload_count ? "Data preventive pada tanggal upload yang sama berhasil diganti dengan file terbaru." : `${result.row_count} baris preventive berhasil diunggah.` });
@@ -1467,7 +1479,7 @@ class App extends React.Component {
       }
     });
     __publicField(this, "changePreventiveFilter", (field, value) => {
-      const filters = { ...this.state.preventiveFilters, [field]: value };
+      const filters = field === "month" ? { ...this.state.preventiveFilters, ...preventiveMonthRange(value) } : { ...this.state.preventiveFilters, [field]: value };
       if (field === "nop") filters.siteId = "";
       if (field === "dateFrom" && value > filters.dateTo) filters.dateTo = value;
       if (field === "dateTo" && value < filters.dateFrom) filters.dateFrom = value;
@@ -1621,7 +1633,7 @@ class App extends React.Component {
         this.setState({ shareLoading: false });
       }
     });
-    this.state = { config: null, run: null, dashboard: null, activePage: new URLSearchParams(window.location.search).get("page") === "data-upload" ? "data-upload" : "ekpi", preventiveOpen: false, preventiveData: null, preventiveScope: "", preventiveFile: null, preventiveDate: "", preventiveBusy: false, preventiveLoading: false, preventiveFilters: { dateFrom: firstDayOfCurrentMonth(), dateTo: todayIso(), nop: "", siteId: "", search: "", status: "", pic: "", interval: "", typePower: "", scopeItem: "", scheduleState: "" }, region: "", nop: "", rowGroup: "", historyFilters: { day: "", month: "", year: "" }, historyItems: [], rangeStart: "", rangeEnd: "", rangeDashboard: null, rangeLoading: false, draftFile: null, draftDate: "", busyUpload: false, pageError: "", prompt: "", promptDraft: "", reportText: "", reportError: "", reportLoading: false, tableImageLoading: false, shareLoading: false, showPrompt: false, notice: "" };
+    this.state = { config: null, run: null, dashboard: null, activePage: new URLSearchParams(window.location.search).get("page") === "data-upload" ? "data-upload" : "ekpi", preventiveOpen: false, preventiveData: null, preventiveScope: "", preventiveFile: null, preventiveDate: "", preventiveBusy: false, preventiveLoading: false, preventiveFilters: defaultPreventiveFilters(), region: "", nop: "", rowGroup: "", historyFilters: { day: "", month: "", year: "" }, historyItems: [], rangeStart: "", rangeEnd: "", rangeDashboard: null, rangeLoading: false, draftFile: null, draftDate: "", busyUpload: false, pageError: "", prompt: "", promptDraft: "", reportText: "", reportError: "", reportLoading: false, tableImageLoading: false, shareLoading: false, showPrompt: false, notice: "" };
     this.requestId = 0;
     this.preventiveRequestId = 0;
     this.preventiveSearchTimer = null;

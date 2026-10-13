@@ -63,9 +63,11 @@ CREATE TABLE IF NOT EXISTS pm_site_source_uploads (
   filename VARCHAR(512) NOT NULL,
   upload_date DATE NOT NULL,
   dataset JSON NOT NULL,
+  archived_at TIMESTAMP NULL DEFAULT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  KEY idx_pm_site_source_uploads_period (source_kind,upload_date,updated_at)
+  KEY idx_pm_site_source_uploads_period (source_kind,upload_date,updated_at),
+  KEY idx_pm_site_source_uploads_archive (archived_at,upload_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS pm_site_source_upload_rows (
@@ -92,9 +94,11 @@ CREATE TABLE IF NOT EXISTS preventive_uploads (
   upload_date DATE NOT NULL,
   filename VARCHAR(512) NOT NULL,
   dataset JSON NOT NULL,
+  archived_at TIMESTAMP NULL DEFAULT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_preventive_upload_id (upload_id),
-  KEY idx_preventive_uploads_date (upload_date)
+  KEY idx_preventive_uploads_date (upload_date),
+  KEY idx_preventive_uploads_archive (archived_at,upload_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

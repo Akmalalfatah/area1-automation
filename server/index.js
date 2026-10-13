@@ -38,10 +38,10 @@ app.get('/api/runs/:id/dashboard',asyncHandler(async(req,res)=>{
 app.get('/api/runs/:id/mttr-boosting',asyncHandler(async(req,res)=>{
   const dataset=await loadDataset(RUNS_DIR,req.params.id),period=boostingPeriod(req.query,dataset.date),sourceSnapshot=await siteDataForUploadMonth(period),data=sourceSnapshot.data
   const selected=dataset.nops.filter(item=>(!req.query.region||item.region===req.query.region)&&(!req.query.nop||item.name===req.query.nop)),names=selected.map(item=>item.name)
-  const b13Rows=combinedKpiB13Rows(data),swfmSummaries=deriveTicketMttrByNop(data,names,period),kpiSummaries=buildKpiB13Summaries(b13Rows,names,period)
+  const b13Rows=combinedKpiB13Rows(data),swfmSummaries=deriveTicketMttrByNop(data,names),kpiSummaries=buildKpiB13Summaries(b13Rows,names)
   const ticket_summaries=mergeTicketSummaries(names,swfmSummaries,kpiSummaries,period)
-  const available_periods=[...new Set([...sourceSnapshot.available_periods,...(data.swfm||[]).map(row=>String(row.occurred_at||'').slice(0,7)),...b13Rows.map(row=>row.period)].filter(value=>/^\d{4}-\d{2}$/.test(value)))].sort().reverse()
-  res.json({period,available_periods,ticket_summaries:withoutSimulationRows(ticket_summaries),debug:buildBoostingDebug(ticket_summaries),source:sourceSnapshot.historical?'Snapshot upload pada bulan terpilih: KPIData B.1-B.3 dengan fallback Ticket SWFM':'KPIData B.1-B.3 dengan fallback Ticket SWFM'})
+  const available_periods=sourceSnapshot.available_periods
+  res.json({period,available_periods,ticket_summaries:withoutSimulationRows(ticket_summaries),debug:buildBoostingDebug(ticket_summaries),source:sourceSnapshot.historical?'Snapshot file berdasarkan bulan tanggal upload: KPIData B.1-B.3 dengan fallback Ticket SWFM':'KPIData B.1-B.3 dengan fallback Ticket SWFM'})
 }))
 
 app.post('/api/runs/:id/report',asyncHandler(async(req,res)=>{
@@ -59,7 +59,7 @@ app.delete('/api/history',asyncHandler(async(req,res)=>{const ids=[...new Set((r
 
 app.post('/api/preventive/upload',upload.single('file'),asyncHandler(async(req,res)=>{assertXlsx(req.file);assertDate(req.body.upload_date);const dataset=await parsePreventiveWorkbook(req.file.buffer,req.file.originalname);const page=req.body.upload_page||dataset.maintenance_kind;if(!['dashboard','genset','site'].includes(page))throw new HttpError(422,'Halaman upload tidak valid.');if(page!=='dashboard'&&page!==dataset.maintenance_kind)throw new HttpError(422,'Jenis file tidak sesuai halaman PM.');dataset.upload_page=page;const uploadId=crypto.randomUUID(),replaced=await savePreventiveUpload(uploadId,req.body.upload_date,req.file.originalname,dataset);res.json({upload_id:uploadId,upload_date:req.body.upload_date,filename:req.file.originalname,row_count:dataset.row_count,data_month:dataset.data_month,date_start:dataset.date_start,date_end:dataset.date_end,replaced_upload_count:replaced})}))
 app.get('/api/preventive/uploads',asyncHandler(async(req,res)=>res.json({items:await preventiveUploadHistory(req.query.page||'dashboard')})))
-app.get('/api/preventive/dashboard',asyncHandler(async(req,res)=>{const payload=buildPreventiveDashboard(await loadPreventiveRows(),req.query.date_from,req.query.date_to,req.query.nop,req.query.site_id,req.query.search,req.query.maintenance_type,req.query.status,req.query.pic,req.query.interval,req.query.type_power,req.query.scope_item,req.query.schedule_state);const source=await siteData();payload.rows=enrichWorkConditions(enrichDashboardReview(payload.rows,source),source);payload.latest_upload=(await preventiveUploadHistory(req.query.maintenance_type||'dashboard',true))[0]||null;res.json(payload)}))
+app.get('/api/preventive/dashboard',asyncHandler(async(req,res)=>{const rows=await loadPreventiveRows({dateFrom:req.query.date_from,dateTo:req.query.date_to}),payload=buildPreventiveDashboard(rows,req.query.date_from,req.query.date_to,req.query.nop,req.query.site_id,req.query.search,req.query.maintenance_type,req.query.status,req.query.pic,req.query.interval,req.query.type_power,req.query.scope_item,req.query.schedule_state);const source=await siteData({includePm:false});payload.rows=enrichWorkConditions(enrichDashboardReview(payload.rows,source),source);payload.latest_upload=(await preventiveUploadHistory(req.query.maintenance_type||'dashboard',true))[0]||null;res.json(payload)}))
 
 app.get('/api/pm-genset/detail',asyncHandler(async(req,res)=>{const data=await gensetData(),pm=data.pm?.findLast(row=>row.maintenance_kind==='genset'&&workOrderKey(row)===req.query.id);if(!pm)throw new HttpError(404,'Pekerjaan PM Genset tidak ditemukan.');res.json(analyzeGenset(pm,data,req.query.window_days?{windowDays:Number(req.query.window_days)}:{}))}))
 app.put('/api/pm-genset/evaluation',asyncHandler(async(req,res)=>{const data=await gensetData(),pm=data.pm?.findLast(row=>row.maintenance_kind==='genset'&&workOrderKey(row)===req.body.id);if(!pm)throw new HttpError(404,'Pekerjaan PM Genset tidak ditemukan.');res.json(await saveGensetEvaluation(pm,req.body))}))
@@ -83,7 +83,7 @@ app.get('/api/runs/:id/export.xlsx',asyncHandler(async(req,res)=>{
 app.get('/api/runs/:id/mttr-boosting/export.xlsx',asyncHandler(async(req,res)=>{
   const dataset=await loadDataset(RUNS_DIR,req.params.id),period=boostingPeriod(req.query,dataset.date),sourceSnapshot=await siteDataForUploadMonth(period),data=sourceSnapshot.data
   const selected=dataset.nops.filter(item=>(!req.query.region||item.region===req.query.region)&&(!req.query.nop||item.name===req.query.nop)),names=selected.map(item=>item.name)
-  const b13Rows=combinedKpiB13Rows(data),summaries=mergeTicketSummaries(names,deriveTicketMttrByNop(data,names,period),buildKpiB13Summaries(b13Rows,names,period),period)
+  const b13Rows=combinedKpiB13Rows(data),summaries=mergeTicketSummaries(names,deriveTicketMttrByNop(data,names),buildKpiB13Summaries(b13Rows,names),period)
   const workbook=buildBoostingWorkbook(dataset,selected,summaries,{period,region:req.query.region||'',nop:req.query.nop||''}),buffer=await workbook.xlsx.writeBuffer()
   const scope=String(req.query.nop||req.query.region||'semua-nop').replace(/[^A-Za-z0-9_-]+/g,'-')
   res.set({'content-type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','content-disposition':`attachment; filename="Peningkatan-KPI-B-${period}-${scope}.xlsx"`});res.send(Buffer.from(buffer))
@@ -99,14 +99,14 @@ function boostingPeriod(query,fallbackDate){
 }
 function asyncHandler(fn){return(req,res,next)=>databaseReady.then(()=>fn(req,res,next)).catch(next)}
 function numberToColumn(number){let result='';while(number){number--;result=String.fromCharCode(65+number%26)+result;number=Math.floor(number/26)}return result}
-export function deriveTicketMttrByNop(data,nopNames,period){
+export function deriveTicketMttrByNop(data,nopNames,period=null){
   const canonical=new Map(nopNames.map(name=>[normalizeNopKey(name),name])),siteNop=new Map((data.master||[]).map(row=>[String(row.site_id||'').trim().toUpperCase(),row.nop]))
   const componentKeys=['B_1','B_2.1','B_2.2','B_2.3','B_3']
   const blank=()=>Object.fromEntries(componentKeys.map(component=>[component,Object.fromEntries(Object.keys(MTTR_TARGETS_BY_COMPONENT[component]).map(severity=>[severity,[]]))]))
   const buckets=new Map(),seen=new Set()
   for(const row of data.swfm||[]){
     const excluded=String(row.excluded||'').trim().toUpperCase();if(excluded!=='NO')continue
-    if(String(row.occurred_at||'').slice(0,7)!==period)continue
+    if(period&&String(row.occurred_at||'').slice(0,7)!==period)continue
     const ticket=String(row.ticket_no||'').trim(),site=String(row.site_id||'').trim().toUpperCase(),identity=ticket.toUpperCase();if(!ticket||seen.has(identity))continue
     const nop=canonical.get(normalizeNopKey(row.nop||siteNop.get(site)));if(!nop)continue
     const severity=normalizeTicketSeverity(row.severity);if(!severity)continue

@@ -49,10 +49,17 @@ export function buildPreventiveDashboard(source,dateFrom,dateTo,nop,siteId,searc
   if(scheduleState==='upcoming')filtered=filtered.filter(row=>!isTerminal(row)&&!row.submitted_date&&row.schedule_date>=todayIso)
   const q=String(search||'').trim().toLowerCase();if(q)filtered=filtered.filter(row=>['site_id','site_name','nop','notes','ticket_no'].map(k=>row[k]||'').join(' ').toLowerCase().includes(q))
   const unique={};for(const row of [...filtered].sort((a,b)=>(a.schedule_date||'').localeCompare(b.schedule_date||'')||(a.submitted_date||'').localeCompare(b.submitted_date||''))){const key=String(row.site_id).toLowerCase();if(!unique[key]||row.submitted_date||!unique[key].submitted_date)unique[key]=row}
-  const rows=filtered.sort((a,b)=>sort(`${a.nop}|${a.site_id}|${a.ticket_no}`,`${b.nop}|${b.site_id}|${b.ticket_no}`)),planIds=new Set(filtered.map(x=>String(x.site_id).toLowerCase())),submittedIds=new Set(filtered.filter(x=>x.submitted_date).map(x=>String(x.site_id).toLowerCase()))
-  const nopSummary=[...new Set(filtered.map(x=>x.nop||'Belum ditentukan'))].sort(sort).map(name=>{const group=filtered.filter(x=>(x.nop||'Belum ditentukan')===name),plan=new Set(group.map(x=>String(x.site_id).toLowerCase())).size,submitted=new Set(group.filter(x=>x.submitted_date).map(x=>String(x.site_id).toLowerCase())).size;return{nop:name,plan,submitted,achievement:plan?Math.round(submitted/plan*10000)/100:0}})
   const optionFor=field=>[...new Set(eligible.map(row=>row[field]).filter(Boolean))].sort(sort)
-  return{period_start:bounds.start,period_end:bounds.end,plan:planIds.size,submitted:submittedIds.size,achievement:planIds.size?Math.round(submittedIds.size/planIds.size*10000)/100:0,pending:Math.max(planIds.size-submittedIds.size,0),nop_options:nopOptions,site_options:siteOptions,status_options:optionFor('status'),pic_options:optionFor('pic'),interval_options:optionFor('interval'),type_power_options:optionFor('type_power'),scope_item_options:optionFor('scope_item_name'),nop_summary:nopSummary,rows}
+  const siteIds=items=>new Set(items.map(item=>String(item.site_id).toLowerCase()))
+  const approved=row=>/^APPROVE(D)?\b/i.test(String(row.status||'').trim())
+  const rows=filtered.sort((a,b)=>sort(`${a.nop}|${a.site_id}|${a.ticket_no}`,`${b.nop}|${b.site_id}|${b.ticket_no}`)),planIds=siteIds(filtered),submittedIds=siteIds(filtered.filter(x=>x.submitted_date)),approvedIds=siteIds(filtered.filter(approved))
+  const statusOptions=optionFor('status')
+  const nopSummary=[...new Set(filtered.map(x=>x.nop||'Belum ditentukan'))].sort(sort).map(name=>{
+    const group=filtered.filter(x=>(x.nop||'Belum ditentukan')===name),plan=siteIds(group).size,submitted=siteIds(group.filter(x=>x.submitted_date)).size,approvedCount=siteIds(group.filter(approved)).size
+    const statuses=Object.fromEntries(statusOptions.map(status=>[status,siteIds(group.filter(row=>row.status===status)).size]))
+    return{nop:name,plan,approved:approvedCount,submitted,pending:Math.max(plan-submitted,0),achievement:plan?Math.round(submitted/plan*10000)/100:0,approved_achievement:plan?Math.round(approvedCount/plan*10000)/100:0,statuses}
+  })
+  return{period_start:bounds.start,period_end:bounds.end,plan:planIds.size,approved:approvedIds.size,submitted:submittedIds.size,achievement:planIds.size?Math.round(submittedIds.size/planIds.size*10000)/100:0,approved_achievement:planIds.size?Math.round(approvedIds.size/planIds.size*10000)/100:0,pending:Math.max(planIds.size-submittedIds.size,0),nop_options:nopOptions,site_options:siteOptions,status_options:statusOptions,pic_options:optionFor('pic'),interval_options:optionFor('interval'),type_power_options:optionFor('type_power'),scope_item_options:optionFor('scope_item_name'),nop_summary:nopSummary,rows}
 }
 
 export const workOrderKey=row=>`${row.maintenance_kind||'site'}|${String(row.ticket_no||'').trim()||`${String(row.site_id).trim().toUpperCase()}|${row.schedule_date}|${row.scope_item_name||''}`}`

@@ -87,19 +87,35 @@ export async function saveSiteSource(kind,filename,date,dataset){
     for(let start=0;start<rows.length;start+=100){const values=rows.slice(start,start+100).map((row,index)=>[kind,start+index,JSON.stringify(row)]);await connection.query('INSERT INTO pm_site_source_rows(source_kind,row_no,payload) VALUES ?',[values])}
     await connection.query('INSERT INTO pm_site_source_uploads(source_upload_id,source_kind,filename,upload_date,dataset) VALUES(?,?,?,?,?)',[sourceUploadId,kind,filename,date,JSON.stringify(metadata)])
     for(let start=0;start<rows.length;start+=100){const values=rows.slice(start,start+100).map((row,index)=>[sourceUploadId,start+index,JSON.stringify(row)]);await connection.query('INSERT INTO pm_site_source_upload_rows(source_upload_id,row_no,payload) VALUES ?',[values])}
+    const monthStart=new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',timeZone:'Asia/Jakarta'}).format(new Date()).slice(0,7)+'-01'
+    await connection.query('UPDATE pm_site_source_uploads SET archived_at=COALESCE(archived_at,CURRENT_TIMESTAMP) WHERE upload_date<?',[monthStart])
     await recordApplicationUpload(kind,sourceUploadId,filename,date,dataset.row_count,connection)
     await connection.commit()
     return{source_kind:kind,filename,row_count:dataset.row_count,issue_count:dataset.issues.length,source_upload_id:sourceUploadId}
   }catch(error){await connection.rollback().catch(()=>{});throw error}finally{connection.release()}
 }
-export async function siteData(){
-  if(!databaseEnabled){const data=await preview(),uploaded=await loadPreventiveRows();const kinds=new Set(uploaded.map(row=>row.maintenance_kind));return{...data,pm:[...(data.pm||[]).filter(row=>!kinds.has(row.maintenance_kind)),...uploaded],evaluations:[],punchlist_notes:[],read_only:true}}
-  const [sources]=await getPool().query('SELECT source_kind,filename,upload_date,dataset FROM pm_site_sources')
-  const [evaluations]=await getPool().query('SELECT * FROM pm_site_evaluations')
-  const [punchlistNotes]=await getPool().query('SELECT site_id,note,updated_at FROM site_punchlist_notes')
-  const data={pm:await loadPreventiveRows(),evaluations,punchlist_notes:punchlistNotes,sources:sources.map(({dataset,...meta})=>meta),quality:[],read_only:false}
+// Baris B1-B3 adalah sumber terbesar. Halaman Dashboard/PM tidak memerlukannya;
+// sumber itu hanya diminta oleh Peningkatan KPI melalui siteDataForUploadMonth().
+const kpiB13SourceKinds=['kpi_b13','kpi_b13_r01','kpi_b13_r02','kpi_b13_r10']
+
+export async function siteData({includeKpiB13=false,includePm=true}={}){
+  if(!databaseEnabled){
+    const data=await preview(),uploaded=includePm?await loadPreventiveRows():[]
+    const kinds=new Set(uploaded.map(row=>row.maintenance_kind))
+    return{...data,pm:includePm?[...(data.pm||[]).filter(row=>!kinds.has(row.maintenance_kind)),...uploaded]:[],evaluations:[],punchlist_notes:[],read_only:true}
+  }
+  const sourceWhere=includeKpiB13?'':' WHERE source_kind NOT IN (?,?,?,?)'
+  const sourceParams=includeKpiB13?[]:kpiB13SourceKinds
+  const [sourceResult,evaluationResult,punchlistResult,pm]=await Promise.all([
+    getPool().query(`SELECT source_kind,filename,upload_date,dataset FROM pm_site_sources${sourceWhere}`,sourceParams),
+    getPool().query('SELECT * FROM pm_site_evaluations'),
+    getPool().query('SELECT site_id,note,updated_at FROM site_punchlist_notes'),
+    includePm?loadPreventiveRows():Promise.resolve([])
+  ])
+  const sources=sourceResult[0],evaluations=evaluationResult[0],punchlistNotes=punchlistResult[0]
+  const data={pm,evaluations,punchlist_notes:punchlistNotes,sources:sources.map(({dataset,...meta})=>meta),quality:[],read_only:false}
   for(const source of sources){const dataset=typeof source.dataset==='string'?JSON.parse(source.dataset):source.dataset;data[source.source_kind]=dataset.rows||[];data.quality.push(...(dataset.issues||[]).map(issue=>({...issue,source:source.source_kind})))}
-  const [records]=await getPool().query('SELECT source_kind,payload FROM pm_site_source_rows ORDER BY source_kind,row_no')
+  const [records]=await getPool().query(`SELECT source_kind,payload FROM pm_site_source_rows${sourceWhere} ORDER BY source_kind,row_no`,sourceParams)
   for(const record of records){const payload=typeof record.payload==='string'?JSON.parse(record.payload):record.payload;data[record.source_kind].push(payload)}
   return data
 }
@@ -107,7 +123,9 @@ export async function siteData(){
 const uploadMonth=value=>String(value||'').slice(0,7)
 const sourceRowsForUploads=async uploads=>{
   const [punchlistNotes]=await getPool().query('SELECT site_id,note,updated_at FROM site_punchlist_notes')
-  const data={pm:await loadPreventiveRows(),evaluations:[],punchlist_notes:punchlistNotes,sources:uploads.map(({dataset,...meta})=>meta),quality:[],read_only:false}
+  // Peningkatan KPI tidak membutuhkan data PM. Hindari membaca snapshot PM
+  // yang besar saat hanya kalkulasi B1-B3/SWFM dijalankan.
+  const data={pm:[],evaluations:[],punchlist_notes:punchlistNotes,sources:uploads.map(({dataset,...meta})=>meta),quality:[],read_only:false}
   if(!uploads.length)return data
   const ids=uploads.map(upload=>upload.source_upload_id)
   const [records]=await getPool().query('SELECT source_upload_id,payload FROM pm_site_source_upload_rows WHERE source_upload_id IN (?) ORDER BY source_upload_id,row_no',[ids])
@@ -121,25 +139,23 @@ const sourceRowsForUploads=async uploads=>{
   return data
 }
 
-// Mengambil snapshot terbaru yang MEMUAT ticket pada bulan filter. Dasarnya
-// adalah Date Occurred/period di dalam data, bukan tanggal user meng-upload file.
+// Mengambil snapshot terbaru berdasarkan bulan pada tanggal saat file diunggah.
+// Isi Date Occurred di dalam file tidak dipakai untuk memilih versi upload.
 export async function siteDataForUploadMonth(period){
-  if(!databaseEnabled)return{data:await siteData(),historical:false,available_periods:[]}
+  if(!databaseEnabled)return{data:await siteData({includeKpiB13:true}),historical:false,available_periods:[]}
   const [allUploads]=await getPool().query('SELECT source_upload_id,source_kind,filename,upload_date,dataset,updated_at FROM pm_site_source_uploads ORDER BY upload_date DESC,updated_at DESC')
-  if(!allUploads.length)return{data:await siteData(),historical:false,available_periods:[]}
-  const ids=allUploads.map(upload=>upload.source_upload_id)
-  const [rowRecords]=await getPool().query('SELECT source_upload_id,payload FROM pm_site_source_upload_rows WHERE source_upload_id IN (?)',[ids])
-  const periodsByUpload=new Map(ids.map(id=>[id,new Set()]))
-  for(const record of rowRecords){
-    const row=typeof record.payload==='string'?JSON.parse(record.payload):record.payload
-    const rowPeriod=String(row.period||row.occurred_at||'').slice(0,7)
-    if(/^\d{4}-\d{2}$/.test(rowPeriod))periodsByUpload.get(record.source_upload_id)?.add(rowPeriod)
+  if(!allUploads.length)return{data:await siteData({includeKpiB13:true}),historical:false,available_periods:[]}
+  const uploadPeriod=upload=>{
+    const date=upload.upload_date
+    if(date instanceof Date)return date.toISOString().slice(0,7)
+    const value=String(date||'')
+    return /^\d{4}-\d{2}/.test(value)?value.slice(0,7):''
   }
-  const available_periods=[...new Set([...periodsByUpload.values()].flatMap(periods=>[...periods]))].sort().reverse()
+  const available_periods=[...new Set(allUploads.map(uploadPeriod).filter(value=>/^\d{4}-\d{2}$/.test(value)))].sort().reverse()
   const selected=[],seen=new Set()
   for(const upload of allUploads){
     const isReference=upload.source_kind==='master'
-    if(seen.has(upload.source_kind)||(!isReference&&!periodsByUpload.get(upload.source_upload_id)?.has(period)))continue
+    if(seen.has(upload.source_kind)||(!isReference&&uploadPeriod(upload)!==period))continue
     seen.add(upload.source_kind);selected.push(upload)
   }
   return{data:await sourceRowsForUploads(selected),historical:true,available_periods}
