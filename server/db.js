@@ -40,7 +40,10 @@ export async function initDb(serverDir){
   }
   const currentMonth=new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',timeZone:'Asia/Jakarta'}).format(new Date()).slice(0,7)+'-01'
   await Promise.all([
-    getPool().query('UPDATE pm_site_source_uploads SET archived_at=COALESCE(archived_at,CURRENT_TIMESTAMP) WHERE upload_date<?',[currentMonth]),
+    // Master Site adalah referensi fondasi aplikasi. Jangan pernah diarsipkan,
+    // termasuk snapshot lama yang sempat menerima penanda archive versi sebelumnya.
+    getPool().query("UPDATE pm_site_source_uploads SET archived_at=NULL WHERE source_kind='master'"),
+    getPool().query("UPDATE pm_site_source_uploads SET archived_at=COALESCE(archived_at,CURRENT_TIMESTAMP) WHERE source_kind<>'master' AND upload_date<?",[currentMonth]),
     getPool().query('UPDATE preventive_uploads SET archived_at=COALESCE(archived_at,CURRENT_TIMESTAMP) WHERE upload_date<?',[currentMonth])
   ])
 }

@@ -88,7 +88,9 @@ export async function saveSiteSource(kind,filename,date,dataset){
     await connection.query('INSERT INTO pm_site_source_uploads(source_upload_id,source_kind,filename,upload_date,dataset) VALUES(?,?,?,?,?)',[sourceUploadId,kind,filename,date,JSON.stringify(metadata)])
     for(let start=0;start<rows.length;start+=100){const values=rows.slice(start,start+100).map((row,index)=>[sourceUploadId,start+index,JSON.stringify(row)]);await connection.query('INSERT INTO pm_site_source_upload_rows(source_upload_id,row_no,payload) VALUES ?',[values])}
     const monthStart=new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',timeZone:'Asia/Jakarta'}).format(new Date()).slice(0,7)+'-01'
-    await connection.query('UPDATE pm_site_source_uploads SET archived_at=COALESCE(archived_at,CURRENT_TIMESTAMP) WHERE upload_date<?',[monthStart])
+    // Master Site adalah backbone pemetaan Site/NOP dan selalu harus aktif.
+    await connection.query("UPDATE pm_site_source_uploads SET archived_at=NULL WHERE source_kind='master'")
+    await connection.query("UPDATE pm_site_source_uploads SET archived_at=COALESCE(archived_at,CURRENT_TIMESTAMP) WHERE source_kind<>'master' AND upload_date<?",[monthStart])
     await recordApplicationUpload(kind,sourceUploadId,filename,date,dataset.row_count,connection)
     await connection.commit()
     return{source_kind:kind,filename,row_count:dataset.row_count,issue_count:dataset.issues.length,source_upload_id:sourceUploadId}

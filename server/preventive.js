@@ -54,12 +54,20 @@ export function buildPreventiveDashboard(source,dateFrom,dateTo,nop,siteId,searc
   const approved=row=>/^APPROVE(D)?\b/i.test(String(row.status||'').trim())
   const rows=filtered.sort((a,b)=>sort(`${a.nop}|${a.site_id}|${a.ticket_no}`,`${b.nop}|${b.site_id}|${b.ticket_no}`)),planIds=siteIds(filtered),submittedIds=siteIds(filtered.filter(x=>x.submitted_date)),approvedIds=siteIds(filtered.filter(approved))
   const statusOptions=optionFor('status')
+  const summarizeGroup=(group,{nop:name,regional}={})=>{
+    const plan=siteIds(group).size,submitted=siteIds(group.filter(x=>x.submitted_date)).size,approvedCount=siteIds(group.filter(approved)).size
+    const statuses=Object.fromEntries(statusOptions.map(status=>[status,siteIds(group.filter(row=>row.status===status)).size]))
+    return{...(name?{nop:name}:{}),...(regional?{regional}:{}),plan,approved:approvedCount,submitted,pending:Math.max(plan-submitted,0),achievement:plan?Math.round(submitted/plan*10000)/100:0,approved_achievement:plan?Math.round(approvedCount/plan*10000)/100:0,statuses}
+  }
   const nopSummary=[...new Set(filtered.map(x=>x.nop||'Belum ditentukan'))].sort(sort).map(name=>{
     const group=filtered.filter(x=>(x.nop||'Belum ditentukan')===name),plan=siteIds(group).size,submitted=siteIds(group.filter(x=>x.submitted_date)).size,approvedCount=siteIds(group.filter(approved)).size
     const statuses=Object.fromEntries(statusOptions.map(status=>[status,siteIds(group.filter(row=>row.status===status)).size]))
-    return{nop:name,plan,approved:approvedCount,submitted,pending:Math.max(plan-submitted,0),achievement:plan?Math.round(submitted/plan*10000)/100:0,approved_achievement:plan?Math.round(approvedCount/plan*10000)/100:0,statuses}
+    const regional=group.map(row=>String(row.regional||'').trim()).find(Boolean)||'Belum ditentukan'
+    return{nop:name,regional,plan,approved:approvedCount,submitted,pending:Math.max(plan-submitted,0),achievement:plan?Math.round(submitted/plan*10000)/100:0,approved_achievement:plan?Math.round(approvedCount/plan*10000)/100:0,statuses}
   })
-  return{period_start:bounds.start,period_end:bounds.end,plan:planIds.size,approved:approvedIds.size,submitted:submittedIds.size,achievement:planIds.size?Math.round(submittedIds.size/planIds.size*10000)/100:0,approved_achievement:planIds.size?Math.round(approvedIds.size/planIds.size*10000)/100:0,pending:Math.max(planIds.size-submittedIds.size,0),nop_options:nopOptions,site_options:siteOptions,status_options:statusOptions,pic_options:optionFor('pic'),interval_options:optionFor('interval'),type_power_options:optionFor('type_power'),scope_item_options:optionFor('scope_item_name'),nop_summary:nopSummary,rows}
+  const regionalSummary=[...new Set(filtered.map(row=>String(row.regional||'').trim()||'Belum ditentukan'))].sort(sort).map(regional=>summarizeGroup(filtered.filter(row=>(String(row.regional||'').trim()||'Belum ditentukan')===regional),{regional}))
+  const statusSummary=Object.fromEntries(statusOptions.map(name=>[name,siteIds(filtered.filter(row=>row.status===name)).size]))
+  return{period_start:bounds.start,period_end:bounds.end,plan:planIds.size,approved:approvedIds.size,submitted:submittedIds.size,achievement:planIds.size?Math.round(submittedIds.size/planIds.size*10000)/100:0,approved_achievement:planIds.size?Math.round(approvedIds.size/planIds.size*10000)/100:0,pending:Math.max(planIds.size-submittedIds.size,0),nop_options:nopOptions,site_options:siteOptions,status_options:statusOptions,pic_options:optionFor('pic'),interval_options:optionFor('interval'),type_power_options:optionFor('type_power'),scope_item_options:optionFor('scope_item_name'),nop_summary:nopSummary,regional_summary:regionalSummary,status_summary:statusSummary,rows}
 }
 
 export const workOrderKey=row=>`${row.maintenance_kind||'site'}|${String(row.ticket_no||'').trim()||`${String(row.site_id).trim().toUpperCase()}|${row.schedule_date}|${row.scope_item_name||''}`}`

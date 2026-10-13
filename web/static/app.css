@@ -1704,8 +1704,22 @@ button { cursor: pointer; }
 .preventive-progress-table td { text-align:center; font-weight:600; }
 .preventive-progress-table .preventive-progress-nop { position:sticky; left:0; z-index:1; min-width:170px; background:#fff; text-align:left; color:#173e68; font-weight:700; }
 .preventive-progress-table tbody tr:nth-child(even) .preventive-progress-nop { background:#f7f9fc; }
+.preventive-progress-table .preventive-progress-regional { min-width:132px; background:#f2f6fa; color:#53657a; text-align:left; font-weight:700; }
 .preventive-progress-table .is-approved { background:#e9f8f1; color:#087d4b; }
 .preventive-progress-table .is-pending { background:#fff1f2; color:#bd3340; }
+.preventive-insights { overflow:hidden; }
+.preventive-insights-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:22px; }
+.preventive-insight-block { min-width:0; border:1px solid #d8e1eb; background:#fbfcfe; padding:16px; }
+.preventive-insight-block h3 { margin:0 0 15px; color:#263f5f; font-size:12px; font-weight:700; }
+.preventive-status-bars,.preventive-regional-bars { display:grid; gap:11px; }
+.preventive-status-row,.preventive-regional-row { display:grid; gap:6px; }
+.preventive-status-label { display:flex; align-items:center; justify-content:space-between; gap:12px; color:#53657a; font-size:10px; font-weight:600; }
+.preventive-status-label b { color:#173e68; font-size:11px; }
+.preventive-status-track,.preventive-regional-track { height:9px; overflow:hidden; background:#e7edf4; }
+.preventive-status-track i,.preventive-regional-track i { display:block; height:100%; min-width:0; transition:width .2s ease; }
+.preventive-regional-track i { background:linear-gradient(90deg,#173e68,#168a63); }
+.preventive-regional-row small { color:#75849a; font-size:9px; }
+.preventive-insight-empty { margin:0; color:#8a98aa; font-size:10px; }
 .corporate-panel .punchlist-filter-grid { display:grid!important; grid-template-columns:minmax(320px,1fr) repeat(3,minmax(175px,220px))!important; align-items:end!important; gap:12px!important; border-bottom:1px solid #e2e8f0; padding-bottom:16px; }
 .punchlist-filter-search, .punchlist-filter-field { min-width:0; }
 .punchlist-filter-grid .control { min-width:0; }
@@ -1980,4 +1994,5 @@ button { cursor: pointer; }
   .corporate-panel[aria-label="Rekap distribusi kategori KPI"] > .grid { grid-template-columns:1fr!important; }
   .preventive-progress-heading { flex-direction:column; }
   .preventive-progress-table .preventive-progress-nop { min-width:128px; }
+  .preventive-insights-grid { grid-template-columns:1fr; }
 }
