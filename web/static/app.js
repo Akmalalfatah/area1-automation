@@ -538,15 +538,15 @@ function pmFooter(ctx, margin, height, note) {
 function saveCanvas(canvas, filename) {
   canvas.toBlob((blob) => { if (blob) downloadBlob(blob, filename); }, "image/png");
 }
-/* Progress PM per Regional: bar bertumpuk Belum Submit / Submitted / Approved. */
+/* Progress PM per Regional: bar bertumpuk Belum Submit / Submitted / Closed. */
 async function pmBuildInsightsCanvas(data, filters, options = {}) {
   if (!options.skipFonts) await pmLoadImageFonts();
   const regional = [...(data && data.regional_summary || [])].sort((a, b) => pmRegionalCompare(a.regional, b.regional));
   const colors = { pending: "#D64B55", submitted: "#E27B2B", approved: "#0B8A5B" };
   const width = 1500, margin = 40, rowHeight = 104, top = 196, height = top + Math.max(regional.length, 1) * rowHeight + 76;
   const { canvas, ctx } = pmNewCanvas(width, height, options.createCanvas);
-  pmHeader(ctx, "PROGRESS OPERASIONAL PER REGIONAL", `${monthLabel(filters.month || filters.dateFrom?.slice(0, 7))} · Komposisi Plan Site: belum submit, submitted, approved`, margin);
-  [["Belum Submit", colors.pending], ["Submitted", colors.submitted], ["Approved", colors.approved]].forEach(([label, color], index) => {
+  pmHeader(ctx, "PROGRESS OPERASIONAL PER REGIONAL", `${monthLabel(filters.month || filters.dateFrom?.slice(0, 7))} · Komposisi Plan Site: belum submit, submitted, closed`, margin);
+  [["Belum Submit", colors.pending], ["Submitted", colors.submitted], ["Closed", colors.approved]].forEach(([label, color], index) => {
     const x = margin + index * 170; ctx.fillStyle = color; ctx.fillRect(x, 150, 13, 13); pmText(ctx, label, x + 22, 162, { size: 13, weight: 500, color: "#53657A" });
   });
   const trackWidth = width - margin * 2;
@@ -561,8 +561,8 @@ async function pmBuildInsightsCanvas(data, filters, options = {}) {
       if (segment >= 46) pmText(ctx, value, cursor + segment / 2, y + 53, { size: 14, weight: 600, color: "#FFFFFF", align: "center" });
       cursor += segment;
     });
-    pmText(ctx, `${pending} belum submit · ${submittedOnly} submitted · ${approved} approved`, margin, y + 88, { size: 13, weight: 500, color: "#607086" });
-    pmText(ctx, `${approved}/${plan} approved`, margin + trackWidth, y + 88, { size: 13, weight: 600, color: "#173E68", align: "right" });
+    pmText(ctx, `${pending} belum submit · ${submittedOnly} submitted · ${approved} closed`, margin, y + 88, { size: 13, weight: 500, color: "#607086" });
+    pmText(ctx, `${approved}/${plan} closed`, margin + trackWidth, y + 88, { size: 13, weight: 600, color: "#173E68", align: "right" });
   });
   if (!regional.length) pmText(ctx, "Belum ada regional pada filter aktif.", margin, top + 30, { size: 15, weight: 500, color: "#64748B" });
   pmFooter(ctx, margin, height);
@@ -575,7 +575,7 @@ async function downloadPreventiveInsightsImage(data, filters) {
 /* Progress PM per NOP: tabel yang sama dengan layar (urutan R01, R02, R10; baris total regional; total akhir). */
 async function pmBuildProgressCanvas(data, filters, options = {}) {
   if (!options.skipFonts) await pmLoadImageFonts();
-  const columns = [["NOP", 300], ["PLAN SITE", 150], ["APPROVED (CLOSED)", 190], ["SUBMITTED DATE", 180], ["BELUM SUBMITTED", 210], ...PM_PROGRESS_STATUSES.map(([, label]) => [label, label.includes("WAITING APPROVAL") ? 250 : label === "IN PROGRESS" ? 170 : label === "ASSIGNED" ? 160 : 140])];
+  const columns = [["NOP", 300], ["PLAN SITE", 150], ["CLOSED", 150], ["SUBMITTED DATE", 180], ["BELUM SUBMITTED", 210], ...PM_PROGRESS_STATUSES.map(([, label]) => [label, label.includes("WAITING APPROVAL") ? 250 : label === "IN PROGRESS" ? 170 : label === "ASSIGNED" ? 160 : 140])];
   const groups = pmGroupByRegional(data && data.nop_summary), grand = pmProgressTotal((data && data.nop_summary) || []);
   const margin = 40, tableWidth = columns.reduce((sum, [, w]) => sum + w, 0), width = tableWidth + margin * 2;
   const headH = 54, regionH = 48, rowH = 46, grandH = 54, top = 150;
@@ -628,12 +628,12 @@ function PreventiveOperationalInsights({ data, filters, onFilter }) {
     const share = (value) => total ? value / total * 100 : 0, segment = (value, className) => h("i", { className, style: { width: `${share(value)}%` } }, share(value) >= 4 ? value : "");
     return h("div", { className: "pm-reg-row", key: item.regional },
       h("div", { className: "pm-reg-label" }, h("span", null, item.regional), h("b", null, `${total} plan`)),
-      h("div", { className: "pm-reg-track", title: `${pending} belum submit, ${submittedOnly} submitted, ${approved} approved` }, segment(pending, "is-pending"), segment(submittedOnly, "is-submitted"), segment(approved, "is-approved")),
-      h("div", { className: "pm-reg-foot" }, h("span", null, `${pending} belum submit · ${submittedOnly} submitted · ${approved} approved`), h("b", null, `${approved}/${total} approved`)));
+      h("div", { className: "pm-reg-track", title: `${pending} belum submit, ${submittedOnly} submitted, ${approved} closed` }, segment(pending, "is-pending"), segment(submittedOnly, "is-submitted"), segment(approved, "is-approved")),
+      h("div", { className: "pm-reg-foot" }, h("span", null, `${pending} belum submit · ${submittedOnly} submitted · ${approved} closed`), h("b", null, `${approved}/${total} closed`)));
   }) : [h("p", { className: "preventive-insight-empty", key: "empty" }, "Belum ada regional pada filter aktif.")];
   return h("section", { className: "corporate-panel p-5 preventive-insights pm-reg-card" },
-    h("div", { className: "pm-reg-head" }, h("div", null, h("p", { className: "pm-img-eyebrow" }, "PREVENTIVE MANAGEMENT"), h("h2", { className: "section-title pm-img-title" }, "PROGRESS OPERASIONAL PER REGIONAL"), h("p", { className: "pm-img-sub" }, `${monthLabel(filters.month || filters.dateFrom?.slice(0, 7))} · Komposisi Plan Site: belum submit, submitted, approved`)), h("button", { type: "button", className: "pm-export-button pm-export-image", onClick: () => downloadPreventiveInsightsImage(data, filters) }, h(Download, { size: 14 }), "Download Image")),
-    h("div", { className: "pm-stacked-legend" }, h("span", { className: "is-pending" }, "Belum Submit"), h("span", { className: "is-submitted" }, "Submitted"), h("span", { className: "is-approved" }, "Approved")),
+    h("div", { className: "pm-reg-head" }, h("div", null, h("p", { className: "pm-img-eyebrow" }, "PREVENTIVE MANAGEMENT"), h("h2", { className: "section-title pm-img-title" }, "PROGRESS OPERASIONAL PER REGIONAL"), h("p", { className: "pm-img-sub" }, `${monthLabel(filters.month || filters.dateFrom?.slice(0, 7))} · Komposisi Plan Site: belum submit, submitted, closed`)), h("button", { type: "button", className: "pm-export-button pm-export-image", onClick: () => downloadPreventiveInsightsImage(data, filters) }, h(Download, { size: 14 }), "Download Image")),
+    h("div", { className: "pm-stacked-legend" }, h("span", { className: "is-pending" }, "Belum Submit"), h("span", { className: "is-submitted" }, "Submitted"), h("span", { className: "is-approved" }, "Closed")),
     h("div", { className: "pm-reg-list" }, ...rows)
   );
 }
@@ -661,7 +661,7 @@ function PreventiveDashboardCards({ data, file, date, busy, loading, filters, on
     "div",
     { className: "grid grid-cols-4 gap-4" },
     h(PreventiveSummaryCard, { label: "PLAN SITE", value: data && data.plan != null ? data.plan : 0, detail: monthLabel(filters.month || filters.dateFrom?.slice(0, 7)), tone: "navy" }),
-    h(PreventiveSummaryCard, { label: "APPROVED", value: data && data.approved != null ? data.approved : 0, detail: `${formatNumber(data && data.approved_achievement != null ? data.approved_achievement : 0)}% plan berhasil di-approve`, tone: "green" }),
+    h(PreventiveSummaryCard, { label: "CLOSED", value: data && data.approved != null ? data.approved : 0, detail: `${formatNumber(data && data.approved_achievement != null ? data.approved_achievement : 0)}% plan berstatus Closed`, tone: "green" }),
     h(PreventiveSummaryCard, { label: "SUBMITTED", value: data && data.submitted != null ? data.submitted : 0, detail: `${formatNumber(data && data.achievement != null ? data.achievement : 0)}% dari Plan Site`, tone: "orange" }),
     h(PreventiveSummaryCard, { label: "BELUM SUBMIT", value: data && data.pending != null ? data.pending : 0, detail: "Site plan yang belum memiliki Submitted Date", tone: "red" })
   );
@@ -681,7 +681,7 @@ function PreventiveDashboardCards({ data, file, date, busy, loading, filters, on
     h("div", { className: "preventive-filter-search" }, h("label", { className: "filter-label mb-1 block" }, "SEARCH"), h("input", { type: "search", value: filters.search, onChange: (event) => onFilter("search", event.target.value), placeholder: "Cari Site ID, Site Name, NOP, atau Notes", className: "control h-10 w-full px-3 text-[10px]" }))
   );
   const statuses = PM_PROGRESS_STATUSES, nopSummary = (data == null ? void 0 : data.nop_summary) || [];
-  const columns = ["REGIONAL", "NOP", "PLAN SITE", "APPROVED (CLOSED)", "SUBMITTED DATE", "BELUM SUBMITTED", ...statuses.map(([, label]) => label)];
+  const columns = ["REGIONAL", "NOP", "PLAN SITE", "CLOSED", "SUBMITTED DATE", "BELUM SUBMITTED", ...statuses.map(([, label]) => label)];
   const progressTotal = pmProgressTotal;
   const progressCells = (item, prefix) => { const plan = Number(item.plan) || 0, submitted = Number(item.submitted) || 0; return [h("td", { key: `${prefix}-plan`, className: "is-plan" }, plan), h("td", { key: `${prefix}-approved`, className: plan && Number(item.approved) ? "is-approved" : "is-zero" }, Number(item.approved) || 0), h("td", { key: `${prefix}-submitted` }, submitted), h("td", { key: `${prefix}-pending`, className: Number(item.pending) >= 50 ? "is-pending is-high" : "is-pending" }, Number(item.pending) || 0), ...statuses.map(([key]) => h("td", { key: `${prefix}-${key}`, className: Number(item.progress_statuses?.[key]) ? "" : "is-zero" }, Number(item.progress_statuses?.[key]) || 0))]; };
   const progressRows = pmGroupByRegional(nopSummary).flatMap(([regional, items], groupIndex) => { const total = progressTotal(items), tone = `pm-region-tone-${groupIndex % 3}`, rowSpan = items.length + 1; return [...items.map((item, index) => h("tr", { className: `preventive-nop-row ${tone}` + (index % 2 ? " is-stripe" : ""), key: `${regional}-${item.nop}` }, index === 0 ? h("th", { scope: "rowgroup", rowSpan, className: "preventive-progress-regional" }, regional) : null, h("th", { scope: "row", className: "preventive-progress-nop" }, compactNop(item.nop)), ...progressCells(item, `${regional}-${item.nop}`))), h("tr", { className: `preventive-progress-regional-total ${tone}`, key: `regional-${regional}` }, h("th", { scope: "row", className: "preventive-progress-total-label" }, "GRAND TOTAL"), ...progressCells(total, `regional-${regional}`))]; });

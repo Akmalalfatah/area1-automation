@@ -150,12 +150,19 @@ export async function loadPreventiveRows({dateFrom,dateTo}={}){
     const months=monthList(dateFrom,dateTo),start=`${months[0]}-01`,next=new Date(`${months.at(-1)}-01T00:00:00Z`);next.setUTCMonth(next.getUTCMonth()+1)
     const [metadata]=await getPool().query("SELECT id,filename,upload_date,updated_at,JSON_UNQUOTE(JSON_EXTRACT(dataset,'$.maintenance_kind')) AS maintenance_kind,JSON_UNQUOTE(JSON_EXTRACT(dataset,'$.upload_page')) AS upload_page FROM preventive_uploads WHERE upload_date>=? AND upload_date<? ORDER BY upload_date DESC,updated_at DESC",[start,next.toISOString().slice(0,10)])
     const selected=[],seen=new Set()
-    for(const record of metadata){const period=iso(record.upload_date).slice(0,7),filename=String(record.filename||'').toLowerCase(),kind=record.maintenance_kind||(filename.includes('genset')?'genset':filename.includes('punchlist')?'punchlist':'site'),page=record.upload_page||kind,key=`${period}|${page}|${kind}`;if(seen.has(key))continue;seen.add(key);selected.push(record)}
+    // Satu snapshot aktif untuk setiap periode dan jenis PM. File yang sama
+    // dapat diunggah lewat Dashboard maupun halaman PM Site; `upload_page`
+    // tidak boleh membuat kedua versi tercampur atau status lama menimpa baru.
+    for(const record of metadata){const period=iso(record.upload_date).slice(0,7),filename=String(record.filename||'').toLowerCase(),kind=record.maintenance_kind||(filename.includes('genset')?'genset':filename.includes('punchlist')?'punchlist':'site'),key=`${period}|${kind}`;if(seen.has(key))continue;seen.add(key);selected.push(record)}
     if(!selected.length)return []
     const [rows]=await getPool().query('SELECT id,filename,dataset,upload_date,updated_at FROM preventive_uploads WHERE id IN (?)',[selected.map(record=>record.id)])
     const order=new Map(selected.map((record,index)=>[record.id,index]));records=rows.sort((a,b)=>order.get(a.id)-order.get(b.id))
   }else records=await localPreventiveUploads()
-  return records.flatMap(record=>{const dataset=typeof record.dataset==='string'?JSON.parse(record.dataset):record.dataset;const filename=String(record.filename||'').toLowerCase(),maintenance_kind=dataset?.maintenance_kind||(filename.includes('genset')?'genset':filename.includes('punchlist')?'punchlist':'site');return(dataset?.rows||[]).map(row=>({...row,maintenance_kind:row.maintenance_kind||maintenance_kind,_upload_date:iso(record.upload_date),_updated_at:record.updated_at?.toISOString?.()||record.updated_at}))})
+  // Perlindungan yang sama untuk preview lokal dan database: pilih snapshot
+  // terbaru per bulan upload dan per jenis PM sebelum baris dibaca.
+  const uniqueRecords=[],seen=new Set()
+  for(const record of [...records].sort((a,b)=>String(b.upload_date||'').localeCompare(String(a.upload_date||''))||String(b.updated_at||'').localeCompare(String(a.updated_at||'')))){const dataset=typeof record.dataset==='string'?JSON.parse(record.dataset):record.dataset;const filename=String(record.filename||'').toLowerCase(),maintenance_kind=dataset?.maintenance_kind||(filename.includes('genset')?'genset':filename.includes('punchlist')?'punchlist':'site'),key=`${iso(record.upload_date).slice(0,7)}|${maintenance_kind}`;if(seen.has(key))continue;seen.add(key);uniqueRecords.push(record)}
+  return uniqueRecords.flatMap(record=>{const dataset=typeof record.dataset==='string'?JSON.parse(record.dataset):record.dataset;const filename=String(record.filename||'').toLowerCase(),maintenance_kind=dataset?.maintenance_kind||(filename.includes('genset')?'genset':filename.includes('punchlist')?'punchlist':'site');return(dataset?.rows||[]).map(row=>({...row,maintenance_kind:row.maintenance_kind||maintenance_kind,_upload_date:iso(record.upload_date),_updated_at:record.updated_at?.toISOString?.()||record.updated_at}))})
 }
 
 // Catatan PM Punchlist adalah atribut site, bukan status pekerjaan bulanan.
