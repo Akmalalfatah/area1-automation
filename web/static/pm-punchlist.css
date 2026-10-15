@@ -93,7 +93,7 @@
 .pl-chevron { align-self:center; justify-self:center; color:#6b7e93; transition:transform .18s ease; }
 .pl-card[open] .pl-chevron { transform:rotate(90deg); color:#e27b2b; }
 
-.pl-chip { align-self:flex-start; display:inline-flex; align-items:center; margin-top:5px; padding:7px 14px; border:0; border-radius:4px; color:#fff; font-size:11px; font-weight:700; line-height:1.2; letter-spacing:.01em; text-transform:uppercase; white-space:nowrap; }
+.pl-chip { align-self:flex-start; display:inline-flex; align-items:center; margin-top:5px; padding:5px 8px; border:0; border-radius:4px; color:#fff; font-size:9px; font-weight:600; line-height:1.4; letter-spacing:0; text-transform:uppercase; white-space:nowrap; }
 .pl-chip i { display:none; }
 .pl-chip.is-empty { background:#75859a; }
 .pl-chip.is-finding { background:#b97a33; }
