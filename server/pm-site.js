@@ -374,7 +374,7 @@ export async function listPunchlistSites(data,filters={}){
   const query=String(search||'').trim().toLowerCase()
   const summarize=level=>{
     const field=level==='punchlist_l0'?'punchlist_l0_note':'review_l1_note'
-    const rows=base.rows.map(row=>{const note=String(row[field]||'').trim(),classified=classifyPunchlistNote(note);return{...row,note,punchlist_l0_note:String(row.punchlist_l0_note||'').trim(),review_l1_note:String(row.review_l1_note||'').trim(),status_note:classified.status,findings:classified.findings}}).filter(row=>{
+    const rows=base.rows.map(row=>{const note=String(row[field]||'').trim(),classified=classifyPunchlistNote(note),updated_at=level==='punchlist_l0'?row.punchlist_l0_updated_at:row.review_l1_updated_at;return{...row,note,updated_at:updated_at||null,punchlist_l0_note:String(row.punchlist_l0_note||'').trim(),review_l1_note:String(row.review_l1_note||'').trim(),status_note:classified.status,findings:classified.findings}}).filter(row=>{
       if(query&&![row.site_id,row.site_name,row.nop,row.regional,row.note].join(' ').toLowerCase().includes(query))return false
       return !category||row.findings.some(finding=>finding.category===category)
     })
@@ -385,7 +385,7 @@ export async function listPunchlistSites(data,filters={}){
     return{rows,summary:{level,month,regions,total_tickets:rows.length,total_findings:allFindings.length,status_by_regional,category_counts:countBy('category'),subcategory_counts:countBy('subcategory',['category'])}}
   }
   const reviewL1=summarize('review_l1'),punchlistL0=summarize('punchlist_l0')
-  return{rows:reviewL1.rows,options:{month:months,regional:[...new Set(base.rows.map(row=>row.regional).filter(Boolean))].sort(),nop:[...new Set(base.rows.map(row=>row.nop).filter(Boolean))].sort()},summary:reviewL1.summary,l0_summary:punchlistL0.summary}
+  return{rows:reviewL1.rows,l0_rows:punchlistL0.rows,options:{month:months,regional:[...new Set(base.rows.map(row=>row.regional).filter(Boolean))].sort(),nop:[...new Set(base.rows.map(row=>row.nop).filter(Boolean))].sort()},summary:reviewL1.summary,l0_summary:punchlistL0.summary}
 }
 
 export async function savePunchlistNote(siteId,input){

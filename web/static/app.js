@@ -1530,7 +1530,7 @@ class PunchlistWorkspace extends React.Component {
   constructor(props) {
     super(props);
     const scope = window.PMPunchlistScope || {};
-    this.state = { rows: [], options: { month: [], regional: [], nop: [] }, summary: null, summaryL0: null, summaryLevel: "punchlist_l0", search: "", month: scope.month || "", regional: scope.regional || "", nop: scope.nop || "", category: "", notes: {}, loading: true, saving: {}, error: "", message: "", dialogSite: null, dialogStep: "question", dialogNote: "" };
+    this.state = { rows: [], l0Rows: [], options: { month: [], regional: [], nop: [] }, summary: null, summaryL0: null, summaryLevel: "punchlist_l0", search: "", month: scope.month || "", regional: scope.regional || "", nop: scope.nop || "", category: "", notes: {}, loading: true, saving: {}, error: "", message: "", dialogSite: null, dialogStep: "question", dialogNote: "" };
     this.load = async () => {
       const { search, month, regional, nop, category } = this.state, params = new URLSearchParams();
       if (search) params.set("search", search);
@@ -1542,7 +1542,7 @@ class PunchlistWorkspace extends React.Component {
       try {
         const data = await api(`/api/punchlist${params.size ? `?${params}` : ""}`), notes = {};
         for (const row of data.rows || []) notes[row.site_id] = row.note || "";
-        this.setState({ rows: data.rows || [], options: data.options || { month: [], regional: [], nop: [] }, summary: data.summary || null, summaryL0: data.l0_summary || null, notes });
+        this.setState({ rows: data.rows || [], l0Rows: data.l0_rows || [], options: data.options || { month: [], regional: [], nop: [] }, summary: data.summary || null, summaryL0: data.l0_summary || null, notes });
       } catch (error) {
         this.setState({ error: error.message });
       } finally {
@@ -1577,15 +1577,22 @@ class PunchlistWorkspace extends React.Component {
   render() {
     const h = React.createElement, s = this.state;
     const number = (value) => new Intl.NumberFormat("id-ID").format(Number(value || 0));
-    const noteOf = (row) => String(s.notes[row.site_id] || "").trim();
-    const stateOf = (row) => !noteOf(row) ? "empty" : /^tidak ada temuan\.?$/i.test(noteOf(row)) ? "clear" : "finding";
+    const activeLevel = s.summaryLevel || "punchlist_l0", activeRows = activeLevel === "punchlist_l0" ? s.l0Rows : s.rows;
+    const noteOfLevel = (row, level) => String(level === "review_l1" ? s.notes[row.site_id] || row.note || "" : row.note || row.punchlist_l0_note || "").trim();
+    const noteOf = (row) => noteOfLevel(row, activeLevel);
+    const stateOfLevel = (row, level) => { const note = noteOfLevel(row, level); return !note ? "empty" : /^tidak ada temuan\.?$/i.test(note) ? "clear" : "finding"; };
+    const stateOf = (row) => stateOfLevel(row, activeLevel);
     const chipLabel = { empty: "Belum dicatat", clear: "Tidak ada temuan", finding: "Ada temuan" };
     const counts = { empty: 0, clear: 0, finding: 0 };
-    for (const row of s.rows) counts[stateOf(row)]++;
-    const total = s.rows.length, noted = counts.clear + counts.finding, percent = total ? Math.round(noted / total * 100) : 0;
+    for (const row of activeRows) counts[stateOf(row)]++;
+    const total = activeRows.length, noted = counts.clear + counts.finding, percent = total ? Math.round(noted / total * 100) : 0;
+    const noteCounts = (rows, level) => rows.reduce((result, row) => { const state = stateOfLevel(row, level); result[state]++; return result; }, { empty: 0, clear: 0, finding: 0 });
+    const l0Kpi = noteCounts(s.l0Rows, "punchlist_l0"), l1Kpi = noteCounts(s.rows, "review_l1");
+    const l0Noted = l0Kpi.clear + l0Kpi.finding, l1Noted = l1Kpi.clear + l1Kpi.finding;
+    const l0KpiTotal = s.l0Rows.length, l1KpiTotal = s.rows.length;
     const noteFilter = s.noteFilter || "";
-    const visibleRows = noteFilter ? s.rows.filter((row) => stateOf(row) === noteFilter) : s.rows;
-    const summary = s.summary || { regions: [], status_by_regional: [], category_counts: [], subcategory_counts: [], total_findings: 0 };
+    const visibleRows = noteFilter ? activeRows.filter((row) => stateOf(row) === noteFilter) : activeRows;
+    const summary = (activeLevel === "punchlist_l0" ? s.summaryL0 : s.summary) || { regions: [], status_by_regional: [], category_counts: [], subcategory_counts: [], total_findings: 0 };
     const regionLabel = (value) => String(value).replace(/_/g, " ");
 
     /* ---------- Filter ---------- */
@@ -1611,14 +1618,14 @@ class PunchlistWorkspace extends React.Component {
             cell("SITE NAME", row.site_name || "Belum tersedia"),
             cell("NOP", compactNop(row.nop)),
             cell("REGIONAL", row.regional ? regionLabel(row.regional) : "-"),
-            h("div", { className: "pl-cell" }, h("p", { className: "pl-label" }, "REVIEW L1"), h("span", { className: `pl-chip is-${st}` }, chipLabel[st])),
+            h("div", { className: "pl-cell" }, h("p", { className: "pl-label" }, activeLevel === "punchlist_l0" ? "PUNCHLIST L0" : "REVIEW L1"), h("span", { className: `pl-chip is-${st}` }, chipLabel[st])),
             h(ChevronRight, { size: 15, className: "pl-chevron" })),
           st === "finding" && h("p", { className: "pl-preview" }, note)),
         h("div", { className: "pl-card-body" },
-          h("div", { className: `pl-note ${note ? "" : "is-empty"}` }, h("p", { className: "pl-label" }, "CATATAN REVIEW L1"), h("p", null, note || "Belum ada catatan")),
+          h("div", { className: `pl-note ${note ? "" : "is-empty"}` }, h("p", { className: "pl-label" }, activeLevel === "punchlist_l0" ? "CATATAN PUNCHLIST L0" : "CATATAN REVIEW L1"), h("p", null, note || "Belum ada catatan")),
           h("div", { className: "pl-aside" },
             h("div", null, h("p", { className: "pl-label" }, "TERAKHIR DISIMPAN"), h("p", { className: "pl-value" }, row.updated_at ? wibDateTime(row.updated_at) : "Belum ada catatan")),
-            h("button", { type: "button", disabled: !!s.saving[row.site_id], onClick: () => this.openAction(row), className: "btn-primary pl-action" }, note ? "UBAH TEMUAN" : "ACTION TEMUAN"))));
+            activeLevel === "review_l1" ? h("button", { type: "button", disabled: !!s.saving[row.site_id], onClick: () => this.openAction(row), className: "btn-primary pl-action" }, note ? "UBAH TEMUAN" : "ACTION TEMUAN") : h("span", { className: "pl-source-note" }, "Dari Notes PM Site"))));
     });
 
     /* ---------- Dialog Action Temuan ---------- */
@@ -1691,7 +1698,7 @@ class PunchlistWorkspace extends React.Component {
     const l0Regions = summaryL0.regions || [];
     const l0Status = (name) => (summaryL0.status_by_regional || []).find((row) => row.status === name) || {};
     const l0Finding = Number(l0Status("Ada Temuan").total || 0), l0Clear = Number(l0Status("Tidak Ada Temuan").total || 0), l0Empty = Number(l0Status("Notes Kosong").total || 0);
-    const l0Total = l0Finding + l0Clear + l0Empty, l0Noted = l0Finding + l0Clear, l0Percent = l0Total ? Math.round(l0Noted / l0Total * 100) : 0;
+    const l0Total = l0Finding + l0Clear + l0Empty, l0VizNoted = l0Finding + l0Clear, l0Percent = l0Total ? Math.round(l0VizNoted / l0Total * 100) : 0;
     const l0Parts = [["finding", l0Finding, "#b97a33", "Ada temuan"], ["clear", l0Clear, "#0b8a5b", "Tidak ada temuan"], ["empty", l0Empty, "#75859a", "Belum dicatat"]];
     let l0Offset = 0;
     const l0Arcs = l0Parts.map(([key, value, color]) => { const length = l0Total ? value / l0Total * 100 : 0, node = h("circle", { key, cx: 21, cy: 21, r: 15.9155, fill: "none", stroke: color, strokeWidth: 5, strokeDasharray: `${length} ${100 - length}`, strokeDashoffset: 25 - l0Offset }); l0Offset += length; return node; });
@@ -1728,35 +1735,32 @@ class PunchlistWorkspace extends React.Component {
         h("div", { className: "pl-mode", role: "group", "aria-label": "Tampilan" }, ...[["chart", "Grafik"], ["table", "Tabel"]].map(([key, label]) => h("button", { key, type: "button", "aria-pressed": summaryMode === key, onClick: () => this.setState({ summaryMode: key }) }, label)))),
       h("div", { className: "pl-tabbody", role: "tabpanel" }, body));
 
+    const levelTitle = activeLevel === "punchlist_l0" ? "PUNCHLIST L0" : "REVIEW L1", levelDescription = activeLevel === "punchlist_l0" ? "Klasifikasi otomatis dari Notes PM Site yang diisi petugas lapangan." : "Klasifikasi otomatis dari review L1 yang tersimpan di website.";
     const summaryView = h("section", { className: "corporate-panel pl-section" },
-      h("div", { className: "pl-section-head" }, h("div", null, h("p", { className: "pl-eyebrow" }, "REKAP OTOMATIS — REVIEW L1"), h("h2", { className: "section-title" }, "TEMUAN PM PUNCHLIST"), h("p", { className: "pl-section-desc" }, "Klasifikasi otomatis dari review L1 yang tersimpan di website."))),
+      h("div", { className: "pl-section-head" }, h("div", null, h("p", { className: "pl-eyebrow" }, `REKAP OTOMATIS — ${levelTitle}`), h("h2", { className: "section-title" }, `TEMUAN ${levelTitle}`), h("p", { className: "pl-section-desc" }, levelDescription))),
       others && Number(others.total) > 0 && h("button", { type: "button", onClick: this.reviewOthers, className: "pl-callout" }, h("span", { className: "pl-callout-text" }, h("small", null, "PERLU PEMETAAN"), h("strong", null, `${number(others.total)} TEMUAN LAINNYA`), h("em", null, "Klik untuk membuka daftar notes")), h(ChevronRight, { size: 19 })),
       h("div", { className: "pl-viz" }, donutCard, topCard, regionalCard),
       tabPanel);
 
-    const l0SummaryView = h("section", { className: "corporate-panel pl-section" },
-      h("div", { className: "pl-section-head" }, h("div", null, h("p", { className: "pl-eyebrow" }, "REKAP OTOMATIS — PUNCHLIST L0"), h("h2", { className: "section-title" }, "TEMUAN PUNCHLIST L0"), h("p", { className: "pl-section-desc" }, "Klasifikasi otomatis dari Notes PM Site yang diisi petugas lapangan."))),
-      h("div", { className: "pl-viz" }, l0Donut, l0Top, l0Regional));
     const summaryTabs = h("div", { className: "pl-level-tabs", role: "tablist", "aria-label": "Pilih rekap PM Punchlist" },
       h("button", { type: "button", role: "tab", "aria-selected": s.summaryLevel === "punchlist_l0", onClick: () => this.setState({ summaryLevel: "punchlist_l0", category: "" }) }, "PUNCHLIST L0"),
-      h("button", { type: "button", role: "tab", "aria-selected": s.summaryLevel === "review_l1", onClick: () => this.setState({ summaryLevel: "review_l1" }) }, "REVIEW L1"));
-    const selectedSummary = s.summaryLevel === "review_l1" ? summaryView : l0SummaryView;
+      h("button", { type: "button", role: "tab", "aria-selected": s.summaryLevel === "review_l1", onClick: () => this.setState({ summaryLevel: "review_l1", category: "" }) }, "REVIEW L1"));
 
     /* ---------- Halaman ---------- */
-    const listTitle = s.category === "LAINNYA" ? "TEMUAN LAINNYA - PERLU PEMETAAN" : "PM PUNCHLIST - GENERAL INFORMATION";
+    const listTitle = s.category === "LAINNYA" ? "TEMUAN LAINNYA - PERLU PEMETAAN" : `${levelTitle} - GENERAL INFORMATION`;
     const countText = s.loading ? "Memuat daftar site..." : h(React.Fragment, null, "Menampilkan ", h("b", null, number(visibleRows.length)), ` dari ${number(total)} site PM Site`);
     return h("div", { className: "pl-page" },
       h("div", { className: "pl-kpis" },
-        h(PreventiveSummaryCard, { label: "SITE PM", value: number(total), detail: "Site yang tersedia dari data PM Site", tone: "navy" }),
-        h(PreventiveSummaryCard, { label: "SUDAH DICATAT", value: number(noted), detail: `${percent}% dari site pada filter aktif`, tone: "green" }),
-        h(PreventiveSummaryCard, { label: "BELUM DICATAT", value: number(counts.empty), detail: "Site yang belum memiliki catatan", tone: "red" }),
-        h(PreventiveSummaryCard, { label: "TOTAL TEMUAN", value: number(summary.total_findings), detail: `${number(counts.finding)} site dengan temuan`, tone: "orange" })),
+        h(PreventiveSummaryCard, { label: "SITE PM", value: number(Math.max(l0KpiTotal, l1KpiTotal)), detail: "Site yang tersedia dari data PM Site", tone: "navy" }),
+        h(PreventiveSummaryCard, { label: "PUNCHLIST L0", value: number(l0Noted), detail: `${l0KpiTotal ? Math.round(l0Noted / l0KpiTotal * 100) : 0}% site sudah dicatat lapangan`, tone: "green" }),
+        h(PreventiveSummaryCard, { label: "REVIEW L1", value: number(l1Noted), detail: `${l1KpiTotal ? Math.round(l1Noted / l1KpiTotal * 100) : 0}% site sudah direview`, tone: "orange" }),
+        h(PreventiveSummaryCard, { label: "TOTAL TEMUAN", value: number(Number((s.summaryL0 || {}).total_findings || 0) + Number((s.summary || {}).total_findings || 0)), detail: `L0: ${number((s.summaryL0 || {}).total_findings)} · L1: ${number((s.summary || {}).total_findings)}`, tone: "red" })),
       !s.dialogSite && s.error && h("p", { role: "alert", className: "pl-alert is-error" }, s.error),
       s.message && h("p", { role: "status", className: "pl-alert is-success" }, s.message),
-      h("section", { className: "pl-summary-switch" }, filters, summaryTabs, selectedSummary),
+      h("section", { className: "pl-summary-switch" }, filters, summaryTabs, summaryView),
       h("section", { className: "corporate-panel pl-section" },
         h("div", { className: "pl-section-head" },
-          h("div", null, h("p", { className: "pl-eyebrow" }, "GENERAL INFORMATION — REVIEW L1"), h("h2", { className: "section-title" }, listTitle), h("p", { className: "pl-section-desc" }, "Filter status review L1 dan buka card site untuk mengisi Action Temuan.")),
+          h("div", null, h("p", { className: "pl-eyebrow" }, `GENERAL INFORMATION — ${levelTitle}`), h("h2", { className: "section-title" }, listTitle), h("p", { className: "pl-section-desc" }, activeLevel === "punchlist_l0" ? "Catatan lapangan berasal dari Notes PM Site dan bersifat referensi." : "Filter status review L1 dan buka card site untuk mengisi Action Temuan.")),
           h("div", { className: "pl-head-actions" }, h("span", { className: "pl-count", role: "status" }, countText), s.loading && h(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" }), s.category === "LAINNYA" && h("button", { type: "button", onClick: this.closeOthers, className: "btn-secondary h-8 px-3 text-[9px] font-semibold" }, "KEMBALI KE SEMUA"))),
         segments,
         h("div", { className: "pl-list kpi-scrollbar" }, ...cards, !s.loading && !visibleRows.length && h("p", { className: "pl-empty" }, s.category === "LAINNYA" ? "Tidak ada temuan Lainnya pada filter aktif." : total ? "Tidak ada site yang cocok dengan filter status ini." : "Belum ada data PM Site. Upload data PM Site terlebih dahulu."))));
