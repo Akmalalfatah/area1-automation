@@ -491,7 +491,7 @@ function masterActiveLabel(value) {
    Gambar unduhan Preventive Management. Tampilan mengikuti website (Poppins, navy, tabel bergaris).
    Urutan regional dan angka total memakai helper yang sama dengan tabel di layar. */
 const PM_REGIONAL_ORDER = ["R01_Sumbagut", "R02_Sumbagsel", "R10_Sumbagteng"];
-const PM_PROGRESS_STATUSES = [["assigned", "ASSIGNED"], ["closed", "CLOSED"], ["in_progress", "IN PROGRESS"], ["waiting_approval", "WAITING APPROVAL"]];
+const PM_PROGRESS_STATUSES = [["new", "NEW"], ["assigned", "ASSIGNED"], ["in_progress", "IN PROGRESS"], ["submitted", "SUBMITTED"], ["closed", "CLOSED"], ["waiting_approval", "WAITING APPROVAL"], ["waiting_approval_amnesty", "WAITING APPROVAL AMNESTY"], ["rejected", "REJECTED"], ["take_out", "TAKE OUT"]];
 const PM_IMG_FONT = "Poppins, 'Segoe UI', Arial, sans-serif";
 function pmRegionalCompare(left, right) {
   const l = PM_REGIONAL_ORDER.indexOf(left), r = PM_REGIONAL_ORDER.indexOf(right);
@@ -575,7 +575,7 @@ async function downloadPreventiveInsightsImage(data, filters) {
 /* Progress PM per NOP: tabel yang sama dengan layar (urutan R01, R02, R10; baris total regional; total akhir). */
 async function pmBuildProgressCanvas(data, filters, options = {}) {
   if (!options.skipFonts) await pmLoadImageFonts();
-  const columns = [["NOP", 300], ["PLAN SITE", 150], ["APPROVED", 150], ["SUBMITTED", 160], ["BELUM SUBMITTED", 210], ...PM_PROGRESS_STATUSES.map(([, label]) => [label, label === "WAITING APPROVAL" ? 230 : label === "IN PROGRESS" ? 170 : label === "ASSIGNED" ? 160 : 140])];
+  const columns = [["NOP", 300], ["PLAN SITE", 150], ["APPROVED (CLOSED)", 190], ["SUBMITTED DATE", 180], ["BELUM SUBMITTED", 210], ...PM_PROGRESS_STATUSES.map(([, label]) => [label, label.includes("WAITING APPROVAL") ? 250 : label === "IN PROGRESS" ? 170 : label === "ASSIGNED" ? 160 : 140])];
   const groups = pmGroupByRegional(data && data.nop_summary), grand = pmProgressTotal((data && data.nop_summary) || []);
   const margin = 40, tableWidth = columns.reduce((sum, [, w]) => sum + w, 0), width = tableWidth + margin * 2;
   const headH = 54, regionH = 48, rowH = 46, grandH = 54, top = 150;
@@ -595,10 +595,11 @@ async function pmBuildProgressCanvas(data, filters, options = {}) {
     values.forEach((value, index) => {
       const col = index + 1, cx = xs[col] + columns[col][1] / 2;
       if (kind === "nop") {
+        if (col === 1) { ctx.fillStyle = "#E9F0FA"; ctx.fillRect(xs[col], y, columns[col][1], h); }
         if (col === 2 && value) { ctx.fillStyle = "#E9F8F1"; ctx.fillRect(xs[col], y, columns[col][1], h); }
         if (col === 4) { ctx.fillStyle = value >= 50 ? "#FBE7E9" : "#FFF1F2"; ctx.fillRect(xs[col], y, columns[col][1], h); }
       }
-      const color = kind !== "nop" ? "#173E68" : col === 2 && value ? "#087D4B" : col === 4 ? "#BD3340" : value ? "#243A55" : "#8492A3";
+      const color = kind !== "nop" ? "#173E68" : col === 1 ? "#173E68" : col === 2 && value ? "#087D4B" : col === 4 ? "#BD3340" : value ? "#243A55" : "#8492A3";
       pmText(ctx, value, cx, y + h / 2 + 6, { size: kind === "nop" ? 15 : 16, weight: 600, color, align: "center" });
     });
     pmText(ctx, label, xs[0] + 18, y + h / 2 + 6, { size: kind === "nop" ? 14 : 16, weight: 600, color: "#173E68", spacing: kind === "nop" ? 0.2 : 0.4 });
@@ -679,10 +680,10 @@ function PreventiveDashboardCards({ data, file, date, busy, loading, filters, on
     h("div", null, h("label", { className: "filter-label mb-1 block" }, "STATUS PM"), h("select", { value: filters.status || "", onChange: (event) => onFilter("status", event.target.value), className: "control h-10 w-[155px] px-3 text-[10px] font-semibold", "aria-label": "Status PM Dashboard" }, h("option", { value: "" }, "All Status"), ...((data == null ? void 0 : data.status_options) || []).map((status) => h("option", { key: status, value: status }, status)))),
     h("div", { className: "preventive-filter-search" }, h("label", { className: "filter-label mb-1 block" }, "SEARCH"), h("input", { type: "search", value: filters.search, onChange: (event) => onFilter("search", event.target.value), placeholder: "Cari Site ID, Site Name, NOP, atau Notes", className: "control h-10 w-full px-3 text-[10px]" }))
   );
-  const statuses = [["assigned", "ASSIGNED"], ["closed", "CLOSED"], ["in_progress", "IN PROGRESS"], ["waiting_approval", "WAITING APPROVAL"]], nopSummary = (data == null ? void 0 : data.nop_summary) || [];
-  const columns = ["REGIONAL", "NOP", "PLAN SITE", "APPROVED", "SUBMITTED", "BELUM SUBMITTED", ...statuses.map(([, label]) => label)];
+  const statuses = PM_PROGRESS_STATUSES, nopSummary = (data == null ? void 0 : data.nop_summary) || [];
+  const columns = ["REGIONAL", "NOP", "PLAN SITE", "APPROVED (CLOSED)", "SUBMITTED DATE", "BELUM SUBMITTED", ...statuses.map(([, label]) => label)];
   const progressTotal = pmProgressTotal;
-  const progressCells = (item, prefix) => { const plan = Number(item.plan) || 0, submitted = Number(item.submitted) || 0; return [h("td", { key: `${prefix}-plan` }, plan), h("td", { key: `${prefix}-approved`, className: plan && Number(item.approved) ? "is-approved" : "is-zero" }, Number(item.approved) || 0), h("td", { key: `${prefix}-submitted` }, submitted), h("td", { key: `${prefix}-pending`, className: Number(item.pending) >= 50 ? "is-pending is-high" : "is-pending" }, Number(item.pending) || 0), ...statuses.map(([key]) => h("td", { key: `${prefix}-${key}`, className: Number(item.progress_statuses?.[key]) ? "" : "is-zero" }, Number(item.progress_statuses?.[key]) || 0))]; };
+  const progressCells = (item, prefix) => { const plan = Number(item.plan) || 0, submitted = Number(item.submitted) || 0; return [h("td", { key: `${prefix}-plan`, className: "is-plan" }, plan), h("td", { key: `${prefix}-approved`, className: plan && Number(item.approved) ? "is-approved" : "is-zero" }, Number(item.approved) || 0), h("td", { key: `${prefix}-submitted` }, submitted), h("td", { key: `${prefix}-pending`, className: Number(item.pending) >= 50 ? "is-pending is-high" : "is-pending" }, Number(item.pending) || 0), ...statuses.map(([key]) => h("td", { key: `${prefix}-${key}`, className: Number(item.progress_statuses?.[key]) ? "" : "is-zero" }, Number(item.progress_statuses?.[key]) || 0))]; };
   const progressRows = pmGroupByRegional(nopSummary).flatMap(([regional, items], groupIndex) => { const total = progressTotal(items), tone = `pm-region-tone-${groupIndex % 3}`, rowSpan = items.length + 1; return [...items.map((item, index) => h("tr", { className: `preventive-nop-row ${tone}` + (index % 2 ? " is-stripe" : ""), key: `${regional}-${item.nop}` }, index === 0 ? h("th", { scope: "rowgroup", rowSpan, className: "preventive-progress-regional" }, regional) : null, h("th", { scope: "row", className: "preventive-progress-nop" }, compactNop(item.nop)), ...progressCells(item, `${regional}-${item.nop}`))), h("tr", { className: `preventive-progress-regional-total ${tone}`, key: `regional-${regional}` }, h("th", { scope: "row", className: "preventive-progress-total-label" }, "GRAND TOTAL"), ...progressCells(total, `regional-${regional}`))]; });
   const allProgressTotal = progressTotal(nopSummary);
   progressRows.push(h("tr", { className: "preventive-progress-grand", key: "progress-total" }, h("th", { scope: "row", colSpan: 2 }, "TOTAL SELURUH REGIONAL"), ...progressCells(allProgressTotal, "progress-total")));
@@ -1592,7 +1593,7 @@ class PunchlistWorkspace extends React.Component {
     const select = (key, allLabel, options, format) => h("select", { value: s[key], onChange: (event) => this.setFilter(key, event.target.value), className: "control" }, h("option", { value: "" }, allLabel), ...(options || []).map((value) => h("option", { key: value, value }, format ? format(value) : value)));
     const monthName = (value) => new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}-01T00:00:00Z`));
     const filters = h("div", { className: "pl-filters" },
-      field("", "SEARCH", h("input", { value: s.search, onChange: (event) => this.setFilter("search", event.target.value), className: "control", placeholder: "Cari Site ID, Site Name, NOP, atau catatan" })),
+      field("", "SEARCH", h("input", { value: s.search, onChange: (event) => this.setFilter("search", event.target.value), className: "control", placeholder: "Cari Site ID, Site Name, NOP, atau review" })),
       !s.category && field("", "BULAN", select("month", "All Bulan", s.options.month, monthName)),
       field("", "REGIONAL", select("regional", "All Regional", s.options.regional)),
       field("", "NOP", select("nop", "All NOP", s.options.nop, compactNop)));
@@ -1610,11 +1611,11 @@ class PunchlistWorkspace extends React.Component {
             cell("SITE NAME", row.site_name || "Belum tersedia"),
             cell("NOP", compactNop(row.nop)),
             cell("REGIONAL", row.regional ? regionLabel(row.regional) : "-"),
-            h("div", { className: "pl-cell" }, h("p", { className: "pl-label" }, "PUNCHLIST"), h("span", { className: `pl-chip is-${st}` }, chipLabel[st])),
+            h("div", { className: "pl-cell" }, h("p", { className: "pl-label" }, "REVIEW L1"), h("span", { className: `pl-chip is-${st}` }, chipLabel[st])),
             h(ChevronRight, { size: 15, className: "pl-chevron" })),
           st === "finding" && h("p", { className: "pl-preview" }, note)),
         h("div", { className: "pl-card-body" },
-          h("div", { className: `pl-note ${note ? "" : "is-empty"}` }, h("p", { className: "pl-label" }, "CATATAN PUNCHLIST"), h("p", null, note || "Belum ada catatan")),
+          h("div", { className: `pl-note ${note ? "" : "is-empty"}` }, h("p", { className: "pl-label" }, "CATATAN REVIEW L1"), h("p", null, note || "Belum ada catatan")),
           h("div", { className: "pl-aside" },
             h("div", null, h("p", { className: "pl-label" }, "TERAKHIR DISIMPAN"), h("p", { className: "pl-value" }, row.updated_at ? wibDateTime(row.updated_at) : "Belum ada catatan")),
             h("button", { type: "button", disabled: !!s.saving[row.site_id], onClick: () => this.openAction(row), className: "btn-primary pl-action" }, note ? "UBAH TEMUAN" : "ACTION TEMUAN"))));
@@ -1625,7 +1626,7 @@ class PunchlistWorkspace extends React.Component {
       const site = s.dialogSite, saving = !!s.saving[site.site_id];
       const question = h("div", { className: "pl-dialog-body" },
         h("p", { className: "pl-dialog-title" }, "Apakah ada temuan?"),
-        h("p", { className: "pl-dialog-text" }, "Pilih salah satu. Status ini tersimpan pada catatan PM Site dan masuk ke rekap PM Punchlist."),
+        h("p", { className: "pl-dialog-text" }, "Pilih salah satu. Review L1 disimpan terpisah di database website dan masuk ke rekap PM Punchlist."),
         h("div", { className: "pl-choices" },
           h("button", { type: "button", disabled: saving, onClick: () => this.setState({ dialogStep: "text", error: "" }), className: "pl-choice" }, h("strong", null, "Ada temuan"), h("span", null, "Tulis temuan, kendala, atau tindak lanjut site.")),
           h("button", { type: "button", disabled: saving, onClick: this.chooseNoFinding, className: "pl-choice is-clear" }, h("strong", null, saving ? "Menyimpan..." : "Tidak ada temuan"), h("span", null, "Simpan status tanpa temuan untuk site ini."))));
@@ -1714,7 +1715,8 @@ class PunchlistWorkspace extends React.Component {
       h("div", { className: "pl-tabbody", role: "tabpanel" }, body));
 
     const summaryView = h("section", { className: "corporate-panel pl-section" },
-      h("div", { className: "pl-section-head" }, h("div", null, h("p", { className: "pl-eyebrow" }, "REKAP OTOMATIS"), h("h2", { className: "section-title" }, "TEMUAN PM PUNCHLIST"), h("p", { className: "pl-section-desc" }, "Klasifikasi otomatis dari catatan PM Site yang terisi."))),
+      h("div", { className: "pl-section-head" }, h("div", null, h("p", { className: "pl-eyebrow" }, "REKAP OTOMATIS — REVIEW L1"), h("h2", { className: "section-title" }, "TEMUAN PM PUNCHLIST"), h("p", { className: "pl-section-desc" }, "Klasifikasi otomatis dari review L1 yang tersimpan di website."))),
+      filters,
       others && Number(others.total) > 0 && h("button", { type: "button", onClick: this.reviewOthers, className: "pl-callout" }, h("span", { className: "pl-callout-text" }, h("small", null, "PERLU PEMETAAN"), h("strong", null, `${number(others.total)} TEMUAN LAINNYA`), h("em", null, "Klik untuk membuka daftar notes")), h(ChevronRight, { size: 19 })),
       h("div", { className: "pl-viz" }, donutCard, topCard, regionalCard),
       tabPanel);
@@ -1733,9 +1735,9 @@ class PunchlistWorkspace extends React.Component {
       summaryView,
       h("section", { className: "corporate-panel pl-section" },
         h("div", { className: "pl-section-head" },
-          h("div", null, h("p", { className: "pl-eyebrow" }, "DAFTAR SITE"), h("h2", { className: "section-title" }, listTitle), h("p", { className: "pl-section-desc" }, "Buka card site untuk melihat catatan dan mengisi Action Temuan.")),
+          h("div", null, h("p", { className: "pl-eyebrow" }, "GENERAL INFORMATION — REVIEW L1"), h("h2", { className: "section-title" }, listTitle), h("p", { className: "pl-section-desc" }, "Filter status review L1 dan buka card site untuk mengisi Action Temuan.")),
           h("div", { className: "pl-head-actions" }, h("span", { className: "pl-count", role: "status" }, countText), s.loading && h(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" }), s.category === "LAINNYA" && h("button", { type: "button", onClick: this.closeOthers, className: "btn-secondary h-8 px-3 text-[9px] font-semibold" }, "KEMBALI KE SEMUA"))),
-        filters, segments,
+        segments,
         h("div", { className: "pl-list kpi-scrollbar" }, ...cards, !s.loading && !visibleRows.length && h("p", { className: "pl-empty" }, s.category === "LAINNYA" ? "Tidak ada temuan Lainnya pada filter aktif." : total ? "Tidak ada site yang cocok dengan filter status ini." : "Belum ada data PM Site. Upload data PM Site terlebih dahulu."))));
   }
 }

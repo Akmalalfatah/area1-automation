@@ -55,7 +55,9 @@ export function buildPreventiveDashboard(source,dateFrom,dateTo,nop,siteId,searc
   const unique={};for(const row of [...filtered].sort((a,b)=>(a.schedule_date||'').localeCompare(b.schedule_date||'')||(a.submitted_date||'').localeCompare(b.submitted_date||''))){const key=String(row.site_id).toLowerCase();if(!unique[key]||row.submitted_date||!unique[key].submitted_date)unique[key]=row}
   const optionFor=field=>[...new Set(eligible.map(row=>row[field]).filter(Boolean))].sort(sort)
   const siteIds=items=>new Set(items.map(item=>String(item.site_id).toLowerCase()))
-  const approved=row=>/^APPROVE(D)?\b/i.test(String(row.status||'').trim())
+  // File PM Site tidak memiliki status APPROVED. Pekerjaan yang berhasil
+  // diselesaikan tercatat sebagai CLOSED (atau COMPLETED pada sumber lain).
+  const approved=row=>/^(CLOSED|COMPLETED)\b/i.test(String(row.status||'').trim())
   const rows=filtered.sort((a,b)=>sort(`${a.nop}|${a.site_id}|${a.ticket_no}`,`${b.nop}|${b.site_id}|${b.ticket_no}`)),planIds=siteIds(filtered),submittedIds=siteIds(filtered.filter(x=>x.submitted_date)),approvedIds=siteIds(filtered.filter(approved))
   const statusOptions=optionFor('status')
   const summarizeGroup=(group,{nop:name,regional}={})=>{
@@ -78,7 +80,17 @@ export function buildPreventiveDashboard(source,dateFrom,dateTo,nop,siteId,searc
 function progressStatusCounts(group,siteIds){
   const normalizeStatus=value=>String(value||'').toUpperCase().replace(/[^A-Z]/g,'')
   const count=matcher=>siteIds(group.filter(row=>matcher(normalizeStatus(row.status)))).size
-  return{assigned:count(status=>status.includes('ASSIGNED')),closed:count(status=>status.includes('CLOSED')||status.includes('COMPLETED')),in_progress:count(status=>status.includes('INPROGRESS')||status==='PROGRESS'),waiting_approval:count(status=>status.includes('WAITINGAPPROVAL')||status.includes('PENDINGAPPROVAL'))}
+  return{
+    new:count(status=>status==='NEW'),
+    assigned:count(status=>status.includes('ASSIGNED')),
+    in_progress:count(status=>status.includes('INPROGRESS')||status==='PROGRESS'),
+    submitted:count(status=>status.includes('SUBMITTED')),
+    closed:count(status=>status.includes('CLOSED')||status.includes('COMPLETED')),
+    waiting_approval:count(status=>status==='WAITINGAPPROVAL'||status.includes('PENDINGAPPROVAL')),
+    waiting_approval_amnesty:count(status=>status.includes('WAITINGAPPROVALAMNESTY')||status.includes('WAITINGAPPROVALAMESTY')),
+    rejected:count(status=>status.includes('REJECT')),
+    take_out:count(status=>status.includes('TAKEOUT'))
+  }
 }
 
 export const workOrderKey=row=>`${row.maintenance_kind||'site'}|${String(row.ticket_no||'').trim()||`${String(row.site_id).trim().toUpperCase()}|${row.schedule_date}|${row.scope_item_name||''}`}`

@@ -490,7 +490,7 @@
   const PMAttentionChartsBase = window.PMAttentionCharts;
   window.PMAttentionCharts = function(props) {
     const chart = /* @__PURE__ */ R.createElement(PMAttentionChartsBase, { ...props });
-    return (props == null ? void 0 : props.kind) === "site" && window.PMPunchlistCoverage ? /* @__PURE__ */ R.createElement(R.Fragment, null, chart, /* @__PURE__ */ R.createElement(window.PMPunchlistCoverage, { rows: props.rows })) : chart;
+    return (props == null ? void 0 : props.kind) === "site" && window.PMPunchlistCoverage ? /* @__PURE__ */ R.createElement(R.Fragment, null, chart, /* @__PURE__ */ R.createElement(window.PMPunchlistCoverage, { rows: props.rows, month: props.month })) : chart;
   };
   window.PMGensetWorkspace = Workspace;
 })();
