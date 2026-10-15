@@ -372,17 +372,20 @@ export async function listPunchlistSites(data,filters={}){
   const {search,category,...sourceFilters}=filters
   const base=listSites(data,{...sourceFilters,date_from:month?`${month}-01`:filters.date_from,date_to:month?`${month}-${String(end).padStart(2,'0')}`:filters.date_to})
   const query=String(search||'').trim().toLowerCase()
-  // Halaman PM Punchlist adalah Review L1. Punchlist L0 dari lapangan tetap
-  // ditampilkan sebagai referensi, tetapi tidak menjadi input klasifikasi review.
-  const rows=base.rows.map(row=>{const note=String(row.review_l1_note||'').trim(),classified=classifyPunchlistNote(note);return{...row,note,punchlist_l0_note:String(row.punchlist_l0_note||'').trim(),status_note:classified.status,findings:classified.findings}}).filter(row=>{
-    if(query&&![row.site_id,row.site_name,row.nop,row.regional,row.note].join(' ').toLowerCase().includes(query))return false
-    return !category||row.findings.some(finding=>finding.category===category)
-  })
-  const regions=[...new Set(rows.map(row=>row.regional).filter(Boolean))].sort()
-  const status_by_regional=['Ada Temuan','Tidak Ada Temuan','Notes Kosong'].map(status=>({status,...Object.fromEntries(regions.map(region=>[region,rows.filter(row=>row.regional===region&&row.status_note===status).length])),total:rows.filter(row=>row.status_note===status).length}))
-  const allFindings=rows.flatMap(row=>row.findings.map(finding=>({...finding,regional:row.regional,site_id:row.site_id,ticket_no:row.ticket_no})))
-  const countBy=(field,extra=[])=>[...new Set(allFindings.map(item=>item[field]))].sort().map(value=>{const items=allFindings.filter(item=>item[field]===value),byRegion=Object.fromEntries(regions.map(region=>[region,items.filter(item=>item.regional===region).length]));return{[field]:value,...Object.fromEntries(extra.map(key=>[key,items[0]?.[key]||''])),...byRegion,total:items.length,affected_sites:new Set(items.map(item=>item.ticket_no||item.site_id)).size}})
-  return{rows,options:{month:months,regional:[...new Set(base.rows.map(row=>row.regional).filter(Boolean))].sort(),nop:[...new Set(base.rows.map(row=>row.nop).filter(Boolean))].sort()},summary:{month,regions,total_tickets:rows.length,total_findings:allFindings.length,status_by_regional,category_counts:countBy('category'),subcategory_counts:countBy('subcategory',['category'])}}
+  const summarize=level=>{
+    const field=level==='punchlist_l0'?'punchlist_l0_note':'review_l1_note'
+    const rows=base.rows.map(row=>{const note=String(row[field]||'').trim(),classified=classifyPunchlistNote(note);return{...row,note,punchlist_l0_note:String(row.punchlist_l0_note||'').trim(),review_l1_note:String(row.review_l1_note||'').trim(),status_note:classified.status,findings:classified.findings}}).filter(row=>{
+      if(query&&![row.site_id,row.site_name,row.nop,row.regional,row.note].join(' ').toLowerCase().includes(query))return false
+      return !category||row.findings.some(finding=>finding.category===category)
+    })
+    const regions=[...new Set(rows.map(row=>row.regional).filter(Boolean))].sort()
+    const status_by_regional=['Ada Temuan','Tidak Ada Temuan','Notes Kosong'].map(status=>({status,...Object.fromEntries(regions.map(region=>[region,rows.filter(row=>row.regional===region&&row.status_note===status).length])),total:rows.filter(row=>row.status_note===status).length}))
+    const allFindings=rows.flatMap(row=>row.findings.map(finding=>({...finding,regional:row.regional,site_id:row.site_id,ticket_no:row.ticket_no})))
+    const countBy=(field,extra=[])=>[...new Set(allFindings.map(item=>item[field]))].sort().map(value=>{const items=allFindings.filter(item=>item[field]===value),byRegion=Object.fromEntries(regions.map(region=>[region,items.filter(item=>item.regional===region).length]));return{[field]:value,...Object.fromEntries(extra.map(key=>[key,items[0]?.[key]||''])),...byRegion,total:items.length,affected_sites:new Set(items.map(item=>item.ticket_no||item.site_id)).size}})
+    return{rows,summary:{level,month,regions,total_tickets:rows.length,total_findings:allFindings.length,status_by_regional,category_counts:countBy('category'),subcategory_counts:countBy('subcategory',['category'])}}
+  }
+  const reviewL1=summarize('review_l1'),punchlistL0=summarize('punchlist_l0')
+  return{rows:reviewL1.rows,options:{month:months,regional:[...new Set(base.rows.map(row=>row.regional).filter(Boolean))].sort(),nop:[...new Set(base.rows.map(row=>row.nop).filter(Boolean))].sort()},summary:reviewL1.summary,l0_summary:punchlistL0.summary}
 }
 
 export async function savePunchlistNote(siteId,input){

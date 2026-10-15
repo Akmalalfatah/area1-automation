@@ -1530,7 +1530,7 @@ class PunchlistWorkspace extends React.Component {
   constructor(props) {
     super(props);
     const scope = window.PMPunchlistScope || {};
-    this.state = { rows: [], options: { month: [], regional: [], nop: [] }, summary: null, search: "", month: scope.month || "", regional: scope.regional || "", nop: scope.nop || "", category: "", notes: {}, loading: true, saving: {}, error: "", message: "", dialogSite: null, dialogStep: "question", dialogNote: "" };
+    this.state = { rows: [], options: { month: [], regional: [], nop: [] }, summary: null, summaryL0: null, search: "", month: scope.month || "", regional: scope.regional || "", nop: scope.nop || "", category: "", notes: {}, loading: true, saving: {}, error: "", message: "", dialogSite: null, dialogStep: "question", dialogNote: "" };
     this.load = async () => {
       const { search, month, regional, nop, category } = this.state, params = new URLSearchParams();
       if (search) params.set("search", search);
@@ -1542,7 +1542,7 @@ class PunchlistWorkspace extends React.Component {
       try {
         const data = await api(`/api/punchlist${params.size ? `?${params}` : ""}`), notes = {};
         for (const row of data.rows || []) notes[row.site_id] = row.note || "";
-        this.setState({ rows: data.rows || [], options: data.options || { month: [], regional: [], nop: [] }, summary: data.summary || null, notes });
+        this.setState({ rows: data.rows || [], options: data.options || { month: [], regional: [], nop: [] }, summary: data.summary || null, summaryL0: data.l0_summary || null, notes });
       } catch (error) {
         this.setState({ error: error.message });
       } finally {
@@ -1686,6 +1686,20 @@ class PunchlistWorkspace extends React.Component {
         return h("div", { key: region, className: "pl-stack-row" }, h("p", null, regionLabel(region), h("b", null, `${number(a + c + e)} site`)), h("div", { className: "pl-stack-track", title: `Ada temuan ${a} · Tidak ada ${c} · Belum dicatat ${e}` }, h("i", { style: { width: `${a / t * 100}%`, background: "#b97a33" } }), h("i", { style: { width: `${c / t * 100}%`, background: "#0b8a5b" } }), h("i", { style: { width: `${e / t * 100}%`, background: "#75859a" } })));
       })) : h("p", { className: "pl-table-empty" }, "Belum ada data regional."));
 
+    /* Infografik Punchlist L0 memakai struktur yang sama dengan Review L1. */
+    const summaryL0 = s.summaryL0 || { regions: [], status_by_regional: [], category_counts: [], total_findings: 0 };
+    const l0Regions = summaryL0.regions || [];
+    const l0Status = (name) => (summaryL0.status_by_regional || []).find((row) => row.status === name) || {};
+    const l0Finding = Number(l0Status("Ada Temuan").total || 0), l0Clear = Number(l0Status("Tidak Ada Temuan").total || 0), l0Empty = Number(l0Status("Notes Kosong").total || 0);
+    const l0Total = l0Finding + l0Clear + l0Empty, l0Noted = l0Finding + l0Clear, l0Percent = l0Total ? Math.round(l0Noted / l0Total * 100) : 0;
+    const l0Parts = [["finding", l0Finding, "#b97a33", "Ada temuan"], ["clear", l0Clear, "#0b8a5b", "Tidak ada temuan"], ["empty", l0Empty, "#75859a", "Belum dicatat"]];
+    let l0Offset = 0;
+    const l0Arcs = l0Parts.map(([key, value, color]) => { const length = l0Total ? value / l0Total * 100 : 0, node = h("circle", { key, cx: 21, cy: 21, r: 15.9155, fill: "none", stroke: color, strokeWidth: 5, strokeDasharray: `${length} ${100 - length}`, strokeDashoffset: 25 - l0Offset }); l0Offset += length; return node; });
+    const l0Donut = h("section", { className: "pl-viz-card" }, h("h3", null, "COVERAGE CATATAN"), h("div", { className: "pl-donut-wrap" }, h("div", { className: "pl-donut" }, h("svg", { viewBox: "0 0 42 42", role: "img", "aria-label": `${l0Percent}% Punchlist L0 sudah dicatat` }, h("circle", { cx: 21, cy: 21, r: 15.9155, fill: "none", stroke: "#e8eef4", strokeWidth: 5 }), ...l0Arcs), h("div", { className: "pl-donut-center" }, h("strong", null, `${l0Percent}%`), h("span", null, "sudah dicatat"))), h("ul", { className: "pl-legend" }, ...l0Parts.map(([key, value, color, label]) => h("li", { key }, h("i", { style: { background: color } }), h("span", null, label), h("b", null, number(value)))))));
+    const l0Categories = [...(summaryL0.category_counts || [])].filter((row) => Number(row.total) > 0).sort((a, b) => Number(b.total) - Number(a.total)).slice(0, 5), l0Max = Math.max(1, ...l0Categories.map((row) => Number(row.total)));
+    const l0Top = h("section", { className: "pl-viz-card" }, h("h3", null, "KATEGORI TEMUAN TERBANYAK"), l0Categories.length ? h("ol", { className: "pl-rank" }, ...l0Categories.map((row, index) => h("li", { key: row.category }, h("span", { className: "pl-rank-no" }, index + 1), h("div", null, h("p", null, row.category, h("b", null, number(row.total))), h("div", { className: "pl-rank-track" }, h("i", { style: { width: `${Number(row.total) / l0Max * 100}%` } })))))) : h("p", { className: "pl-table-empty" }, "Belum ada temuan terklasifikasi."));
+    const l0Regional = h("section", { className: "pl-viz-card" }, h("h3", null, "KOMPOSISI PER REGIONAL"), l0Regions.length ? h("div", { className: "pl-stack-list" }, ...l0Regions.map((region) => { const a = Number(l0Status("Ada Temuan")[region] || 0), c = Number(l0Status("Tidak Ada Temuan")[region] || 0), e = Number(l0Status("Notes Kosong")[region] || 0), t = a + c + e || 1; return h("div", { key: region, className: "pl-stack-row" }, h("p", null, regionLabel(region), h("b", null, `${number(a + c + e)} site`)), h("div", { className: "pl-stack-track", title: `Ada temuan ${a} · Tidak ada ${c} · Belum dicatat ${e}` }, h("i", { style: { width: `${a / t * 100}%`, background: "#b97a33" } }), h("i", { style: { width: `${c / t * 100}%`, background: "#0b8a5b" } }), h("i", { style: { width: `${e / t * 100}%`, background: "#75859a" } }))); })) : h("p", { className: "pl-table-empty" }, "Belum ada data regional."));
+
     /* Panel bertab */
     const barMax = (rows) => Math.max(1, ...rows.map((row) => Number(row.total || 0)));
     const barRow = (row, max, label, extra) => h("div", { className: `pl-bar-row ${extra || ""}` }, h("div", { className: "pl-bar-label" }, ...[].concat(label)), h("div", { className: "pl-bar-track" }, ...regions.map((region, index) => Number(row[region] || 0) > 0 && h("span", { key: region, className: "pl-bar-seg", style: { width: `${Number(row[region]) / max * 100}%`, background: regionColors[index % regionColors.length] }, title: `${regionLabel(region)}: ${number(row[region])}` }))), h("b", { className: "pl-bar-total" }, number(row.total)));
@@ -1721,6 +1735,10 @@ class PunchlistWorkspace extends React.Component {
       h("div", { className: "pl-viz" }, donutCard, topCard, regionalCard),
       tabPanel);
 
+    const l0SummaryView = h("section", { className: "corporate-panel pl-section" },
+      h("div", { className: "pl-section-head" }, h("div", null, h("p", { className: "pl-eyebrow" }, "REKAP OTOMATIS — PUNCHLIST L0"), h("h2", { className: "section-title" }, "TEMUAN PUNCHLIST L0"), h("p", { className: "pl-section-desc" }, "Klasifikasi otomatis dari Notes PM Site yang diisi petugas lapangan."))),
+      h("div", { className: "pl-viz" }, l0Donut, l0Top, l0Regional));
+
     /* ---------- Halaman ---------- */
     const listTitle = s.category === "LAINNYA" ? "TEMUAN LAINNYA - PERLU PEMETAAN" : "PM PUNCHLIST - GENERAL INFORMATION";
     const countText = s.loading ? "Memuat daftar site..." : h(React.Fragment, null, "Menampilkan ", h("b", null, number(visibleRows.length)), ` dari ${number(total)} site PM Site`);
@@ -1732,6 +1750,7 @@ class PunchlistWorkspace extends React.Component {
         h(PreventiveSummaryCard, { label: "TOTAL TEMUAN", value: number(summary.total_findings), detail: `${number(counts.finding)} site dengan temuan`, tone: "orange" })),
       !s.dialogSite && s.error && h("p", { role: "alert", className: "pl-alert is-error" }, s.error),
       s.message && h("p", { role: "status", className: "pl-alert is-success" }, s.message),
+      l0SummaryView,
       summaryView,
       h("section", { className: "corporate-panel pl-section" },
         h("div", { className: "pl-section-head" },
