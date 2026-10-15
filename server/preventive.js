@@ -54,32 +54,34 @@ export function buildPreventiveDashboard(source,dateFrom,dateTo,nop,siteId,searc
   const q=String(search||'').trim().toLowerCase();if(q)filtered=filtered.filter(row=>['site_id','site_name','nop','notes','ticket_no'].map(k=>row[k]||'').join(' ').toLowerCase().includes(q))
   const unique={};for(const row of [...filtered].sort((a,b)=>(a.schedule_date||'').localeCompare(b.schedule_date||'')||(a.submitted_date||'').localeCompare(b.submitted_date||''))){const key=String(row.site_id).toLowerCase();if(!unique[key]||row.submitted_date||!unique[key].submitted_date)unique[key]=row}
   const optionFor=field=>[...new Set(eligible.map(row=>row[field]).filter(Boolean))].sort(sort)
-  const siteIds=items=>new Set(items.map(item=>String(item.site_id).toLowerCase()))
+  // Seluruh KPI dashboard PM memakai satuan ticket/work order. Satu Site ID
+  // dapat memiliki lebih dari satu ticket pada periode yang sama.
+  const ticketIds=items=>new Set(items.map(item=>workOrderKey(item)))
   // File PM Site tidak memiliki status APPROVED. Pekerjaan yang berhasil
   // diselesaikan tercatat sebagai CLOSED (atau COMPLETED pada sumber lain).
   const approved=row=>/^(CLOSED|COMPLETED)\b/i.test(String(row.status||'').trim())
-  const rows=filtered.sort((a,b)=>sort(`${a.nop}|${a.site_id}|${a.ticket_no}`,`${b.nop}|${b.site_id}|${b.ticket_no}`)),planIds=siteIds(filtered),submittedIds=siteIds(filtered.filter(x=>x.submitted_date)),approvedIds=siteIds(filtered.filter(approved))
+  const rows=filtered.sort((a,b)=>sort(`${a.nop}|${a.site_id}|${a.ticket_no}`,`${b.nop}|${b.site_id}|${b.ticket_no}`)),planIds=ticketIds(filtered),submittedIds=ticketIds(filtered.filter(x=>x.submitted_date)),approvedIds=ticketIds(filtered.filter(approved))
   const statusOptions=optionFor('status')
   const summarizeGroup=(group,{nop:name,regional}={})=>{
-    const plan=siteIds(group).size,submitted=siteIds(group.filter(x=>x.submitted_date)).size,approvedCount=siteIds(group.filter(approved)).size
-    const statuses=Object.fromEntries(statusOptions.map(status=>[status,siteIds(group.filter(row=>row.status===status)).size]))
-    const progressStatuses=progressStatusCounts(group,siteIds)
+    const plan=ticketIds(group).size,submitted=ticketIds(group.filter(x=>x.submitted_date)).size,approvedCount=ticketIds(group.filter(approved)).size
+    const statuses=Object.fromEntries(statusOptions.map(status=>[status,ticketIds(group.filter(row=>row.status===status)).size]))
+    const progressStatuses=progressStatusCounts(group,ticketIds)
     return{...(name?{nop:name}:{}),...(regional?{regional}:{}),plan,approved:approvedCount,submitted,pending:Math.max(plan-submitted,0),achievement:plan?Math.round(submitted/plan*10000)/100:0,approved_achievement:plan?Math.round(approvedCount/plan*10000)/100:0,statuses,progress_statuses:progressStatuses}
   }
   const nopSummary=[...new Set(filtered.map(x=>x.nop||'Belum ditentukan'))].sort(sort).map(name=>{
-    const group=filtered.filter(x=>(x.nop||'Belum ditentukan')===name),plan=siteIds(group).size,submitted=siteIds(group.filter(x=>x.submitted_date)).size,approvedCount=siteIds(group.filter(approved)).size
-    const statuses=Object.fromEntries(statusOptions.map(status=>[status,siteIds(group.filter(row=>row.status===status)).size]))
+    const group=filtered.filter(x=>(x.nop||'Belum ditentukan')===name),plan=ticketIds(group).size,submitted=ticketIds(group.filter(x=>x.submitted_date)).size,approvedCount=ticketIds(group.filter(approved)).size
+    const statuses=Object.fromEntries(statusOptions.map(status=>[status,ticketIds(group.filter(row=>row.status===status)).size]))
     const regional=group.map(row=>String(row.regional||'').trim()).find(Boolean)||'Belum ditentukan'
-    return{nop:name,regional,plan,approved:approvedCount,submitted,pending:Math.max(plan-submitted,0),achievement:plan?Math.round(submitted/plan*10000)/100:0,approved_achievement:plan?Math.round(approvedCount/plan*10000)/100:0,statuses,progress_statuses:progressStatusCounts(group,siteIds)}
+    return{nop:name,regional,plan,approved:approvedCount,submitted,pending:Math.max(plan-submitted,0),achievement:plan?Math.round(submitted/plan*10000)/100:0,approved_achievement:plan?Math.round(approvedCount/plan*10000)/100:0,statuses,progress_statuses:progressStatusCounts(group,ticketIds)}
   })
   const regionalSummary=[...new Set(filtered.map(row=>String(row.regional||'').trim()||'Belum ditentukan'))].sort(sort).map(regional=>summarizeGroup(filtered.filter(row=>(String(row.regional||'').trim()||'Belum ditentukan')===regional),{regional}))
-  const statusSummary=Object.fromEntries(statusOptions.map(name=>[name,siteIds(filtered.filter(row=>row.status===name)).size]))
+  const statusSummary=Object.fromEntries(statusOptions.map(name=>[name,ticketIds(filtered.filter(row=>row.status===name)).size]))
   return{period_start:bounds.start,period_end:bounds.end,plan:planIds.size,approved:approvedIds.size,submitted:submittedIds.size,achievement:planIds.size?Math.round(submittedIds.size/planIds.size*10000)/100:0,approved_achievement:planIds.size?Math.round(approvedIds.size/planIds.size*10000)/100:0,pending:Math.max(planIds.size-submittedIds.size,0),regional_options:regionalOptions,nop_options:nopOptions,site_options:siteOptions,status_options:statusOptions,pic_options:optionFor('pic'),interval_options:optionFor('interval'),type_power_options:optionFor('type_power'),scope_item_options:optionFor('scope_item_name'),nop_summary:nopSummary,regional_summary:regionalSummary,status_summary:statusSummary,rows}
 }
 
-function progressStatusCounts(group,siteIds){
+function progressStatusCounts(group,ticketIds){
   const normalizeStatus=value=>String(value||'').toUpperCase().replace(/[^A-Z]/g,'')
-  const count=matcher=>siteIds(group.filter(row=>matcher(normalizeStatus(row.status)))).size
+  const count=matcher=>ticketIds(group.filter(row=>matcher(normalizeStatus(row.status)))).size
   return{
     new:count(status=>status==='NEW'),
     assigned:count(status=>status.includes('ASSIGNED')),
