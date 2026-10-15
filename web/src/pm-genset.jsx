@@ -1,32 +1,190 @@
 (function () {
   const R=window.React;
+  // Proyek masih memakai React 16.0 yang belum menyediakan Fragment.
+  // Fallback elemen native menjaga grafik radar tetap dapat dirender.
+  R.Fragment = R.Fragment || 'div';
   const workStatusTone = status => /REJECT|CANCEL|TAKE.?OUT/.test(String(status).toUpperCase())?'red':/CLOSED|COMPLETED/.test(String(status).toUpperCase())?'green':/SUBMIT|APPROVAL/.test(String(status).toUpperCase())?'purple':/PROGRESS/.test(String(status).toUpperCase())?'orange':/ASSIGNED/.test(String(status).toUpperCase())?'navy':'gray';
   window.PMWorkStatus = function({status}) { return <span className={'pm-work-status is-'+workStatusTone(status)}>{status}</span>; };
   window.PMConditionBadge = function({row}) {return <span className={'pm-condition-badge is-'+(row.condition_tone||'gray')} title="Kondisi berdasarkan sumber dan jendela evaluasi tersedia">{row.condition_label||'Belum dapat dievaluasi'}</span>;};
-  window.PMAttentionCharts = function({rows=[],loading}) {
-    const normalize=row=>String(row.status||'').toUpperCase().replace(/[ _-]/g,'');
-    const unfinished=rows.filter(row=>!['CLOSED','COMPLETED','TAKEOUT','CANCELED','CANCELLED'].includes(normalize(row)));
-    const groups={}; unfinished.forEach(row=>{const label=row.status||'Status belum tersedia';groups[label]=(groups[label]||0)+1;});
-    const statuses=Object.entries(groups).sort((a,b)=>b[1]-a[1]);
-    const palette=['#c87519','#173e68','#7653b4','#269b9b','#d64b55','#8997aa','#aa79cc','#618bc0'];
-    const now=new Date(),today=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');
-    const nopGroups={};
-    unfinished.forEach(row=>{
-      const rejected=normalize(row)==='REJECTED';
-      const late=!row.submitted_date&&!/SUBMIT|APPROVAL/.test(normalize(row))&&row.schedule_date&&row.schedule_date<today;
-      if(!rejected&&!late)return;
-      const label=String(row.nop||'NOP belum tersedia').replace(/^NOP\s+/i,'').replace(/_/g,' ');
-      const item=nopGroups[label]||(nopGroups[label]={label,late:0,rejected:0});
-      if(rejected)item.rejected++;else item.late++;
+  // ---------------------------------------------------------------------------
+  // Status & Prioritas PM (Dashboard dan PM Site).
+  // Satu model data dipakai oleh tampilan layar DAN gambar unduhan, jadi angka,
+  // urutan, dan teks keduanya selalu sama. React proyek masih 16.0 (tanpa Fragment).
+  // ---------------------------------------------------------------------------
+  const STATUS_COLORS=['#173e68','#c47b2b','#7255b3','#4c9899','#c75358','#8b99aa','#4b8d68','#6686bb','#a85f8e'];
+  const numberFormat=new Intl.NumberFormat('id-ID');
+  const titleCase=value=>String(value||'Status belum tersedia').toLowerCase().replace(/\b\w/g,char=>char.toUpperCase());
+  const percentOf=(part,whole)=>(part/Math.max(whole,1)*100).toFixed(1).replace('.',',')+'%';
+  // Nama NOP panjang dipecah menjadi dua baris, bukan dipotong dengan "…".
+  const splitLabel=(text,limit=13)=>{
+    const value=String(text),words=value.split(' ');
+    if(value.length<=limit||words.length<2)return [value];
+    let best=1,gap=Infinity;
+    for(let index=1;index<words.length;index++){const left=words.slice(0,index).join(' ').length,right=words.slice(index).join(' ').length;if(Math.abs(left-right)<gap){gap=Math.abs(left-right);best=index;}}
+    return [words.slice(0,best).join(' '),words.slice(best).join(' ')];
+  };
+  // Skala radar dibulatkan ke angka rapi (kelipatan 5/10/20/25/50/100) agar label cincin mudah dibaca.
+  const niceScale=peak=>{const step=[5,10,20,25,50,100,200,500,1000].find(item=>item*4>=peak)||Math.ceil(peak/4);return {step,max:step*4};};
+  const RADAR={cx:260,cy:200,radius:120,labelRatio:1.16};
+  function buildModel(rows){
+    const groups={};rows.forEach(row=>{const label=row.status||'Status belum tersedia';groups[label]=(groups[label]||0)+1;});
+    const statuses=Object.entries(groups).sort((a,b)=>b[1]-a[1]),total=rows.length;
+    const source=rows.find(row=>row.schedule_date||row.submitted_date)||{},periodKey=String(source.schedule_date||source.submitted_date||'').slice(0,7);
+    const period=periodKey?new Intl.DateTimeFormat('id-ID',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(periodKey+'-01T00:00:00Z')):'Periode aktif';
+    const sumOf=pattern=>statuses.filter(([label])=>pattern.test(label)).reduce((sum,[,value])=>sum+value,0);
+    const completed=sumOf(/closed|completed/i),active=sumOf(/submitted|progress|assigned|new/i),waiting=sumOf(/waiting|approval/i),exception=sumOf(/take out|rejected/i);
+    const statusChips=[
+      ['Selesai',completed,percentOf(completed,total),'Closed dan Completed'],
+      ['Masih berjalan',active,percentOf(active,total),'Submitted, Progress, Assigned, New'],
+      ['Menunggu approval',waiting,percentOf(waiting,total),'Waiting Approval'],
+      ['Take Out dan Rejected',exception,percentOf(exception,total),'Perlu tindak lanjut']
+    ];
+    // Kendala = Rejected, atau lewat jadwal tetapi belum submit / approval / closed.
+    const normalized=row=>String(row.status||'').toUpperCase().replace(/[ _-]/g,'');
+    const now=new Date(),today=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-'),nop={};
+    rows.forEach(row=>{const state=normalized(row),rejected=state==='REJECTED',late=!row.submitted_date&&!/SUBMIT|APPROVAL|CLOSED|COMPLETED/.test(state)&&row.schedule_date&&row.schedule_date<today;if(!rejected&&!late)return;const name=String(row.nop||'NOP belum tersedia').replace(/^NOP\s+/i,'').replace(/_/g,' ');const item=nop[name]||(nop[name]={name,value:0});item.value++;});
+    const everyNop=Object.values(nop).sort((a,b)=>b.value-a.value||a.name.localeCompare(b.name)),top=everyNop.slice(0,8);
+    const totalIssues=everyNop.reduce((sum,item)=>sum+item.value,0),average=top.length?top.reduce((sum,item)=>sum+item.value,0)/top.length:0;
+    const scale=niceScale(Math.max(1,...top.map(item=>item.value)));
+    const lowest=top.length?top[top.length-1]:null;
+    const nopChips=[
+      ['Total kendala',numberFormat.format(totalIssues),'',`pada ${everyNop.length} NOP`],
+      ['Tertinggi',top.length?top[0].value:0,'',top.length?top[0].name:'-'],
+      ['Terendah',lowest?lowest.value:0,'',lowest?`${lowest.name}, dari ${top.length} teratas`:'-']
+    ];
+    return {statuses,total,period,periodKey,statusChips,top,everyNop,totalIssues,average,scale,nopChips,
+      averageLabel:average.toFixed(1).replace('.',','),
+      definition:'Kendala = PM berstatus Rejected, atau sudah lewat jadwal tetapi belum submit.'};
+  }
+  const radarPoint=(model,index,value)=>{const angle=-Math.PI/2+index*Math.PI*2/Math.max(model.top.length,3),radius=RADAR.radius*value/model.scale.max;return [RADAR.cx+Math.cos(angle)*radius,RADAR.cy+Math.sin(angle)*radius,angle];};
+  // Posisi label radar: blok nama (1-2 baris) + angka, menempel di luar ujung sumbu.
+  function radarLabel(model,index){
+    const [lx,ly,angle]=radarPoint(model,index,model.scale.max*RADAR.labelRatio),lines=splitLabel(model.top[index].name),sine=Math.sin(angle),cosine=Math.cos(angle);
+    const anchor=cosine>0.3?'start':cosine<-0.3?'end':'middle',height=lines.length*13+18;
+    const top=sine<-0.5?ly-height:sine>0.5?ly:ly-height/2;
+    return {x:lx,anchor,lines,top,numberY:top+lines.length*13+15,nameY:top+10};
+  }
+
+  // ---- Gambar unduhan (canvas): meniru tampilan layar dengan font Poppins ----
+  async function loadImageFonts(){try{if(document.fonts&&document.fonts.load)await Promise.all(['400','500','600'].map(weight=>document.fonts.load(`${weight} 16px Poppins`)));}catch(error){/* font bawaan dipakai bila Poppins gagal dimuat */}}
+  const FONT="Poppins, 'Segoe UI', Arial, sans-serif";
+  function put(context,text,x,y,{size=14,weight=500,color='#243a55',align='left',spacing=0,halo=''}={}){
+    context.font=`${weight} ${size}px ${FONT}`;context.fillStyle=color;context.textAlign=align;context.textBaseline='alphabetic';
+    if('letterSpacing' in context)context.letterSpacing=spacing?`${spacing}px`:'0px';
+    if(halo){context.lineWidth=4;context.lineJoin='round';context.strokeStyle=halo;context.strokeText(text,x,y);}
+    context.fillText(text,x,y);if('letterSpacing' in context)context.letterSpacing='0px';
+  }
+  function wrapText(context,text,maxWidth){
+    const words=String(text).split(' '),lines=[];let line='';
+    words.forEach(word=>{const next=line?line+' '+word:word;if(context.measureText(next).width>maxWidth&&line){lines.push(line);line=word;}else line=next;});
+    if(line)lines.push(line);return lines;
+  }
+  function drawChips(context,chips,x,y,width,height,gap=12){
+    const cell=(width-gap*(chips.length-1))/chips.length;
+    chips.forEach(([label,value,percent,description],index)=>{
+      const left=x+index*(cell+gap);context.fillStyle='#f1f5f9';context.fillRect(left,y,cell,height);
+      put(context,label.toUpperCase(),left+14,y+22,{size:10.5,weight:600,color:'#6d7d90',spacing:.5});
+      put(context,String(value),left+14,y+55,{size:28,weight:600,color:'#173e68'});
+      if(percent)put(context,percent,left+cell-14,y+55,{size:14,weight:600,color:'#3979a5',align:'right'});
+      context.font=`500 11px ${FONT}`;wrapText(context,description,cell-28).slice(0,2).forEach((line,lineIndex)=>put(context,line,left+14,y+74+lineIndex*15,{size:11,weight:500,color:'#6f8094'}));
     });
-    const priorities=Object.values(nopGroups).sort((a,b)=>(b.late+b.rejected)-(a.late+a.rejected));
-    const top=priorities.slice(0,6),totalProblems=priorities.reduce((n,row)=>n+row.late+row.rejected,0);
-    const axisMax=Math.max(5,Math.ceil(Math.max(0,...top.map(row=>row.late+row.rejected))/5)*5);
-    const monthLabel=value=>new Intl.DateTimeFormat('id-ID',{month:'long'}).format(new Date(value+'-01T00:00:00'));
-    const monthlyMap={};
-    unfinished.forEach(row=>{const month=String(row.schedule_date||row.submitted_date||'').slice(0,7);if(!month)return;const item=monthlyMap[month]||{month,total:0,counts:{}};const label=row.status||'Status belum tersedia';item.total++;item.counts[label]=(item.counts[label]||0)+1;monthlyMap[month]=item;});
-    const monthly=Object.values(monthlyMap).sort((a,b)=>a.month.localeCompare(b.month));
-    const statusBars=<div className="pm-status-bar-layout"><div className="pm-status-month-bars" role="img" aria-label={'Komposisi status pekerjaan per bulan'}>{monthly.map(item=><div className="pm-status-month" key={item.month}><div className="pm-status-month-track">{statuses.map(([label],i)=>item.counts[label]?<div key={label} className="pm-status-month-segment" title={`${monthLabel(item.month)} - ${label}: ${item.counts[label]} pekerjaan`} style={{height:`${item.counts[label]/item.total*100}%`,flex:`0 0 ${item.counts[label]/item.total*100}%`,background:palette[i%palette.length]}}></div>:null)}</div><span>{monthLabel(item.month)}</span></div>)}</div><ul className="pm-chart-legend pm-status-detail">{statuses.map(([label,count],i)=><li key={label}><i style={{background:palette[i%palette.length]}} /><span>{label.toLowerCase().replace(/\b\w/g,c=>c.toUpperCase())}</span><strong>{count}<small>{(count/unfinished.length*100).toFixed(1)}%</small></strong></li>)}</ul></div>;    const graph=<div className="pm-priority-bars" role="img" aria-label="Enam NOP dengan pekerjaan terlambat atau rejected terbanyak">{top.map(row=>{const total=row.late+row.rejected;return <div className="pm-priority-bar-row" key={row.label}><div className="pm-priority-bar-head"><span>{row.label}</span><strong>{total}</strong></div><div className="pm-priority-bar-track"><div className="pm-priority-bar-late" style={{width:`${row.late/axisMax*100}%`}}></div><div className="pm-priority-bar-rejected" style={{width:`${row.rejected/axisMax*100}%`}}></div></div></div>})}<div className="pm-priority-axis"><span>0</span><span>{axisMax}</span></div></div>;    return <div className="pm-attention-grid"><section className="corporate-panel pm-attention-panel"><div className="pm-attention-heading"><div><p>PEKERJAAN BELUM SELESAI</p><h3>Komposisi status PM</h3></div></div>{loading?<p className="pm-attention-note">Memuat grafik…</p>:unfinished.length?statusBars:<p className="pm-chart-empty">Tidak ada pekerjaan aktif yang belum selesai.</p>}</section><section className="corporate-panel pm-attention-panel"><div className="pm-attention-heading"><div><p>PRIORITAS EVALUASI</p><h3>NOP dengan kendala terbanyak</h3></div></div><div className="pm-chart-key"><span><i style={{background:'#d64b55'}}/>Lewat jadwal · belum submit</span><span><i style={{background:'#c87519'}}/>Rejected</span></div>{loading?<p className="pm-attention-note">Memuat grafik…</p>:top.length?graph:<p className="pm-chart-empty">Tidak ada pekerjaan terlambat atau rejected pada filter ini.</p>}</section></div>;
+  }
+  // rows = baris PM Dashboard/PM Site. opts.createCanvas dipakai untuk pengujian di luar browser.
+  window.PMStatusPriorityImage=async function(rows,opts={}){
+    if(!opts.skipFonts)await loadImageFonts();
+    const model=buildModel(rows||[]),scaleFactor=2,width=1600,margin=40,gap=24,panelWidth=(width-margin*2-gap)/2,panelTop=124,panelHeight=704,height=panelTop+panelHeight+64;
+    const canvas=opts.createCanvas?opts.createCanvas(width*scaleFactor,height*scaleFactor):document.createElement('canvas');
+    canvas.width=width*scaleFactor;canvas.height=height*scaleFactor;
+    const context=canvas.getContext('2d');context.scale(scaleFactor,scaleFactor);
+    context.fillStyle='#ffffff';context.fillRect(0,0,width,height);context.fillStyle='#173e68';context.fillRect(0,0,width,14);
+    put(context,'RINGKASAN OPERASIONAL',margin,58,{size:12,weight:600,color:'#77899e',spacing:1.6});
+    put(context,'STATUS & PRIORITAS PM',margin,92,{size:27,weight:600,color:'#263f5f',spacing:.8});
+    put(context,model.period,width-margin,92,{size:16,weight:500,color:'#64748b',align:'right'});
+    const panel=(x,title)=>{
+      context.fillStyle='#fbfcfe';context.fillRect(x,panelTop,panelWidth,panelHeight);context.strokeStyle='#d8e1eb';context.lineWidth=1;context.strokeRect(x+.5,panelTop+.5,panelWidth-1,panelHeight-1);
+      put(context,title,x+28,panelTop+46,{size:16,weight:600,color:'#53657a',spacing:1.3});
+      put(context,model.period,x+panelWidth-28,panelTop+46,{size:13,weight:500,color:'#64748b',align:'right'});
+    };
+    // --- Panel kiri: donut, tabel status, ringkasan ---
+    const leftX=margin;panel(leftX,'STATUS PM');
+    const donutX=leftX+28+138,donutY=panelTop+88+138,outer=116,thick=32,radius=outer-thick/2;
+    if(model.total){
+      let angle=-Math.PI/2;
+      model.statuses.forEach(([,count],index)=>{
+        const span=count/model.total*Math.PI*2,gapAngle=Math.min(0.03,span*0.3);
+        context.beginPath();context.arc(donutX,donutY,radius,angle+gapAngle/2,angle+span-gapAngle/2);
+        context.strokeStyle=STATUS_COLORS[index%STATUS_COLORS.length];context.lineWidth=thick;context.lineCap='butt';context.stroke();angle+=span;
+      });
+    }
+    put(context,numberFormat.format(model.total),donutX,donutY+8,{size:42,weight:600,color:'#173e68',align:'center'});
+    put(context,'Plan PM',donutX,donutY+34,{size:13,weight:500,color:'#738398',align:'center'});
+    const tableX=leftX+28+276+28,tableRight=leftX+panelWidth-28,rowH=31;let rowY=panelTop+98;
+    put(context,'STATUS',tableX,rowY,{size:10.5,weight:600,color:'#7b8a9c',spacing:1});
+    put(context,'JUMLAH',tableRight-70,rowY,{size:10.5,weight:600,color:'#7b8a9c',align:'right',spacing:1});
+    put(context,'%',tableRight,rowY,{size:10.5,weight:600,color:'#7b8a9c',align:'right',spacing:1});
+    model.statuses.slice(0,9).forEach(([label,count],index)=>{
+      const y=rowY+10+index*rowH;context.fillStyle='#e0e7ef';context.fillRect(tableX,y,tableRight-tableX,1);
+      context.fillStyle=STATUS_COLORS[index%STATUS_COLORS.length];context.fillRect(tableX,y+11,12,12);
+      put(context,titleCase(label),tableX+22,y+21,{size:13,weight:500,color:'#607086'});
+      put(context,numberFormat.format(count),tableRight-70,y+21,{size:13.5,weight:600,color:'#173e68',align:'right'});
+      put(context,percentOf(count,model.total),tableRight,y+21,{size:13,weight:500,color:'#8090a2',align:'right'});
+    });
+    const insightY=panelTop+460;
+    context.fillStyle='#dfe6ee';context.fillRect(leftX+28,insightY,panelWidth-56,1);
+    put(context,'RINGKASAN',leftX+28,insightY+28,{size:10.5,weight:600,color:'#7a8a9d',spacing:1.4});
+    drawChips(context,model.statusChips,leftX+28,insightY+42,panelWidth-56,96);
+    context.font=`500 12px ${FONT}`;
+    put(context,`Persentase dihitung dari ${numberFormat.format(model.total)} Plan PM pada ${model.period}.`,leftX+28,insightY+168,{size:12,weight:500,color:'#64748b'});
+    // --- Panel kanan: radar, kunci, ringkasan ---
+    const rightX=margin+panelWidth+gap;panel(rightX,'TOP NOP KENDALA');
+    if(model.top.length){
+      const scale=1.12,cx=rightX+panelWidth/2,cy=panelTop+250,unit=scale;
+      const pt=(index,value)=>{const [x,y]=radarPoint(model,index,value);return [cx+(x-RADAR.cx)*unit,cy+(y-RADAR.cy)*unit];};
+      const polygon=(valueOf,fill,stroke,line,dash)=>{
+        context.beginPath();model.top.forEach((item,index)=>{const [x,y]=pt(index,valueOf(item));index?context.lineTo(x,y):context.moveTo(x,y);});context.closePath();
+        if(fill){context.fillStyle=fill;context.fill();}context.setLineDash(dash||[]);context.strokeStyle=stroke;context.lineWidth=line;context.lineJoin='round';context.stroke();context.setLineDash([]);
+      };
+      [1,2,3,4].forEach(step=>polygon(()=>model.scale.step*step,null,'#d8e2ec',1));
+      model.top.forEach((item,index)=>{const [x,y]=pt(index,model.scale.max);context.beginPath();context.moveTo(cx,cy);context.lineTo(x,y);context.strokeStyle='#d8e2ec';context.lineWidth=1;context.stroke();});
+      [1,2,3,4].forEach(step=>{const [x,y]=pt(0.5,model.scale.step*step);put(context,String(model.scale.step*step),x,y+4,{size:10.5,weight:500,color:'#8a99ab',align:'center',halo:'#fbfcfe'});});
+      polygon(()=>model.average,null,'#8290a3',1.6,[6,5]);
+      polygon(item=>item.value,'rgba(57,121,165,.18)','#3979a5',3);
+      model.top.forEach((item,index)=>{const [x,y]=pt(index,item.value);context.beginPath();context.arc(x,y,6,0,Math.PI*2);context.fillStyle='#ffffff';context.fill();context.strokeStyle='#3979a5';context.lineWidth=3;context.stroke();});
+      // Label dihitung di koordinat SVG (pusat 260,200); dipetakan ke pusat radar di canvas.
+      const mapX=x=>cx+(x-RADAR.cx)*unit,mapY=y=>cy+(y-RADAR.cy)*unit;
+      model.top.forEach((item,index)=>{
+        const label=radarLabel(model,index),align=label.anchor==='start'?'left':label.anchor==='end'?'right':'center';
+        label.lines.forEach((line,lineIndex)=>put(context,line.toUpperCase(),mapX(label.x),mapY(label.nameY+lineIndex*13),{size:12.5,weight:600,color:'#596b80',align,spacing:.4}));
+        put(context,String(item.value),mapX(label.x),mapY(label.numberY),{size:18,weight:600,color:'#173e68',align});
+      });
+    }else put(context,'Tidak ada kendala pada periode ini.',rightX+panelWidth/2,panelTop+260,{size:15,weight:500,color:'#64748b',align:'center'});
+    const keyY=panelTop+470;
+    context.fillStyle='#3979a5';context.fillRect(rightX+panelWidth/2-170,keyY-10,12,12);
+    put(context,'Jumlah kendala per NOP',rightX+panelWidth/2-150,keyY,{size:12,weight:500,color:'#6f8094'});
+    context.setLineDash([5,4]);context.beginPath();context.moveTo(rightX+panelWidth/2+34,keyY-4);context.lineTo(rightX+panelWidth/2+56,keyY-4);context.strokeStyle='#8290a3';context.lineWidth=2;context.stroke();context.setLineDash([]);
+    put(context,`Rata-rata ${model.averageLabel}`,rightX+panelWidth/2+64,keyY,{size:12,weight:500,color:'#6f8094'});
+    const noteY=panelTop+500;
+    context.fillStyle='#dfe6ee';context.fillRect(rightX+28,noteY+14,panelWidth-56,1);
+    put(context,'RINGKASAN',rightX+28,noteY+42,{size:10.5,weight:600,color:'#7a8a9d',spacing:1.4});
+    drawChips(context,model.nopChips,rightX+28,noteY+56,panelWidth-56,96);
+    put(context,model.definition,rightX+28,noteY+182,{size:12,weight:500,color:'#64748b'});
+    // --- Footer ---
+    const stamp=new Intl.DateTimeFormat('id-ID',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'}).format(new Date());
+    put(context,`A1 Operations Command Center · dibuat ${stamp} WIB`,margin,height-26,{size:12,weight:500,color:'#64748b'});
+    return canvas;
+  };
+  function saveBlob(canvas,filename){canvas.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);},'image/png');}
+
+  // ---- Tampilan layar ----
+  window.PMAttentionCharts = function({rows=[],loading}) {
+    const model=buildModel(rows),total=model.total,circumference=2*Math.PI*80;let offset=0;
+    const download=async()=>{try{saveBlob(await window.PMStatusPriorityImage(rows),`status-prioritas-pm-${model.periodKey||'periode-aktif'}.png`);}catch(error){window.alert('Gambar belum dapat dibuat: '+error.message);}};
+    const donut=<div className="pm-snippet-donut"><svg viewBox="0 0 220 220" role="img" aria-label={`Status PM, ${total} plan`}><g transform="rotate(-90 110 110)">{model.statuses.map(([label,count],index)=>{const length=count/Math.max(total,1)*circumference,gap=2.2,segment=<circle key={label} cx="110" cy="110" r="80" fill="none" stroke={STATUS_COLORS[index%STATUS_COLORS.length]} strokeWidth="25" strokeDasharray={`${Math.max(length-gap,.8)} ${circumference}`} strokeDashoffset={-offset}><title>{`${titleCase(label)}: ${numberFormat.format(count)} (${percentOf(count,total)})`}</title></circle>;offset+=length;return segment;})}</g></svg><div><strong>{numberFormat.format(total)}</strong><span>Plan PM</span></div></div>;
+    const polygon=value=>model.top.map((item,index)=>radarPoint(model,index,value).slice(0,2).map(number=>number.toFixed(1)).join(',')).join(' ');
+    const radar=<div className="pm-snippet-radar"><svg viewBox="0 0 520 400" role="img" aria-label="Radar jumlah kendala per NOP">{[1,2,3,4].map(step=><polygon key={step} className="pm-snippet-radar-ring" points={polygon(model.scale.step*step)}/>)}{model.top.map((item,index)=>{const [x,y]=radarPoint(model,index,model.scale.max);return <line key={item.name} className="pm-snippet-radar-axis" x1={RADAR.cx} y1={RADAR.cy} x2={x} y2={y}/>;})}{[1,2,3,4].map(step=>{const [x,y]=radarPoint(model,0.5,model.scale.step*step);return <text key={step} className="pm-snippet-radar-scale" x={x} y={y+3} textAnchor="middle">{model.scale.step*step}</text>;})}<polygon className="pm-snippet-radar-average" points={polygon(model.average)}/><polygon className="pm-snippet-radar-area" points={model.top.map((item,index)=>radarPoint(model,index,item.value).slice(0,2).join(',')).join(' ')}/>{model.top.map((item,index)=>{const [x,y]=radarPoint(model,index,item.value),label=radarLabel(model,index);return <g key={item.name}><circle className="pm-snippet-radar-point" cx={x} cy={y} r="5"><title>{`${item.name}: ${item.value} kendala`}</title></circle><text className="pm-snippet-radar-name" x={label.x} y={label.nameY} textAnchor={label.anchor}>{label.lines.map((line,lineIndex)=><tspan key={lineIndex} x={label.x} dy={lineIndex?13:0}>{line.toUpperCase()}</tspan>)}</text><text className="pm-snippet-radar-number" x={label.x} y={label.numberY} textAnchor={label.anchor}>{item.value}</text></g>;})}</svg></div>;
+    const chip=([label,value,percent,description])=><div className="pm-snippet-chip" key={label}><span>{label}</span><strong>{value}{percent?<em>{percent}</em>:null}</strong><small>{description}</small></div>;
+    const statusTable=<table><thead><tr><th>Status</th><th>Jumlah</th><th>%</th></tr></thead><tbody>{model.statuses.map(([label,count],index)=><tr key={label}><td><i style={{background:STATUS_COLORS[index%STATUS_COLORS.length]}}/>{titleCase(label)}</td><td>{numberFormat.format(count)}</td><td>{percentOf(count,total)}</td></tr>)}</tbody></table>;
+    return <section className="pm-snippet-visuals" aria-busy={loading?'true':'false'}><div className="pm-snippet-head"><div><p>RINGKASAN OPERASIONAL</p><h3>STATUS & PRIORITAS PM</h3></div><button type="button" className="pm-export-button pm-export-image" onClick={download}>↓ Download Image</button></div>{loading?<p className="pm-attention-note">Memuat grafik…</p>:<div className="pm-snippet-row"><section className="pm-snippet-panel"><header><h4>STATUS PM</h4><span>{model.period}</span></header>{total?<div className="pm-snippet-status">{donut}{statusTable}</div>:<p className="pm-chart-empty">Tidak ada data status PM pada filter ini.</p>}<div className="pm-snippet-insight"><p>RINGKASAN</p><div>{model.statusChips.map(chip)}</div><small className="pm-snippet-note">{`Persentase dihitung dari ${numberFormat.format(total)} Plan PM pada ${model.period}.`}</small></div></section><section className="pm-snippet-panel"><header><h4>TOP NOP KENDALA</h4><span>{model.period}</span></header>{model.top.length?radar:<p className="pm-chart-empty">Tidak ada kendala pada periode ini.</p>}<div className="pm-snippet-radar-key"><i/> Jumlah kendala per NOP <b/> Rata-rata {model.averageLabel}</div><div className="pm-snippet-insight"><p>RINGKASAN</p><div className="is-three">{model.nopChips.map(chip)}</div><small className="pm-snippet-note">{model.definition}</small></div></section></div>}</section>;
   };
   const unavailable='Data belum tersedia';
   const value=v=>v===null||v===undefined||v===''||v==='-'?unavailable:String(v);
@@ -115,5 +273,10 @@
     async open(row,windowDays=this.state.windowDays){const token=++this.sequence;this.setState({loading:true,error:'',selected:row,windowDays});const id=`genset|${String(row.ticket_no||'').trim()||`${String(row.site_id).trim().toUpperCase()}|${row.schedule_date}|${row.scope_item_name||''}`}`;try{const params=new URLSearchParams({id});if(windowDays!==null)params.set('window_days',windowDays);const detail=await request('/api/pm-genset/detail?'+params);if(token===this.sequence)this.setState({detail,windowDays:detail.rules.windowDays},()=>window.scrollTo({top:0,behavior:'auto'}));}catch(error){if(token===this.sequence)this.setState({error:error.message});}finally{if(token===this.sequence)this.setState({loading:false});}}
     render(){const {RoutinePage,SummaryCard,...props}=this.props,s=this.state;return <div className="genset-workspace">{s.error&&<p className="pm-site-error" role="alert">{s.error}</p>}{s.loading&&<p className="genset-note" role="status">Memuat evaluasi genset…</p>}{s.detail?<Detail detail={s.detail} SummaryCard={SummaryCard} back={()=>{this.sequence++;this.setState({detail:null,selected:null,error:'',loading:false});}} onWindow={days=>this.open(s.selected,days)} onSaved={evaluation=>this.setState(current=>({detail:{...current.detail,evaluation}}))}/>:<RoutinePage {...props} onOpenGenset={row=>this.open(row)}/>}</div>;}
   }
+  const PMAttentionChartsBase = window.PMAttentionCharts;
+  window.PMAttentionCharts = function(props) {
+    const chart = <PMAttentionChartsBase {...props} />;
+    return props?.kind === 'site' && window.PMPunchlistCoverage ? R.createElement(R.Fragment, null, chart, R.createElement(window.PMPunchlistCoverage, { rows: props.rows })) : chart;
+  };
   window.PMGensetWorkspace=Workspace;
 })();

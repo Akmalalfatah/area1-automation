@@ -65,7 +65,14 @@ const preventivePeriod=query=>{
 }
 const preventiveSourceData=async query=>{
   const period=preventivePeriod(query)
-  if(!period)return siteData({includeKpiB13:false})
+  if(!period){
+    const data=await siteData({includeKpiB13:false})
+    // PM Punchlist dapat dibuka tanpa memilih bulan. Tetap ambil PM Site
+    // dari tabel preventive_uploads agar notes yang tersimpan di database
+    // tidak berubah menjadi daftar kosong.
+    data.pm=await loadPreventiveRows({dateFrom:query.date_from,dateTo:query.date_to})
+    return data
+  }
   const snapshot=await siteDataForUploadMonth(period,{includeKpiB13:false})
   snapshot.data.pm=await loadPreventiveRows({dateFrom:query.date_from,dateTo:query.date_to})
   return snapshot.data

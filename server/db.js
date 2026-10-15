@@ -157,4 +157,27 @@ export async function loadPreventiveRows({dateFrom,dateTo}={}){
   }else records=await localPreventiveUploads()
   return records.flatMap(record=>{const dataset=typeof record.dataset==='string'?JSON.parse(record.dataset):record.dataset;const filename=String(record.filename||'').toLowerCase(),maintenance_kind=dataset?.maintenance_kind||(filename.includes('genset')?'genset':filename.includes('punchlist')?'punchlist':'site');return(dataset?.rows||[]).map(row=>({...row,maintenance_kind:row.maintenance_kind||maintenance_kind,_upload_date:iso(record.upload_date),_updated_at:record.updated_at?.toISOString?.()||record.updated_at}))})
 }
+
+// Catatan PM Punchlist adalah atribut site, bukan status pekerjaan bulanan.
+// Ambil Notes yang sudah pernah ada pada upload PM Site terdahulu sebagai
+// fallback saat file bulan aktif belum membawa kembali kolom Notes tersebut.
+let preventiveNotesCache={at:0,rows:[]}
+export async function loadHistoricalPmSiteNotes(){
+  if(!databaseEnabled)return[]
+  if(Date.now()-preventiveNotesCache.at<60_000)return preventiveNotesCache.rows
+  const [records]=await getPool().query('SELECT filename,dataset,updated_at FROM preventive_uploads ORDER BY updated_at DESC')
+  const notes=new Map()
+  for(const record of records){
+    let dataset
+    try{dataset=typeof record.dataset==='string'?JSON.parse(record.dataset):record.dataset}catch{continue}
+    const filename=String(record.filename||'').toLowerCase(),kind=dataset?.maintenance_kind||(filename.includes('genset')?'genset':filename.includes('punchlist')?'punchlist':'site')
+    if(kind!=='site'||!Array.isArray(dataset?.rows))continue
+    for(const row of dataset.rows||[]){
+      const siteId=String(row.site_id||'').trim().toUpperCase(),note=String(row.notes??row.note??row.catatan??'').trim()
+      if(siteId&&note&&!notes.has(siteId))notes.set(siteId,{site_id:siteId,note,updated_at:record.updated_at?.toISOString?.()||record.updated_at||null})
+    }
+  }
+  preventiveNotesCache={at:Date.now(),rows:[...notes.values()]}
+  return preventiveNotesCache.rows
+}
 export async function latestPreventiveUpload(){const rows=databaseEnabled?(await getPool().query('SELECT upload_id,upload_date,filename,dataset,updated_at FROM preventive_uploads ORDER BY upload_date DESC,updated_at DESC LIMIT 1'))[0]:await localPreventiveUploads();const row=rows.sort((a,b)=>String(b.upload_date).localeCompare(String(a.upload_date))||String(b.updated_at).localeCompare(String(a.updated_at)))[0];if(!row)return null;const dataset=typeof row.dataset==='string'?JSON.parse(row.dataset):row.dataset;return{upload_id:row.upload_id,upload_date:iso(row.upload_date),filename:row.filename,row_count:dataset?.row_count||0,data_month:dataset?.data_month,date_start:dataset?.date_start,date_end:dataset?.date_end,updated_at:row.updated_at?.toISOString?.()||row.updated_at}}

@@ -299,7 +299,7 @@ function Sidebar({ activePage, preventiveOpen, onPage, onTogglePreventive }) {
       h("button", { onClick: () => onPage("ekpi"), className: `sidebar-nav-button sidebar-main-item flex h-[42px] items-center text-left text-xs font-semibold ${activePage === "ekpi" ? "is-active" : ""}` }, h("span", null, "eKPI Automation")),
       h("button", { onClick: () => onPage("data-upload"), className: `sidebar-nav-button sidebar-main-item flex h-[42px] items-center text-left text-xs font-semibold ${activePage === "data-upload" ? "is-active" : ""}` }, h("span", null, "Data Upload")),
       h("button", { onClick: onTogglePreventive, "aria-expanded": preventiveOpen, className: `sidebar-nav-button sidebar-main-item flex h-[42px] items-center gap-2 text-left text-xs font-semibold ${preventiveOpen ? "is-active" : ""}` }, h(ChevronRight, { size: 15, className: `sidebar-arrow ${preventiveOpen ? "is-open" : ""}` }), h("span", null, "Preventive Management")),
-      preventiveOpen && h("div", { className: "sidebar-subnav py-1" }, menu("preventive-dashboard", "Dashboard"), menu("preventive-site", "PM Site"), menu("preventive-genset", "PM Genset"))
+      preventiveOpen && h("div", { className: "sidebar-subnav py-1" }, menu("preventive-dashboard", "Dashboard"), menu("preventive-site", "PM Site"), menu("preventive-punchlist", "PM Punchlist"), menu("preventive-genset", "PM Genset"))
     ),
     h(
       "div",
@@ -487,43 +487,153 @@ function masterActiveLabel(value) {
   const text = String(value != null ? value : "").trim().toLowerCase();
   return ["true", "1", "yes", "y", "ya"].includes(text) ? "Ya" : ["false", "0", "no", "n", "tidak"].includes(text) ? "Tidak" : value;
 }
+/* PM-IMAGE-KIT:START
+   Gambar unduhan Preventive Management. Tampilan mengikuti website (Poppins, navy, tabel bergaris).
+   Urutan regional dan angka total memakai helper yang sama dengan tabel di layar. */
+const PM_REGIONAL_ORDER = ["R01_Sumbagut", "R02_Sumbagsel", "R10_Sumbagteng"];
+const PM_PROGRESS_STATUSES = [["assigned", "ASSIGNED"], ["closed", "CLOSED"], ["in_progress", "IN PROGRESS"], ["waiting_approval", "WAITING APPROVAL"]];
+const PM_IMG_FONT = "Poppins, 'Segoe UI', Arial, sans-serif";
+function pmRegionalCompare(left, right) {
+  const l = PM_REGIONAL_ORDER.indexOf(left), r = PM_REGIONAL_ORDER.indexOf(right);
+  return (l < 0 ? 999 : l) - (r < 0 ? 999 : r) || String(left).localeCompare(String(right));
+}
+function pmGroupByRegional(nopSummary) {
+  const groups = {};
+  (nopSummary || []).forEach((item) => { const regional = item.regional || "Belum ditentukan"; (groups[regional] ||= []).push(item); });
+  return Object.entries(groups).sort(([left], [right]) => pmRegionalCompare(left, right));
+}
+function pmProgressTotal(items) {
+  return items.reduce((total, item) => {
+    total.plan += Number(item.plan) || 0; total.approved += Number(item.approved) || 0; total.submitted += Number(item.submitted) || 0; total.pending += Number(item.pending) || 0;
+    PM_PROGRESS_STATUSES.forEach(([key]) => { total.progress_statuses[key] += Number(item.progress_statuses?.[key]) || 0; });
+    return total;
+  }, { plan: 0, approved: 0, submitted: 0, pending: 0, progress_statuses: Object.fromEntries(PM_PROGRESS_STATUSES.map(([key]) => [key, 0])) });
+}
+async function pmLoadImageFonts() {
+  try { if (document.fonts && document.fonts.load) await Promise.all(["400", "500", "600"].map((weight) => document.fonts.load(`${weight} 16px Poppins`))); } catch (error) { /* font bawaan dipakai bila Poppins gagal dimuat */ }
+}
+function pmText(ctx, text, x, y, { size = 14, weight = 500, color = "#243A55", align = "left", spacing = 0 } = {}) {
+  ctx.font = `${weight} ${size}px ${PM_IMG_FONT}`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = "alphabetic";
+  if ("letterSpacing" in ctx) ctx.letterSpacing = spacing ? `${spacing}px` : "0px";
+  ctx.fillText(String(text), x, y);
+  if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
+}
+function pmNewCanvas(width, height, factory) {
+  const scale = 2, canvas = factory ? factory(width * scale, height * scale) : document.createElement("canvas");
+  canvas.width = width * scale; canvas.height = height * scale;
+  const ctx = canvas.getContext("2d"); ctx.scale(scale, scale);
+  ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0, 0, width, height); ctx.fillStyle = "#173E68"; ctx.fillRect(0, 0, width, 14);
+  return { canvas, ctx };
+}
+function pmHeader(ctx, title, subtitle, margin) {
+  pmText(ctx, "PREVENTIVE MANAGEMENT", margin, 58, { size: 12, weight: 600, color: "#64748B", spacing: 1.6 });
+  pmText(ctx, title, margin, 92, { size: 27, weight: 600, color: "#263F5F", spacing: 0.8 });
+  pmText(ctx, subtitle, margin, 120, { size: 14, weight: 500, color: "#64748B" });
+}
+function pmFooter(ctx, margin, height, note) {
+  const stamp = new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date());
+  if (note) pmText(ctx, note, margin, height - 50, { size: 12, weight: 500, color: "#64748B" });
+  pmText(ctx, `A1 Operations Command Center · dibuat ${stamp} WIB`, margin, height - 24, { size: 12, weight: 500, color: "#64748B" });
+}
 function saveCanvas(canvas, filename) {
   canvas.toBlob((blob) => { if (blob) downloadBlob(blob, filename); }, "image/png");
 }
-function drawPmHeader(ctx, title, subtitle, width) {
-  ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0, 0, width, ctx.canvas.height);
-  ctx.fillStyle = "#173E68"; ctx.fillRect(0, 0, width, 16);
-  ctx.fillStyle = "#243A55"; ctx.font = "bold 30px Arial"; ctx.fillText(title, 52, 68);
-  ctx.fillStyle = "#607086"; ctx.font = "18px Arial"; ctx.fillText(subtitle, 52, 100);
+/* Progress PM per Regional: bar bertumpuk Belum Submit / Submitted / Approved. */
+async function pmBuildInsightsCanvas(data, filters, options = {}) {
+  if (!options.skipFonts) await pmLoadImageFonts();
+  const regional = [...(data && data.regional_summary || [])].sort((a, b) => pmRegionalCompare(a.regional, b.regional));
+  const colors = { pending: "#D64B55", submitted: "#E27B2B", approved: "#0B8A5B" };
+  const width = 1500, margin = 40, rowHeight = 104, top = 196, height = top + Math.max(regional.length, 1) * rowHeight + 76;
+  const { canvas, ctx } = pmNewCanvas(width, height, options.createCanvas);
+  pmHeader(ctx, "PROGRESS OPERASIONAL PER REGIONAL", `${monthLabel(filters.month || filters.dateFrom?.slice(0, 7))} · Komposisi Plan Site: belum submit, submitted, approved`, margin);
+  [["Belum Submit", colors.pending], ["Submitted", colors.submitted], ["Approved", colors.approved]].forEach(([label, color], index) => {
+    const x = margin + index * 170; ctx.fillStyle = color; ctx.fillRect(x, 150, 13, 13); pmText(ctx, label, x + 22, 162, { size: 13, weight: 500, color: "#53657A" });
+  });
+  const trackWidth = width - margin * 2;
+  regional.forEach((item, index) => {
+    const y = top + index * rowHeight, plan = Number(item.plan) || 0, pending = Number(item.pending) || 0, approved = Number(item.approved) || 0, submittedOnly = Math.max(0, Number(item.submitted || 0) - approved);
+    pmText(ctx, item.regional, margin, y + 20, { size: 18, weight: 600, color: "#263F5F" });
+    pmText(ctx, `${plan} plan`, margin + trackWidth, y + 20, { size: 15, weight: 600, color: "#173E68", align: "right" });
+    ctx.fillStyle = "#E8EEF4"; ctx.fillRect(margin, y + 32, trackWidth, 32);
+    let cursor = margin;
+    [[pending, colors.pending], [submittedOnly, colors.submitted], [approved, colors.approved]].forEach(([value, color]) => {
+      const segment = plan ? trackWidth * value / plan : 0; ctx.fillStyle = color; ctx.fillRect(cursor, y + 32, segment, 32);
+      if (segment >= 46) pmText(ctx, value, cursor + segment / 2, y + 53, { size: 14, weight: 600, color: "#FFFFFF", align: "center" });
+      cursor += segment;
+    });
+    pmText(ctx, `${pending} belum submit · ${submittedOnly} submitted · ${approved} approved`, margin, y + 88, { size: 13, weight: 500, color: "#607086" });
+    pmText(ctx, `${approved}/${plan} approved`, margin + trackWidth, y + 88, { size: 13, weight: 600, color: "#173E68", align: "right" });
+  });
+  if (!regional.length) pmText(ctx, "Belum ada regional pada filter aktif.", margin, top + 30, { size: 15, weight: 500, color: "#64748B" });
+  pmFooter(ctx, margin, height);
+  return canvas;
 }
-function downloadPreventiveInsightsImage(data, filters) {
-  const canvas = document.createElement("canvas"), regional = data && data.regional_summary || [], width = 1500, height = Math.max(450, 210 + regional.length * 84), colors = { pending: "#D64B55", submitted: "#E27B2B", approved: "#0B8A5B" };
-  canvas.width = width; canvas.height = height; const ctx = canvas.getContext("2d"); drawPmHeader(ctx, "Progress Preventive Management per Regional", `${monthLabel(filters.month || filters.dateFrom?.slice(0, 7))} · Plan / Submitted / Approved`, width);
-  ctx.font = "600 16px Arial"; [["Belum Submit", colors.pending], ["Submitted", colors.submitted], ["Approved", colors.approved]].forEach(([label, color], i) => { const x = 52 + i * 175; ctx.fillStyle = color; ctx.fillRect(x, 124, 14, 14); ctx.fillStyle = "#53657A"; ctx.fillText(label, x + 22, 136); });
-  regional.forEach((item, index) => { const y = 168 + index * 84, plan = Number(item.plan) || 0, pending = Number(item.pending) || 0, approved = Number(item.approved) || 0, submittedOnly = Math.max(0, Number(item.submitted || 0) - approved), widthTrack = 1120;
-    ctx.fillStyle = "#42536A"; ctx.font = "600 19px Arial"; ctx.fillText(item.regional, 52, y + 18); ctx.fillStyle = "#E8EEF4"; ctx.fillRect(52, y + 32, widthTrack, 26);
-    let cursor = 52; [[pending, colors.pending], [submittedOnly, colors.submitted], [approved, colors.approved]].forEach(([value, color]) => { const segment = plan ? widthTrack * value / plan : 0; ctx.fillStyle = color; ctx.fillRect(cursor, y + 32, segment, 26); cursor += segment; });
-    ctx.fillStyle = "#173E68"; ctx.font = "600 18px Arial"; ctx.fillText(`${approved}/${plan} approved`, 1210, y + 52); ctx.fillStyle = "#607086"; ctx.font = "16px Arial"; ctx.fillText(`${pending} belum submit · ${submittedOnly} submitted`, 52, y + 78);
-  }); saveCanvas(canvas, `Progress-PM-Regional-${filters.month || todayIso()}.png`);
+async function downloadPreventiveInsightsImage(data, filters) {
+  try { saveCanvas(await pmBuildInsightsCanvas(data, filters), `Progress-PM-Regional-${filters.month || todayIso()}.png`); }
+  catch (error) { window.alert("Gambar belum dapat dibuat: " + error.message); }
 }
-function downloadPreventiveProgressImage(data, filters) {
-  const status = [["assigned", "Assigned"], ["closed", "Closed"], ["in_progress", "In Progress"], ["waiting_approval", "Waiting Approval"]], rows = data && data.nop_summary || [], columns = ["Regional", "NOP", "Plan", "Approved", "Submitted", "Belum Submitted", ...status.map(([, label]) => label)], width = Math.max(1500, columns.length * 155), height = Math.max(400, 180 + rows.length * 42), canvas = document.createElement("canvas");
-  canvas.width = width; canvas.height = height; const ctx = canvas.getContext("2d"), col = width / columns.length; drawPmHeader(ctx, "Progress PM per NOP", monthLabel(filters.month || filters.dateFrom?.slice(0, 7)), width);
-  ctx.fillStyle = "#173E68"; ctx.fillRect(0, 125, width, 40); ctx.font = "bold 14px Arial"; ctx.fillStyle = "#FFFFFF"; columns.forEach((title, i) => ctx.fillText(title, i * col + 14, 151));
-  rows.forEach((item, rowIndex) => { const y = 165 + rowIndex * 42, values = [item.regional || "-", compactNop(item.nop), item.plan, item.approved, item.submitted, item.pending, ...status.map(([key]) => item.progress_statuses?.[key] || 0)]; ctx.fillStyle = rowIndex % 2 ? "#F6F8FB" : "#FFFFFF"; ctx.fillRect(0, y, width, 42); ctx.strokeStyle = "#D8E0EA"; ctx.strokeRect(0, y, width, 42); ctx.fillStyle = "#243A55"; ctx.font = "14px Arial"; values.forEach((value, i) => ctx.fillText(String(value), i * col + 14, y + 26)); });
-  saveCanvas(canvas, `Progress-PM-per-NOP-${filters.month || todayIso()}.png`);
+/* Progress PM per NOP: tabel yang sama dengan layar (urutan R01, R02, R10; baris total regional; total akhir). */
+async function pmBuildProgressCanvas(data, filters, options = {}) {
+  if (!options.skipFonts) await pmLoadImageFonts();
+  const columns = [["NOP", 300], ["PLAN SITE", 150], ["APPROVED", 150], ["SUBMITTED", 160], ["BELUM SUBMITTED", 210], ...PM_PROGRESS_STATUSES.map(([, label]) => [label, label === "WAITING APPROVAL" ? 230 : label === "IN PROGRESS" ? 170 : label === "ASSIGNED" ? 160 : 140])];
+  const groups = pmGroupByRegional(data && data.nop_summary), grand = pmProgressTotal((data && data.nop_summary) || []);
+  const margin = 40, tableWidth = columns.reduce((sum, [, w]) => sum + w, 0), width = tableWidth + margin * 2;
+  const headH = 54, regionH = 48, rowH = 46, grandH = 54, top = 150;
+  const height = top + headH + groups.reduce((sum, [, items]) => sum + regionH + items.length * rowH, 0) + grandH + 96;
+  const { canvas, ctx } = pmNewCanvas(width, height, options.createCanvas);
+  pmHeader(ctx, "PROGRESS PM PER NOP", `Rekap plan ${monthLabel(filters.month || filters.dateFrom?.slice(0, 7))} berdasarkan status PM.`, margin);
+  const valuesOf = (item) => [Number(item.plan) || 0, Number(item.approved) || 0, Number(item.submitted) || 0, Number(item.pending) || 0, ...PM_PROGRESS_STATUSES.map(([key]) => Number(item.progress_statuses?.[key]) || 0)];
+  const xs = []; { let cursor = margin; columns.forEach(([, w]) => { xs.push(cursor); cursor += w; }); }
+  let y = top;
+  ctx.fillStyle = "#173E68"; ctx.fillRect(margin, y, tableWidth, headH);
+  columns.forEach(([label, w], index) => pmText(ctx, label, index ? xs[index] + w / 2 : xs[0] + 18, y + 33, { size: 12.5, weight: 600, color: "#FFFFFF", align: index ? "center" : "left", spacing: 0.8 }));
+  y += headH;
+  const line = (yy, color = "#E3E8F0", h = 1) => { ctx.fillStyle = color; ctx.fillRect(margin, yy, tableWidth, h); };
+  const drawRow = (label, item, kind, stripe) => {
+    const h = kind === "region" ? regionH : kind === "grand" ? grandH : rowH, values = valuesOf(item);
+    ctx.fillStyle = kind === "region" ? "#DFE7F0" : kind === "grand" ? "#D2DEEB" : stripe ? "#F7F9FC" : "#FFFFFF"; ctx.fillRect(margin, y, tableWidth, h);
+    values.forEach((value, index) => {
+      const col = index + 1, cx = xs[col] + columns[col][1] / 2;
+      if (kind === "nop") {
+        if (col === 2 && value) { ctx.fillStyle = "#E9F8F1"; ctx.fillRect(xs[col], y, columns[col][1], h); }
+        if (col === 4) { ctx.fillStyle = value >= 50 ? "#FBE7E9" : "#FFF1F2"; ctx.fillRect(xs[col], y, columns[col][1], h); }
+      }
+      const color = kind !== "nop" ? "#173E68" : col === 2 && value ? "#087D4B" : col === 4 ? "#BD3340" : value ? "#243A55" : "#8492A3";
+      pmText(ctx, value, cx, y + h / 2 + 6, { size: kind === "nop" ? 15 : 16, weight: 600, color, align: "center" });
+    });
+    pmText(ctx, label, xs[0] + 18, y + h / 2 + 6, { size: kind === "nop" ? 14 : 16, weight: 600, color: "#173E68", spacing: kind === "nop" ? 0.2 : 0.4 });
+    y += h; line(y - (kind === "grand" ? 0 : 1), "#E3E8F0", 1);
+  };
+  groups.forEach(([regional, items]) => {
+    drawRow(regional, pmProgressTotal(items), "region");
+    items.forEach((item, index) => drawRow(compactNop(item.nop), item, "nop", index % 2 === 1));
+  });
+  const grandTop = y;
+  drawRow("TOTAL", grand, "grand");
+  ctx.fillStyle = "#173E68"; ctx.fillRect(margin, grandTop, tableWidth, 2);
+  ctx.strokeStyle = "#CBD5E1"; ctx.lineWidth = 1; ctx.strokeRect(margin + 0.5, top + 0.5, tableWidth - 1, y - top - 1);
+  pmFooter(ctx, margin, height, "Belum Submitted = Plan Site dikurangi Submitted. Latar merah lebih pekat menandai Belum Submitted 50 atau lebih.");
+  return canvas;
 }
+async function downloadPreventiveProgressImage(data, filters) {
+  try { saveCanvas(await pmBuildProgressCanvas(data, filters), `Progress-PM-per-NOP-${filters.month || todayIso()}.png`); }
+  catch (error) { window.alert("Gambar belum dapat dibuat: " + error.message); }
+}
+/* PM-IMAGE-KIT:END */
 function PreventiveOperationalInsights({ data, filters, onFilter }) {
-  const h = React.createElement, plan = Number(data && data.plan || 0), regional = data && data.regional_summary || [];
-  const regionalContent = regional.length ? h("div", { className: "pm-regional-stacked-bars" }, ...regional.map(item => { const total = Number(item.plan) || 0, pending = Number(item.pending) || 0, approved = Number(item.approved) || 0, submittedOnly = Math.max(0, Number(item.submitted || 0) - approved); return h("div", { className: "pm-regional-stacked-row", key: item.regional },
-    h("div", { className: "preventive-status-label" }, h("span", null, item.regional), h("b", null, `${total} plan`)),
-    h("div", { className: "pm-regional-stacked-track", title: `${pending} belum submit, ${submittedOnly} submitted, ${approved} approved` }, h("i", { className: "is-pending", style: { width: `${total ? pending / total * 100 : 0}%` } }), h("i", { className: "is-submitted", style: { width: `${total ? submittedOnly / total * 100 : 0}%` } }), h("i", { className: "is-approved", style: { width: `${total ? approved / total * 100 : 0}%` } })),
-    h("small", null, `${pending} belum submit · ${submittedOnly} submitted · ${approved} approved`)
-  ); })) : h("p", { className: "preventive-insight-empty" }, "Belum ada regional pada filter aktif.");
-  return h("section", { className: "corporate-panel p-5 preventive-insights" },
-    h("div", { className: "flex items-center justify-between gap-3 mb-4" }, h("div", null, h("h2", { className: "section-title" }, "PROGRESS OPERASIONAL PER REGIONAL"), h("p", { className: "mt-1 text-[10px] text-slate-400" }, "Komposisi Plan Site berdasarkan belum submit, submitted, dan approved.")), h("button", { type: "button", className: "pm-export-button pm-export-image", onClick: () => downloadPreventiveInsightsImage(data, filters) }, h(Download, { size: 14 }), "Download Image")),
+  const h = React.createElement, regional = [...(data && data.regional_summary || [])].sort((a, b) => pmRegionalCompare(a.regional, b.regional));
+  const rows = regional.length ? regional.map((item) => {
+    const total = Number(item.plan) || 0, pending = Number(item.pending) || 0, approved = Number(item.approved) || 0, submittedOnly = Math.max(0, Number(item.submitted || 0) - approved);
+    const share = (value) => total ? value / total * 100 : 0, segment = (value, className) => h("i", { className, style: { width: `${share(value)}%` } }, share(value) >= 4 ? value : "");
+    return h("div", { className: "pm-reg-row", key: item.regional },
+      h("div", { className: "pm-reg-label" }, h("span", null, item.regional), h("b", null, `${total} plan`)),
+      h("div", { className: "pm-reg-track", title: `${pending} belum submit, ${submittedOnly} submitted, ${approved} approved` }, segment(pending, "is-pending"), segment(submittedOnly, "is-submitted"), segment(approved, "is-approved")),
+      h("div", { className: "pm-reg-foot" }, h("span", null, `${pending} belum submit · ${submittedOnly} submitted · ${approved} approved`), h("b", null, `${approved}/${total} approved`)));
+  }) : [h("p", { className: "preventive-insight-empty", key: "empty" }, "Belum ada regional pada filter aktif.")];
+  return h("section", { className: "corporate-panel p-5 preventive-insights pm-reg-card" },
+    h("div", { className: "pm-reg-head" }, h("div", null, h("p", { className: "pm-img-eyebrow" }, "PREVENTIVE MANAGEMENT"), h("h2", { className: "section-title pm-img-title" }, "PROGRESS OPERASIONAL PER REGIONAL"), h("p", { className: "pm-img-sub" }, `${monthLabel(filters.month || filters.dateFrom?.slice(0, 7))} · Komposisi Plan Site: belum submit, submitted, approved`)), h("button", { type: "button", className: "pm-export-button pm-export-image", onClick: () => downloadPreventiveInsightsImage(data, filters) }, h(Download, { size: 14 }), "Download Image")),
     h("div", { className: "pm-stacked-legend" }, h("span", { className: "is-pending" }, "Belum Submit"), h("span", { className: "is-submitted" }, "Submitted"), h("span", { className: "is-approved" }, "Approved")),
-    regionalContent
+    h("div", { className: "pm-reg-list" }, ...rows)
   );
 }
 function PreventiveDashboardCards({ data, file, date, busy, loading, filters, onFile, onDate, onUpload, onFilter, onReview, onRefresh }) {
@@ -570,13 +680,13 @@ function PreventiveDashboardCards({ data, file, date, busy, loading, filters, on
     h("div", { className: "preventive-filter-search" }, h("label", { className: "filter-label mb-1 block" }, "SEARCH"), h("input", { type: "search", value: filters.search, onChange: (event) => onFilter("search", event.target.value), placeholder: "Cari Site ID, Site Name, NOP, atau Notes", className: "control h-10 w-full px-3 text-[10px]" }))
   );
   const statuses = [["assigned", "ASSIGNED"], ["closed", "CLOSED"], ["in_progress", "IN PROGRESS"], ["waiting_approval", "WAITING APPROVAL"]], nopSummary = (data == null ? void 0 : data.nop_summary) || [];
-  const regionalGroups = nopSummary.reduce((groups, item) => { const regional = item.regional || "Belum ditentukan"; (groups[regional] ||= []).push(item); return groups; }, {});
-  const columns = ["NOP", "PLAN SITE", "APPROVED", "SUBMITTED", "BELUM SUBMITTED", ...statuses.map(([, label]) => label)];
-  const progressRows = Object.entries(regionalGroups).flatMap(([regional, items]) => [
-    h("tr", { className: "preventive-regional-group", key: `regional-${regional}` }, h("td", { colSpan: columns.length }, regional)),
-    ...items.map(item => h("tr", { key: `${regional}-${item.nop}` }, h("td", { className: "preventive-progress-nop" }, compactNop(item.nop)), h("td", null, item.plan), h("td", { className: "is-approved" }, item.approved), h("td", null, item.submitted), h("td", { className: "is-pending" }, item.pending), ...statuses.map(([key]) => h("td", { key }, item.progress_statuses?.[key] || 0))))
-  ]);
-  const progressTable = h("div", { className: "preventive-progress-panel" }, h("div", { className: "preventive-progress-heading" }, h("div", null, h("h2", { className: "section-title" }, "PROGRESS PM PER NOP"), h("p", null, `Rekap plan ${monthLabel(filters.month || filters.dateFrom?.slice(0, 7))} berdasarkan status PM.`)), h("div", { className: "pm-export-actions" }, h("button", { type: "button", className: "pm-export-button pm-export-excel", onClick: async () => { try { const result = await getPreventiveProgressExport(filters); downloadBlob(result.blob, result.filename); } catch (error) { window.alert(error.message); } } }, h(FileSpreadsheet, { size: 14 }), "Download Excel"), h("button", { type: "button", className: "pm-export-button pm-export-image", onClick: () => downloadPreventiveProgressImage(data, filters) }, h(Download, { size: 14 }), "Download Image"))), h("div", { className: "preventive-progress-scroll kpi-scrollbar" }, h("table", { className: "preventive-table preventive-progress-table" }, h("thead", { className: "bg-[#173E68] text-white" }, h("tr", null, ...columns.map(label => h("th", { key: label }, label)))), h("tbody", null, ...progressRows))));
+  const columns = ["REGIONAL", "NOP", "PLAN SITE", "APPROVED", "SUBMITTED", "BELUM SUBMITTED", ...statuses.map(([, label]) => label)];
+  const progressTotal = pmProgressTotal;
+  const progressCells = (item, prefix) => { const plan = Number(item.plan) || 0, submitted = Number(item.submitted) || 0; return [h("td", { key: `${prefix}-plan` }, plan), h("td", { key: `${prefix}-approved`, className: plan && Number(item.approved) ? "is-approved" : "is-zero" }, Number(item.approved) || 0), h("td", { key: `${prefix}-submitted` }, submitted), h("td", { key: `${prefix}-pending`, className: Number(item.pending) >= 50 ? "is-pending is-high" : "is-pending" }, Number(item.pending) || 0), ...statuses.map(([key]) => h("td", { key: `${prefix}-${key}`, className: Number(item.progress_statuses?.[key]) ? "" : "is-zero" }, Number(item.progress_statuses?.[key]) || 0))]; };
+  const progressRows = pmGroupByRegional(nopSummary).flatMap(([regional, items], groupIndex) => { const total = progressTotal(items), tone = `pm-region-tone-${groupIndex % 3}`, rowSpan = items.length + 1; return [...items.map((item, index) => h("tr", { className: `preventive-nop-row ${tone}` + (index % 2 ? " is-stripe" : ""), key: `${regional}-${item.nop}` }, index === 0 ? h("th", { scope: "rowgroup", rowSpan, className: "preventive-progress-regional" }, regional) : null, h("th", { scope: "row", className: "preventive-progress-nop" }, compactNop(item.nop)), ...progressCells(item, `${regional}-${item.nop}`))), h("tr", { className: `preventive-progress-regional-total ${tone}`, key: `regional-${regional}` }, h("th", { scope: "row", className: "preventive-progress-total-label" }, "GRAND TOTAL"), ...progressCells(total, `regional-${regional}`))]; });
+  const allProgressTotal = progressTotal(nopSummary);
+  progressRows.push(h("tr", { className: "preventive-progress-grand", key: "progress-total" }, h("th", { scope: "row", colSpan: 2 }, "TOTAL SELURUH REGIONAL"), ...progressCells(allProgressTotal, "progress-total")));
+  const progressTable = h("div", { className: "preventive-progress-panel" }, h("div", { className: "preventive-progress-heading" }, h("div", null, h("p", { className: "pm-img-eyebrow" }, "PREVENTIVE MANAGEMENT"), h("h2", { className: "section-title pm-img-title" }, "PROGRESS PM PER NOP"), h("p", { className: "pm-img-sub" }, `Rekap plan ${monthLabel(filters.month || filters.dateFrom?.slice(0, 7))} berdasarkan status PM.`)), h("div", { className: "pm-export-actions" }, h("button", { type: "button", className: "pm-export-button pm-export-excel", onClick: async () => { try { const result = await getPreventiveProgressExport(filters); downloadBlob(result.blob, result.filename); } catch (error) { window.alert(error.message); } } }, h(FileSpreadsheet, { size: 14 }), "Download Excel"), h("button", { type: "button", className: "pm-export-button pm-export-image", onClick: () => downloadPreventiveProgressImage(data, filters) }, h(Download, { size: 14 }), "Download Image"))), h("div", { className: "preventive-progress-scroll kpi-scrollbar" }, h("table", { className: "preventive-table preventive-progress-table" }, h("thead", { className: "bg-[#173E68] text-white" }, h("tr", null, ...columns.map(label => h("th", { key: label }, label)))), h("tbody", null, ...progressRows))), h("p", { className: "pm-img-note" }, "Belum Submitted = Plan Site dikurangi Submitted. Latar merah lebih pekat menandai Belum Submitted 50 atau lebih."));
   const cards = visibleRows.length ? visibleRows.map((row, index) => {
     var _a, _b;
     const key = `${row.site_id}-${row.schedule_date}-${row.ticket_no}-${index}`;
@@ -1418,18 +1528,20 @@ async function copyText(text) {
 class PunchlistWorkspace extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { rows: [], options: { month: [], regional: [], nop: [] }, search: "", month: "", regional: "", nop: "", notes: {}, loading: true, saving: {}, error: "", message: "", dialogSite: null, dialogStep: "question", dialogNote: "" };
+    const scope = window.PMPunchlistScope || {};
+    this.state = { rows: [], options: { month: [], regional: [], nop: [] }, summary: null, search: "", month: scope.month || "", regional: scope.regional || "", nop: scope.nop || "", category: "", notes: {}, loading: true, saving: {}, error: "", message: "", dialogSite: null, dialogStep: "question", dialogNote: "" };
     this.load = async () => {
-      const { search, month, regional, nop } = this.state, params = new URLSearchParams();
+      const { search, month, regional, nop, category } = this.state, params = new URLSearchParams();
       if (search) params.set("search", search);
       if (month) params.set("month", month);
       if (regional) params.set("regional", regional);
       if (nop) params.set("nop", nop);
+      if (category) params.set("category", category);
       this.setState({ loading: true, error: "" });
       try {
         const data = await api(`/api/punchlist${params.size ? `?${params}` : ""}`), notes = {};
         for (const row of data.rows || []) notes[row.site_id] = row.note || "";
-        this.setState({ rows: data.rows || [], options: data.options || { month: [], regional: [], nop: [] }, notes });
+        this.setState({ rows: data.rows || [], options: data.options || { month: [], regional: [], nop: [] }, summary: data.summary || null, notes });
       } catch (error) {
         this.setState({ error: error.message });
       } finally {
@@ -1437,6 +1549,8 @@ class PunchlistWorkspace extends React.Component {
       }
     };
     this.setFilter = (key, value) => this.setState({ [key]: value }, this.load);
+    this.reviewOthers = () => this.setState({ category: "LAINNYA", search: "", regional: "", nop: "" }, this.load);
+    this.closeOthers = () => this.setState({ category: "", search: "", regional: "", nop: "" }, this.load);
     this.setNote = (siteId, note) => this.setState((state) => ({ notes: { ...state.notes, [siteId]: note }, message: "" }));
     this.save = async (siteId, noteOverride) => {
       this.setState((state) => ({ saving: { ...state.saving, [siteId]: true }, error: "", message: "" }));
@@ -1460,37 +1574,169 @@ class PunchlistWorkspace extends React.Component {
   }
   componentDidMount() { this.load(); }
   render() {
-    const h = React.createElement, s = this.state, notedCount = s.rows.filter((row) => String(s.notes[row.site_id] || "").trim()).length;
-    const filters = h("div", { className: "punchlist-filter-grid" },
-      h("div", { className: "punchlist-filter-search" }, h("label", { className: "filter-label mb-1 block" }, "SEARCH"), h("input", { value: s.search, onChange: (event) => this.setFilter("search", event.target.value), className: "control h-10 w-full px-3 text-[10px]", placeholder: "Cari Site ID, Site Name, NOP, atau catatan" })),
-      h("div", { className: "punchlist-filter-field" }, h("label", { className: "filter-label mb-1 block" }, "BULAN"), h("select", { value: s.month, onChange: (event) => this.setFilter("month", event.target.value), className: "control h-10 w-full px-3 text-[10px] font-semibold" }, h("option", { value: "" }, "All Bulan"), ...(s.options.month || []).map((value) => h("option", { key: value, value }, new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}-01T00:00:00Z`))))),
-      h("div", { className: "punchlist-filter-field" }, h("label", { className: "filter-label mb-1 block" }, "REGIONAL"), h("select", { value: s.regional, onChange: (event) => this.setFilter("regional", event.target.value), className: "control h-10 w-full px-3 text-[10px] font-semibold" }, h("option", { value: "" }, "All Regional"), ...(s.options.regional || []).map((value) => h("option", { key: value, value }, value)))),
-      h("div", { className: "punchlist-filter-field" }, h("label", { className: "filter-label mb-1 block" }, "NOP"), h("select", { value: s.nop, onChange: (event) => this.setFilter("nop", event.target.value), className: "control h-10 w-full px-3 text-[10px] font-semibold" }, h("option", { value: "" }, "All NOP"), ...(s.options.nop || []).map((value) => h("option", { key: value, value }, compactNop(value)))))));
-    const cards = s.rows.map((row) => h("details", { key: row.site_id, className: "preventive-info-card pm-dashboard-work-card" },
-      h("summary", { className: "preventive-card-head" },
-        h("div", { className: "preventive-card-section" }, h("p", { className: "preventive-card-label" }, "SITE ID"), h("p", { className: "pm-site-work-value" }, row.site_id)),
-        h("div", { className: "preventive-card-section with-divider" }, h("p", { className: "preventive-card-label" }, "SITE NAME"), h("p", { className: "pm-site-work-value" }, row.site_name || "Belum tersedia")),
-        h("div", { className: "preventive-card-section with-divider" }, h("p", { className: "preventive-card-label" }, "NOP"), h("p", { className: "pm-site-work-value" }, compactNop(row.nop))),
-        h("div", { className: "preventive-card-section with-divider" }, h("p", { className: "preventive-card-label" }, "PUNCHLIST"), h("span", { className: `status-ready ${s.notes[row.site_id] ? "" : "opacity-50"}` }, s.notes[row.site_id] ? "Ada catatan" : "Belum ada")), h(ChevronRight, { size: 15, className: "preventive-card-chevron" })),
-      h("div", { className: "preventive-card-details" }, h("div", { className: "preventive-detail-grid" }, h("div", null, h("p", { className: "preventive-card-label" }, "REGIONAL"), h("p", { className: "mt-1 text-[10px] font-medium text-[#42536A]" }, row.regional || "-")), h("div", null, h("p", { className: "preventive-card-label" }, "TERAKHIR DISIMPAN"), h("p", { className: "mt-1 text-[10px] font-medium text-[#42536A]" }, row.updated_at ? wibDateTime(row.updated_at) : "Belum ada catatan"))),
-        h("div", { className: "preventive-notes mt-4" }, h("p", { className: "preventive-card-label" }, "CATATAN PUNCHLIST"), h("p", { className: "mt-1 text-[10px] leading-5 text-[#42536A]" }, s.notes[row.site_id] || "Belum ada catatan")),
-        h("div", { className: "mt-3 flex items-center justify-end" }, h("button", { type: "button", disabled: !!s.saving[row.site_id], onClick: () => this.openAction(row), className: "btn-primary h-8 px-3 text-[9px] font-semibold disabled:opacity-40" }, "ACTION TEMUAN")))));
+    const h = React.createElement, s = this.state;
+    const number = (value) => new Intl.NumberFormat("id-ID").format(Number(value || 0));
+    const noteOf = (row) => String(s.notes[row.site_id] || "").trim();
+    const stateOf = (row) => !noteOf(row) ? "empty" : /^tidak ada temuan\.?$/i.test(noteOf(row)) ? "clear" : "finding";
+    const chipLabel = { empty: "Belum dicatat", clear: "Tidak ada temuan", finding: "Ada temuan" };
+    const counts = { empty: 0, clear: 0, finding: 0 };
+    for (const row of s.rows) counts[stateOf(row)]++;
+    const total = s.rows.length, noted = counts.clear + counts.finding, percent = total ? Math.round(noted / total * 100) : 0;
+    const noteFilter = s.noteFilter || "";
+    const visibleRows = noteFilter ? s.rows.filter((row) => stateOf(row) === noteFilter) : s.rows;
+    const summary = s.summary || { regions: [], status_by_regional: [], category_counts: [], subcategory_counts: [], total_findings: 0 };
+    const regionLabel = (value) => String(value).replace(/_/g, " ");
+
+    /* ---------- Filter ---------- */
+    const field = (cls, label, control) => h("div", { className: `pl-field ${cls || ""}` }, h("label", { className: "filter-label" }, label), control);
+    const select = (key, allLabel, options, format) => h("select", { value: s[key], onChange: (event) => this.setFilter(key, event.target.value), className: "control" }, h("option", { value: "" }, allLabel), ...(options || []).map((value) => h("option", { key: value, value }, format ? format(value) : value)));
+    const monthName = (value) => new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}-01T00:00:00Z`));
+    const filters = h("div", { className: "pl-filters" },
+      field("", "SEARCH", h("input", { value: s.search, onChange: (event) => this.setFilter("search", event.target.value), className: "control", placeholder: "Cari Site ID, Site Name, NOP, atau catatan" })),
+      !s.category && field("", "BULAN", select("month", "All Bulan", s.options.month, monthName)),
+      field("", "REGIONAL", select("regional", "All Regional", s.options.regional)),
+      field("", "NOP", select("nop", "All NOP", s.options.nop, compactNop)));
+    const segments = h("div", { className: "pl-segments", role: "group", "aria-label": "Filter status catatan" },
+      ...[["", "Semua", total], ["empty", "Belum dicatat", counts.empty], ["finding", "Ada temuan", counts.finding], ["clear", "Tidak ada temuan", counts.clear]].map(([value, label, count]) => h("button", { key: value || "all", type: "button", className: "pl-segment", "aria-pressed": noteFilter === value, onClick: () => this.setState({ noteFilter: value }) }, label, h("b", null, number(count)))));
+
+    /* ---------- Daftar site ---------- */
+    const cell = (label, value, extra) => h("div", { className: "pl-cell" }, h("p", { className: "pl-label" }, label), h("p", { className: `pl-value ${extra || ""}` }, value));
+    const cards = visibleRows.map((row) => {
+      const st = stateOf(row), note = noteOf(row);
+      return h("details", { key: row.site_id, className: `pl-card is-${st}` },
+        h("summary", { className: "pl-card-summary" },
+          h("div", { className: "pl-card-head" },
+            cell("SITE ID", row.site_id, "is-id"),
+            cell("SITE NAME", row.site_name || "Belum tersedia"),
+            cell("NOP", compactNop(row.nop)),
+            cell("REGIONAL", row.regional ? regionLabel(row.regional) : "-"),
+            h("div", { className: "pl-cell" }, h("p", { className: "pl-label" }, "PUNCHLIST"), h("span", { className: `pl-chip is-${st}` }, chipLabel[st])),
+            h(ChevronRight, { size: 15, className: "pl-chevron" })),
+          st === "finding" && h("p", { className: "pl-preview" }, note)),
+        h("div", { className: "pl-card-body" },
+          h("div", { className: `pl-note ${note ? "" : "is-empty"}` }, h("p", { className: "pl-label" }, "CATATAN PUNCHLIST"), h("p", null, note || "Belum ada catatan")),
+          h("div", { className: "pl-aside" },
+            h("div", null, h("p", { className: "pl-label" }, "TERAKHIR DISIMPAN"), h("p", { className: "pl-value" }, row.updated_at ? wibDateTime(row.updated_at) : "Belum ada catatan")),
+            h("button", { type: "button", disabled: !!s.saving[row.site_id], onClick: () => this.openAction(row), className: "btn-primary pl-action" }, note ? "UBAH TEMUAN" : "ACTION TEMUAN"))));
+    });
+
+    /* ---------- Dialog Action Temuan ---------- */
     if (s.dialogSite) {
       const site = s.dialogSite, saving = !!s.saving[site.site_id];
-      const question = h("div", { className: "p-5" },
-        h("p", { className: "text-[13px] font-semibold text-[#26384F]" }, "Apakah ada temuan?"),
-        h("p", { className: "mt-2 text-[10px] leading-5 text-slate-500" }, "Pilih Ada Temuan untuk menulis catatan, atau Tidak Ada Temuan untuk menyimpan status tanpa temuan."),
-        h("div", { className: "mt-5 flex justify-end gap-2" }, h("button", { type: "button", onClick: () => this.setState({ dialogStep: "text" }), className: "btn-secondary h-9 px-4 text-[10px] font-semibold" }, "ADA TEMUAN"), h("button", { type: "button", disabled: saving, onClick: this.chooseNoFinding, className: "btn-primary h-9 px-4 text-[10px] font-semibold disabled:opacity-40" }, saving ? "MENYIMPAN..." : "TIDAK ADA TEMUAN")));
-      const textForm = h("div", { className: "p-5" },
-        h("label", null, h("span", { className: "filter-label mb-2 block" }, "TEMUAN"), h("textarea", { autoFocus: true, value: s.dialogNote, maxLength: 5000, onChange: (event) => this.setState({ dialogNote: event.target.value }), className: "control h-[130px] w-full resize-y p-3 text-[11px] leading-5", placeholder: "Tulis temuan, kendala, atau tindak lanjut site..." })),
-        h("div", { className: "mt-5 flex justify-end gap-2" }, h("button", { type: "button", disabled: saving, onClick: () => this.setState({ dialogStep: "question" }), className: "btn-secondary h-9 px-4 text-[10px] font-semibold" }, "KEMBALI"), h("button", { type: "button", disabled: saving, onClick: this.saveFinding, className: "btn-primary h-9 px-4 text-[10px] font-semibold disabled:opacity-40" }, saving ? "MENYIMPAN..." : "SIMPAN TEMUAN")));
+      const question = h("div", { className: "pl-dialog-body" },
+        h("p", { className: "pl-dialog-title" }, "Apakah ada temuan?"),
+        h("p", { className: "pl-dialog-text" }, "Pilih salah satu. Status ini tersimpan pada catatan PM Site dan masuk ke rekap PM Punchlist."),
+        h("div", { className: "pl-choices" },
+          h("button", { type: "button", disabled: saving, onClick: () => this.setState({ dialogStep: "text", error: "" }), className: "pl-choice" }, h("strong", null, "Ada temuan"), h("span", null, "Tulis temuan, kendala, atau tindak lanjut site.")),
+          h("button", { type: "button", disabled: saving, onClick: this.chooseNoFinding, className: "pl-choice is-clear" }, h("strong", null, saving ? "Menyimpan..." : "Tidak ada temuan"), h("span", null, "Simpan status tanpa temuan untuk site ini."))));
+      const textForm = h("div", { className: "pl-dialog-body" },
+        h("label", null, h("span", { className: "filter-label" }, "TEMUAN"), h("textarea", { autoFocus: true, value: s.dialogNote, maxLength: 5000, onChange: (event) => this.setState({ dialogNote: event.target.value }), className: "control", placeholder: "Tulis temuan, kendala, atau tindak lanjut site..." })),
+        s.error && h("p", { role: "alert", className: "pl-alert is-error" }, s.error),
+        h("div", { className: "pl-dialog-actions" }, h("button", { type: "button", disabled: saving, onClick: () => this.setState({ dialogStep: "question", error: "" }), className: "btn-secondary" }, "KEMBALI"), h("button", { type: "button", disabled: saving, onClick: this.saveFinding, className: "btn-primary" }, saving ? "MENYIMPAN..." : "SIMPAN TEMUAN")));
       const dialog = h("div", { className: "pm-upload-history-overlay", onClick: (event) => { if (event.target === event.currentTarget && !saving) this.closeAction(); } },
-        h("section", { role: "dialog", "aria-modal": true, "aria-label": "Action Temuan", className: "pm-upload-history-dialog", style: { maxWidth: "480px" } },
-          h("header", null, h("div", null, h("h3", null, "Action Temuan"), h("p", null, `${site.site_id} ${site.site_name ? `- ${site.site_name}` : ""}`)), h("button", { type: "button", "aria-label": "Tutup", disabled: saving, onClick: this.closeAction }, h(X, { size: 18 }))),
+        h("section", { role: "dialog", "aria-modal": true, "aria-label": "Action Temuan", className: "pm-upload-history-dialog pl-dialog" },
+          h("header", null, h("div", null, h("h3", null, "Action Temuan"), h("p", null, `${site.site_id}${site.site_name ? ` - ${site.site_name}` : ""}`)), h("button", { type: "button", "aria-label": "Tutup", disabled: saving, onClick: this.closeAction }, h(X, { size: 18 }))),
           s.dialogStep === "question" ? question : textForm));
       cards.push(ReactDOM.createPortal(dialog, document.body, "punchlist-action-modal"));
     }
-    return h("div", { className: "space-y-4" }, h("div", { className: "grid grid-cols-2 gap-4" }, h(PreventiveSummaryCard, { label: "SITE PM", value: s.rows.length, detail: "Site yang tersedia dari data PM Site", tone: "navy" }), h(PreventiveSummaryCard, { label: "SUDAH DICATAT", value: notedCount, detail: "Site dengan catatan Punchlist", tone: "orange" })), s.error && h("p", { className: "border border-red-300 bg-red-50 px-4 py-3 text-[10px] text-red-800" }, s.error), s.message && h("p", { className: "border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10px] text-emerald-800" }, s.message), h("section", { className: "corporate-panel p-5" }, filters, h("div", { className: "mt-4 flex items-center justify-between" }, h("div", null, h("h2", { className: "section-title" }, "PM PUNCHLIST - GENERAL INFORMATION"), h("p", { className: "mt-1 text-[10px] text-slate-400" }, s.loading ? "Memuat daftar site..." : `Menampilkan ${s.rows.length} site dari data PM Site`)), s.loading && h(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" })), h("div", { className: "kpi-scrollbar preventive-card-list" }, ...cards, !s.loading && !cards.length && h("p", { className: "p-8 text-center text-[10px] text-slate-400" }, "Belum ada data PM Site. Upload data PM Site terlebih dahulu."))));
+
+    /* ---------- Rekap otomatis ---------- */
+    const others = (summary.category_counts || []).find((item) => item.category === "LAINNYA");
+    const columns = [...(summary.regions || []), "total"];
+    const recapTable = (rows, labels) => {
+      if (!rows.length) return h("p", { className: "pl-table-empty" }, "Belum ada data.");
+      const labelOf = (row, label) => label === "KATEGORI" ? row.category : label === "SUB KATEGORI" ? row.subcategory : row.status;
+      return h("div", { className: "pl-table-wrap kpi-scrollbar" }, h("table", { className: "pl-table" },
+        h("thead", null, h("tr", null, ...labels.map((label) => h("th", { key: label, className: "is-label" }, label)), ...columns.map((column) => h("th", { key: column, className: column === "total" ? "is-total" : "" }, column === "total" ? "TOTAL" : regionLabel(column))))),
+        h("tbody", null, ...rows.map((row, index) => {
+          const groupStart = labels.length > 1 && (index === 0 || rows[index - 1].category !== row.category);
+          return h("tr", { key: `${row.category || row.status || row.subcategory}-${index}`, className: groupStart ? "is-group-start" : "" },
+            ...labels.map((label, position) => h("td", { key: label, className: `is-label ${position > 0 ? "is-sub" : ""} ${labels.length > 1 && position === 0 && !groupStart ? "is-repeat" : ""}` }, labelOf(row, label))),
+            ...columns.map((column) => h("td", { key: column, className: `${column === "total" ? "is-total" : ""} ${Number(row[column] || 0) === 0 ? "is-zero" : ""}` }, Number(row[column] || 0) === 0 ? "–" : number(row[column]))));
+        }))));
+    };
+    const regions = summary.regions || [];
+    const regionColors = ["#173e68", "#3979a5", "#e27b2b", "#0b8a5b"];
+    const summaryTab = s.summaryTab || "status", summaryMode = s.summaryMode || "chart", openCategory = s.openCategory || "";
+    const statusRow = (name) => (summary.status_by_regional || []).find((row) => row.status === name) || {};
+
+    /* Visual 1: donut coverage */
+    const donutParts = [["finding", counts.finding, "#b97a33", "Ada temuan"], ["clear", counts.clear, "#0b8a5b", "Tidak ada temuan"], ["empty", counts.empty, "#75859a", "Belum dicatat"]];
+    let offset = 0;
+    const arcs = donutParts.map(([key, value, color]) => {
+      const length = total ? value / total * 100 : 0, node = h("circle", { key, cx: 21, cy: 21, r: 15.9155, fill: "none", stroke: color, strokeWidth: 5, strokeDasharray: `${length} ${100 - length}`, strokeDashoffset: 25 - offset });
+      offset += length; return node;
+    });
+    const donutCard = h("section", { className: "pl-viz-card" }, h("h3", null, "COVERAGE CATATAN"),
+      h("div", { className: "pl-donut-wrap" },
+        h("div", { className: "pl-donut" }, h("svg", { viewBox: "0 0 42 42", role: "img", "aria-label": `${percent}% site sudah dicatat` }, h("circle", { cx: 21, cy: 21, r: 15.9155, fill: "none", stroke: "#e8eef4", strokeWidth: 5 }), ...arcs), h("div", { className: "pl-donut-center" }, h("strong", null, `${percent}%`), h("span", null, "sudah dicatat"))),
+        h("ul", { className: "pl-legend" }, ...donutParts.map(([key, value, color, label]) => h("li", { key }, h("i", { style: { background: color } }), h("span", null, label), h("b", null, number(value)))))));
+
+    /* Visual 2: top kategori */
+    const topCategories = [...(summary.category_counts || [])].filter((row) => Number(row.total) > 0).sort((a, b) => Number(b.total) - Number(a.total)).slice(0, 5);
+    const topMax = Math.max(1, ...topCategories.map((row) => Number(row.total)));
+    const topCard = h("section", { className: "pl-viz-card" }, h("h3", null, "KATEGORI TEMUAN TERBANYAK"),
+      topCategories.length ? h("ol", { className: "pl-rank" }, ...topCategories.map((row, index) => h("li", { key: row.category }, h("span", { className: "pl-rank-no" }, index + 1), h("div", null, h("p", null, row.category, h("b", null, number(row.total))), h("div", { className: "pl-rank-track" }, h("i", { style: { width: `${Number(row.total) / topMax * 100}%` } })))))) : h("p", { className: "pl-table-empty" }, "Belum ada temuan terklasifikasi."));
+
+    /* Visual 3: komposisi per regional */
+    const regionalCard = h("section", { className: "pl-viz-card" }, h("h3", null, "KOMPOSISI PER REGIONAL"),
+      regions.length ? h("div", { className: "pl-stack-list" }, ...regions.map((region) => {
+        const a = Number(statusRow("Ada Temuan")[region] || 0), c = Number(statusRow("Tidak Ada Temuan")[region] || 0), e = Number(statusRow("Notes Kosong")[region] || 0), t = a + c + e || 1;
+        return h("div", { key: region, className: "pl-stack-row" }, h("p", null, regionLabel(region), h("b", null, `${number(a + c + e)} site`)), h("div", { className: "pl-stack-track", title: `Ada temuan ${a} · Tidak ada ${c} · Belum dicatat ${e}` }, h("i", { style: { width: `${a / t * 100}%`, background: "#b97a33" } }), h("i", { style: { width: `${c / t * 100}%`, background: "#0b8a5b" } }), h("i", { style: { width: `${e / t * 100}%`, background: "#75859a" } })));
+      })) : h("p", { className: "pl-table-empty" }, "Belum ada data regional."));
+
+    /* Panel bertab */
+    const barMax = (rows) => Math.max(1, ...rows.map((row) => Number(row.total || 0)));
+    const barRow = (row, max, label, extra) => h("div", { className: `pl-bar-row ${extra || ""}` }, h("div", { className: "pl-bar-label" }, ...[].concat(label)), h("div", { className: "pl-bar-track" }, ...regions.map((region, index) => Number(row[region] || 0) > 0 && h("span", { key: region, className: "pl-bar-seg", style: { width: `${Number(row[region]) / max * 100}%`, background: regionColors[index % regionColors.length] }, title: `${regionLabel(region)}: ${number(row[region])}` }))), h("b", { className: "pl-bar-total" }, number(row.total)));
+    const legend = h("div", { className: "pl-region-legend" }, ...regions.map((region, index) => h("span", { key: region }, h("i", { style: { background: regionColors[index % regionColors.length] } }), regionLabel(region))));
+    const statusRows = summary.status_by_regional || [], categoryRows = [...(summary.category_counts || [])].sort((a, b) => Number(b.total) - Number(a.total)), subRows = summary.subcategory_counts || [];
+    const tabs = [["status", "Status Notes", number(total)], ["category", "Per Kategori", number(categoryRows.length)], ["sub", "Per Sub Kategori", number(subRows.length)]];
+    let body;
+    if (summaryMode === "table") {
+      body = summaryTab === "status" ? recapTable(statusRows, ["STATUS CATATAN"]) : summaryTab === "category" ? recapTable(categoryRows, ["KATEGORI"]) : recapTable(subRows, ["KATEGORI", "SUB KATEGORI"]);
+    } else {
+      const rows = summaryTab === "status" ? statusRows : summaryTab === "category" ? categoryRows : subRows;
+      if (!rows.length) body = h("p", { className: "pl-table-empty" }, "Belum ada data.");
+      else {
+        const max = barMax(rows);
+        body = h("div", { className: "pl-bars" }, legend, summaryTab === "status" ? rows.map((row) => h("div", { key: row.status }, barRow(row, max, row.status))) : summaryTab === "category" ? rows.map((row) => {
+          const children = subRows.filter((item) => item.category === row.category), open = openCategory === row.category;
+          return h("div", { key: row.category, className: `pl-bar-group ${open ? "is-open" : ""}` },
+            h("button", { type: "button", className: "pl-bar-toggle", "aria-expanded": open, onClick: () => this.setState({ openCategory: open ? "" : row.category }) }, barRow(row, max, [h(ChevronRight, { key: "c", size: 13, className: "pl-bar-chevron" }), h("span", { key: "t" }, row.category), children.length ? h("em", { key: "n" }, `${children.length} sub`) : null])),
+            open && h("div", { className: "pl-bar-children" }, children.map((item) => h("div", { key: item.subcategory }, barRow(item, max, item.subcategory, "is-sub")))));
+        }) : rows.map((row, index) => h("div", { key: `${row.category}-${row.subcategory}-${index}` }, barRow(row, max, [h("span", { key: "t" }, row.subcategory), h("em", { key: "n" }, row.category)]))));
+      }
+    }
+    const tabPanel = h("section", { className: "pl-tabpanel" },
+      h("div", { className: "pl-tabbar" },
+        h("div", { className: "pl-tabs", role: "tablist", "aria-label": "Rekap temuan" }, ...tabs.map(([key, label, count]) => h("button", { key, type: "button", role: "tab", "aria-selected": summaryTab === key, className: "pl-tab", onClick: () => this.setState({ summaryTab: key }) }, label, h("b", null, count)))),
+        h("div", { className: "pl-mode", role: "group", "aria-label": "Tampilan" }, ...[["chart", "Grafik"], ["table", "Tabel"]].map(([key, label]) => h("button", { key, type: "button", "aria-pressed": summaryMode === key, onClick: () => this.setState({ summaryMode: key }) }, label)))),
+      h("div", { className: "pl-tabbody", role: "tabpanel" }, body));
+
+    const summaryView = h("section", { className: "corporate-panel pl-section" },
+      h("div", { className: "pl-section-head" }, h("div", null, h("p", { className: "pl-eyebrow" }, "REKAP OTOMATIS"), h("h2", { className: "section-title" }, "TEMUAN PM PUNCHLIST"), h("p", { className: "pl-section-desc" }, "Klasifikasi otomatis dari catatan PM Site yang terisi."))),
+      others && Number(others.total) > 0 && h("button", { type: "button", onClick: this.reviewOthers, className: "pl-callout" }, h("span", { className: "pl-callout-text" }, h("small", null, "PERLU PEMETAAN"), h("strong", null, `${number(others.total)} TEMUAN LAINNYA`), h("em", null, "Klik untuk membuka daftar notes")), h(ChevronRight, { size: 19 })),
+      h("div", { className: "pl-viz" }, donutCard, topCard, regionalCard),
+      tabPanel);
+
+    /* ---------- Halaman ---------- */
+    const listTitle = s.category === "LAINNYA" ? "TEMUAN LAINNYA - PERLU PEMETAAN" : "PM PUNCHLIST - GENERAL INFORMATION";
+    const countText = s.loading ? "Memuat daftar site..." : h(React.Fragment, null, "Menampilkan ", h("b", null, number(visibleRows.length)), ` dari ${number(total)} site PM Site`);
+    return h("div", { className: "pl-page" },
+      h("div", { className: "pl-kpis" },
+        h(PreventiveSummaryCard, { label: "SITE PM", value: number(total), detail: "Site yang tersedia dari data PM Site", tone: "navy" }),
+        h(PreventiveSummaryCard, { label: "SUDAH DICATAT", value: number(noted), detail: `${percent}% dari site pada filter aktif`, tone: "green" }),
+        h(PreventiveSummaryCard, { label: "BELUM DICATAT", value: number(counts.empty), detail: "Site yang belum memiliki catatan", tone: "red" }),
+        h(PreventiveSummaryCard, { label: "TOTAL TEMUAN", value: number(summary.total_findings), detail: `${number(counts.finding)} site dengan temuan`, tone: "orange" })),
+      !s.dialogSite && s.error && h("p", { role: "alert", className: "pl-alert is-error" }, s.error),
+      s.message && h("p", { role: "status", className: "pl-alert is-success" }, s.message),
+      summaryView,
+      h("section", { className: "corporate-panel pl-section" },
+        h("div", { className: "pl-section-head" },
+          h("div", null, h("p", { className: "pl-eyebrow" }, "DAFTAR SITE"), h("h2", { className: "section-title" }, listTitle), h("p", { className: "pl-section-desc" }, "Buka card site untuk melihat catatan dan mengisi Action Temuan.")),
+          h("div", { className: "pl-head-actions" }, h("span", { className: "pl-count", role: "status" }, countText), s.loading && h(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" }), s.category === "LAINNYA" && h("button", { type: "button", onClick: this.closeOthers, className: "btn-secondary h-8 px-3 text-[9px] font-semibold" }, "KEMBALI KE SEMUA"))),
+        filters, segments,
+        h("div", { className: "pl-list kpi-scrollbar" }, ...cards, !s.loading && !visibleRows.length && h("p", { className: "pl-empty" }, s.category === "LAINNYA" ? "Tidak ada temuan Lainnya pada filter aktif." : total ? "Tidak ada site yang cocok dengan filter status ini." : "Belum ada data PM Site. Upload data PM Site terlebih dahulu."))));
   }
 }
 class App extends React.Component {
@@ -1780,7 +2026,7 @@ class App extends React.Component {
     return /* @__PURE__ */ React.createElement("div", { className: "app-shell min-h-screen bg-[#E9EFF5] pl-[250px]" }, /* @__PURE__ */ React.createElement(Sidebar, { activePage: s.activePage, preventiveOpen: s.preventiveOpen, onPage: this.openPage, onTogglePreventive: this.togglePreventive }), /* @__PURE__ */ React.createElement("header", { className: "h-[66px] bg-white shadow-[0_1px_0_#D7DFE8]" }, /* @__PURE__ */ React.createElement("div", { className: "flex h-full items-center px-6" }, /* @__PURE__ */ React.createElement("h1", { className: "text-[20px] font-semibold text-[#29496C]" }, pageTitle))), /* @__PURE__ */ React.createElement("main", { className: "space-y-4 p-5" }, s.pageError && /* @__PURE__ */ React.createElement("div", { className: "border border-red-300 bg-red-50 px-4 py-3 text-[10px] text-red-800" }, s.pageError), s.notice && /* @__PURE__ */ React.createElement("div", { className: "border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10px] font-medium text-emerald-800" }, s.notice), s.activePage === "ekpi" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(UploadPanel, { run: s.run, draftFile: s.draftFile, draftDate: s.draftDate, busyUpload: s.busyUpload, setDraftFile: (file) => this.setState({ draftFile: file }), setDraftDate: (value) => this.setState({ draftDate: value }), onUpload: this.handleUpload })), s.activePage === "ekpi" && ready && /* @__PURE__ */ React.createElement("div", { className: "flex min-w-0 flex-col gap-4" }, /* @__PURE__ */ React.createElement(KpiWorkspace, { config: s.config, dashboard: s.rangeDashboard || s.dashboard, region: s.region, nop: s.nop, rowGroup: s.rowGroup, onRegion: this.onRegion, onNop: this.onNop, onRowGroup: this.onRowGroup, rangeStart: s.rangeStart, rangeEnd: s.rangeEnd, rangeLoading: s.rangeLoading, onRangeDate: this.onRangeDate, onClearRange: this.clearDateRange, tableRef: this.setTableRef, runId: s.run.id, onTicketUploaded: refreshTicketSummary }), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-[1fr_1fr_1fr_1.05fr] gap-4" }, /* @__PURE__ */ React.createElement(SummaryCard, { label: analysis.comparison_available ? "NOP IMPROVED" : "AVAILABLE NOP", value: analysis.comparison_available ? `${analysis.improved_count} NOPs` : `${analysis.nop_count} NOPs`, detail: analysis.comparison_available ? best ? `Peningkatan tertinggi: ${bestNopName} (${deltaText(best.delta)} poin)` : "Belum ada NOP dengan peningkatan" : `Mencakup ${analysis.nop_count} NOP pada filter aktif`, tone: "green" }), /* @__PURE__ */ React.createElement(SummaryCard, { label: analysis.comparison_available ? "NOP DECLINE" : "AVERAGE KPI SCORE", value: analysis.comparison_available ? `${analysis.declined_count} NOPs` : `${formatNumber(analysis.current_average)}%`, detail: analysis.comparison_available ? declining ? `Penurunan terbesar: ${decliningNopName} (${deltaText(declining.delta)} poin)` : "Tidak ada NOP yang menurun" : `Rata-rata KPI seluruh NOP pada filter`, tone: "red" }), /* @__PURE__ */ React.createElement(SummaryCard, { label: analysis.comparison_available ? "BEST IMPROVEMENT" : "BEST KPI SCORE", value: bestNopName, delta: analysis.comparison_available && best ? `${deltaText(best.delta)}%` : "", detail: best ? `${bestNopName} mencatat KPI Score ${formatNumber(best.end)}%` : "Belum ada data KPI", tone: "navy" }), /* @__PURE__ */ React.createElement(ExportCard, { hasTable: Boolean(ready), hasReport: Boolean(s.reportText), reportLoading: s.reportLoading, tableImageLoading: s.tableImageLoading, shareLoading: s.shareLoading, onDownloadTableImage: this.downloadTableImage, onCopyReport: this.copyReport, onShareExcel: this.shareExcel, onSettings: () => this.setState({ showPrompt: true, promptDraft: s.prompt }) })), /* @__PURE__ */ React.createElement(KpiCategoryTrend, { runId: s.run.id, region: s.region, nop: s.nop }), /* @__PURE__ */ React.createElement(TopImprovementChart, { items: analysis.top_nops, comparisonAvailable: analysis.comparison_available }), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 items-stretch gap-4" }, /* @__PURE__ */ React.createElement(NopComparisonPanel, { best: analysis.top_nops, attention: analysis.attention_nops, comparisonAvailable: analysis.comparison_available }), /* @__PURE__ */ React.createElement(PointKpiPanel, { best: analysis.top_components, worst: analysis.worst_components, comparisonAvailable: analysis.comparison_available })), s.reportError && /* @__PURE__ */ React.createElement("div", { className: "border border-amber-200 bg-amber-50 px-4 py-3 text-[10px] text-amber-800" }, "AI Report: ", s.reportError)), s.activePage === "preventive-dashboard" && /* @__PURE__ */ React.createElement(PreventiveDashboardCards, { data: s.preventiveData, file: s.preventiveFile, date: s.preventiveDate, busy: s.preventiveBusy, loading: s.preventiveLoading, filters: s.preventiveFilters, onFile: (file) => this.setState({ preventiveFile: file }), onDate: (value) => this.setState({ preventiveDate: value }), onUpload: this.handlePreventiveUpload, onFilter: this.changePreventiveFilter, onRefresh: () => this.refreshPreventive(), onReview: (row) => {
       const page = row.maintenance_kind === "genset" ? "preventive-genset" : "preventive-site";
       this.setState({ preventiveFilters: { ...this.state.preventiveFilters, siteId: row.site_id, search: "", nop: "" } }, () => this.openPage(page, true));
-    } }), s.activePage === "preventive-genset" && /* @__PURE__ */ React.createElement(window.PMGensetWorkspace, { key: s.navigationRevision, RoutinePage: PreventiveRoutinePage, SummaryCard: PreventiveSummaryCard, data: s.preventiveData, loading: s.preventiveLoading, filters: s.preventiveFilters, onFilter: this.changePreventiveFilter, kind: "genset" }), s.activePage === "preventive-site" && /* @__PURE__ */ React.createElement(PreventiveRoutinePage, { key: s.navigationRevision, data: s.preventiveData, loading: s.preventiveLoading, filters: s.preventiveFilters, onFilter: this.changePreventiveFilter, kind: "site" })), s.showPrompt && /* @__PURE__ */ React.createElement(PromptModal, { draft: s.promptDraft, setDraft: (value) => this.setState({ promptDraft: value }), onClose: () => this.setState({ showPrompt: false }), onSave: this.savePrompt }));
+    } }), s.activePage === "preventive-punchlist" && /* @__PURE__ */ React.createElement(PunchlistWorkspace, { key: s.navigationRevision }), s.activePage === "preventive-genset" && /* @__PURE__ */ React.createElement(window.PMGensetWorkspace, { key: s.navigationRevision, RoutinePage: PreventiveRoutinePage, SummaryCard: PreventiveSummaryCard, data: s.preventiveData, loading: s.preventiveLoading, filters: s.preventiveFilters, onFilter: this.changePreventiveFilter, kind: "genset" }), s.activePage === "preventive-site" && /* @__PURE__ */ React.createElement(PreventiveRoutinePage, { key: s.navigationRevision, data: s.preventiveData, loading: s.preventiveLoading, filters: s.preventiveFilters, onFilter: this.changePreventiveFilter, kind: "site" })), s.showPrompt && /* @__PURE__ */ React.createElement(PromptModal, { draft: s.promptDraft, setDraft: (value) => this.setState({ promptDraft: value }), onClose: () => this.setState({ showPrompt: false }), onSave: this.savePrompt }));
   }
 }
 ReactDOM.render(/* @__PURE__ */ React.createElement(App, null), document.getElementById("root"));

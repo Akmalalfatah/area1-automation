@@ -1,5 +1,6 @@
 (function() {
   const R = window.React;
+  R.Fragment = R.Fragment || "div";
   const workStatusTone = (status) => /REJECT|CANCEL|TAKE.?OUT/.test(String(status).toUpperCase()) ? "red" : /CLOSED|COMPLETED/.test(String(status).toUpperCase()) ? "green" : /SUBMIT|APPROVAL/.test(String(status).toUpperCase()) ? "purple" : /PROGRESS/.test(String(status).toUpperCase()) ? "orange" : /ASSIGNED/.test(String(status).toUpperCase()) ? "navy" : "gray";
   window.PMWorkStatus = function({ status }) {
     return /* @__PURE__ */ R.createElement("span", { className: "pm-work-status is-" + workStatusTone(status) }, status);
@@ -7,48 +8,324 @@
   window.PMConditionBadge = function({ row }) {
     return /* @__PURE__ */ R.createElement("span", { className: "pm-condition-badge is-" + (row.condition_tone || "gray"), title: "Kondisi berdasarkan sumber dan jendela evaluasi tersedia" }, row.condition_label || "Belum dapat dievaluasi");
   };
-  window.PMAttentionCharts = function({ rows = [], loading }) {
-    const normalize = (row) => String(row.status || "").toUpperCase().replace(/[ _-]/g, "");
-    const unfinished = rows.filter((row) => !["CLOSED", "COMPLETED", "TAKEOUT", "CANCELED", "CANCELLED"].includes(normalize(row)));
+  const STATUS_COLORS = ["#173e68", "#c47b2b", "#7255b3", "#4c9899", "#c75358", "#8b99aa", "#4b8d68", "#6686bb", "#a85f8e"];
+  const numberFormat = new Intl.NumberFormat("id-ID");
+  const titleCase = (value2) => String(value2 || "Status belum tersedia").toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
+  const percentOf = (part, whole) => (part / Math.max(whole, 1) * 100).toFixed(1).replace(".", ",") + "%";
+  const splitLabel = (text, limit = 13) => {
+    const value2 = String(text), words = value2.split(" ");
+    if (value2.length <= limit || words.length < 2) return [value2];
+    let best = 1, gap = Infinity;
+    for (let index = 1; index < words.length; index++) {
+      const left = words.slice(0, index).join(" ").length, right = words.slice(index).join(" ").length;
+      if (Math.abs(left - right) < gap) {
+        gap = Math.abs(left - right);
+        best = index;
+      }
+    }
+    return [words.slice(0, best).join(" "), words.slice(best).join(" ")];
+  };
+  const niceScale = (peak) => {
+    const step = [5, 10, 20, 25, 50, 100, 200, 500, 1e3].find((item) => item * 4 >= peak) || Math.ceil(peak / 4);
+    return { step, max: step * 4 };
+  };
+  const RADAR = { cx: 260, cy: 200, radius: 120, labelRatio: 1.16 };
+  function buildModel(rows) {
     const groups = {};
-    unfinished.forEach((row) => {
+    rows.forEach((row) => {
       const label = row.status || "Status belum tersedia";
       groups[label] = (groups[label] || 0) + 1;
     });
-    const statuses = Object.entries(groups).sort((a, b) => b[1] - a[1]);
-    const palette = ["#c87519", "#173e68", "#7653b4", "#269b9b", "#d64b55", "#8997aa", "#aa79cc", "#618bc0"];
-    const now = /* @__PURE__ */ new Date(), today = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate()).padStart(2, "0")].join("-");
-    const nopGroups = {};
-    unfinished.forEach((row) => {
-      const rejected = normalize(row) === "REJECTED";
-      const late = !row.submitted_date && !/SUBMIT|APPROVAL/.test(normalize(row)) && row.schedule_date && row.schedule_date < today;
+    const statuses = Object.entries(groups).sort((a, b) => b[1] - a[1]), total = rows.length;
+    const source = rows.find((row) => row.schedule_date || row.submitted_date) || {}, periodKey = String(source.schedule_date || source.submitted_date || "").slice(0, 7);
+    const period = periodKey ? new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric", timeZone: "UTC" }).format(/* @__PURE__ */ new Date(periodKey + "-01T00:00:00Z")) : "Periode aktif";
+    const sumOf = (pattern) => statuses.filter(([label]) => pattern.test(label)).reduce((sum, [, value2]) => sum + value2, 0);
+    const completed = sumOf(/closed|completed/i), active = sumOf(/submitted|progress|assigned|new/i), waiting = sumOf(/waiting|approval/i), exception = sumOf(/take out|rejected/i);
+    const statusChips = [
+      ["Selesai", completed, percentOf(completed, total), "Closed dan Completed"],
+      ["Masih berjalan", active, percentOf(active, total), "Submitted, Progress, Assigned, New"],
+      ["Menunggu approval", waiting, percentOf(waiting, total), "Waiting Approval"],
+      ["Take Out dan Rejected", exception, percentOf(exception, total), "Perlu tindak lanjut"]
+    ];
+    const normalized = (row) => String(row.status || "").toUpperCase().replace(/[ _-]/g, "");
+    const now = /* @__PURE__ */ new Date(), today = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate()).padStart(2, "0")].join("-"), nop = {};
+    rows.forEach((row) => {
+      const state = normalized(row), rejected = state === "REJECTED", late = !row.submitted_date && !/SUBMIT|APPROVAL|CLOSED|COMPLETED/.test(state) && row.schedule_date && row.schedule_date < today;
       if (!rejected && !late) return;
-      const label = String(row.nop || "NOP belum tersedia").replace(/^NOP\s+/i, "").replace(/_/g, " ");
-      const item = nopGroups[label] || (nopGroups[label] = { label, late: 0, rejected: 0 });
-      if (rejected) item.rejected++;
-      else item.late++;
+      const name = String(row.nop || "NOP belum tersedia").replace(/^NOP\s+/i, "").replace(/_/g, " ");
+      const item = nop[name] || (nop[name] = { name, value: 0 });
+      item.value++;
     });
-    const priorities = Object.values(nopGroups).sort((a, b) => b.late + b.rejected - (a.late + a.rejected));
-    const top = priorities.slice(0, 6), totalProblems = priorities.reduce((n, row) => n + row.late + row.rejected, 0);
-    const axisMax = Math.max(5, Math.ceil(Math.max(0, ...top.map((row) => row.late + row.rejected)) / 5) * 5);
-    const monthLabel = (value2) => new Intl.DateTimeFormat("id-ID", { month: "long" }).format(/* @__PURE__ */ new Date(value2 + "-01T00:00:00"));
-    const monthlyMap = {};
-    unfinished.forEach((row) => {
-      const month = String(row.schedule_date || row.submitted_date || "").slice(0, 7);
-      if (!month) return;
-      const item = monthlyMap[month] || { month, total: 0, counts: {} };
-      const label = row.status || "Status belum tersedia";
-      item.total++;
-      item.counts[label] = (item.counts[label] || 0) + 1;
-      monthlyMap[month] = item;
+    const everyNop = Object.values(nop).sort((a, b) => b.value - a.value || a.name.localeCompare(b.name)), top = everyNop.slice(0, 8);
+    const totalIssues = everyNop.reduce((sum, item) => sum + item.value, 0), average = top.length ? top.reduce((sum, item) => sum + item.value, 0) / top.length : 0;
+    const scale = niceScale(Math.max(1, ...top.map((item) => item.value)));
+    const lowest = top.length ? top[top.length - 1] : null;
+    const nopChips = [
+      ["Total kendala", numberFormat.format(totalIssues), "", `pada ${everyNop.length} NOP`],
+      ["Tertinggi", top.length ? top[0].value : 0, "", top.length ? top[0].name : "-"],
+      ["Terendah", lowest ? lowest.value : 0, "", lowest ? `${lowest.name}, dari ${top.length} teratas` : "-"]
+    ];
+    return {
+      statuses,
+      total,
+      period,
+      periodKey,
+      statusChips,
+      top,
+      everyNop,
+      totalIssues,
+      average,
+      scale,
+      nopChips,
+      averageLabel: average.toFixed(1).replace(".", ","),
+      definition: "Kendala = PM berstatus Rejected, atau sudah lewat jadwal tetapi belum submit."
+    };
+  }
+  const radarPoint = (model, index, value2) => {
+    const angle = -Math.PI / 2 + index * Math.PI * 2 / Math.max(model.top.length, 3), radius = RADAR.radius * value2 / model.scale.max;
+    return [RADAR.cx + Math.cos(angle) * radius, RADAR.cy + Math.sin(angle) * radius, angle];
+  };
+  function radarLabel(model, index) {
+    const [lx, ly, angle] = radarPoint(model, index, model.scale.max * RADAR.labelRatio), lines = splitLabel(model.top[index].name), sine = Math.sin(angle), cosine = Math.cos(angle);
+    const anchor = cosine > 0.3 ? "start" : cosine < -0.3 ? "end" : "middle", height = lines.length * 13 + 18;
+    const top = sine < -0.5 ? ly - height : sine > 0.5 ? ly : ly - height / 2;
+    return { x: lx, anchor, lines, top, numberY: top + lines.length * 13 + 15, nameY: top + 10 };
+  }
+  async function loadImageFonts() {
+    try {
+      if (document.fonts && document.fonts.load) await Promise.all(["400", "500", "600"].map((weight) => document.fonts.load(`${weight} 16px Poppins`)));
+    } catch (error) {
+    }
+  }
+  const FONT = "Poppins, 'Segoe UI', Arial, sans-serif";
+  function put(context, text, x, y, { size = 14, weight = 500, color = "#243a55", align = "left", spacing = 0, halo = "" } = {}) {
+    context.font = `${weight} ${size}px ${FONT}`;
+    context.fillStyle = color;
+    context.textAlign = align;
+    context.textBaseline = "alphabetic";
+    if ("letterSpacing" in context) context.letterSpacing = spacing ? `${spacing}px` : "0px";
+    if (halo) {
+      context.lineWidth = 4;
+      context.lineJoin = "round";
+      context.strokeStyle = halo;
+      context.strokeText(text, x, y);
+    }
+    context.fillText(text, x, y);
+    if ("letterSpacing" in context) context.letterSpacing = "0px";
+  }
+  function wrapText(context, text, maxWidth) {
+    const words = String(text).split(" "), lines = [];
+    let line = "";
+    words.forEach((word) => {
+      const next = line ? line + " " + word : word;
+      if (context.measureText(next).width > maxWidth && line) {
+        lines.push(line);
+        line = word;
+      } else line = next;
     });
-    const monthly = Object.values(monthlyMap).sort((a, b) => a.month.localeCompare(b.month));
-    const statusBars = /* @__PURE__ */ R.createElement("div", { className: "pm-status-bar-layout" }, /* @__PURE__ */ R.createElement("div", { className: "pm-status-month-bars", role: "img", "aria-label": "Komposisi status pekerjaan per bulan" }, monthly.map((item) => /* @__PURE__ */ R.createElement("div", { className: "pm-status-month", key: item.month }, /* @__PURE__ */ R.createElement("div", { className: "pm-status-month-track" }, statuses.map(([label], i) => item.counts[label] ? /* @__PURE__ */ R.createElement("div", { key: label, className: "pm-status-month-segment", title: `${monthLabel(item.month)} - ${label}: ${item.counts[label]} pekerjaan`, style: { height: `${item.counts[label] / item.total * 100}%`, flex: `0 0 ${item.counts[label] / item.total * 100}%`, background: palette[i % palette.length] } }) : null)), /* @__PURE__ */ R.createElement("span", null, monthLabel(item.month))))), /* @__PURE__ */ R.createElement("ul", { className: "pm-chart-legend pm-status-detail" }, statuses.map(([label, count], i) => /* @__PURE__ */ R.createElement("li", { key: label }, /* @__PURE__ */ R.createElement("i", { style: { background: palette[i % palette.length] } }), /* @__PURE__ */ R.createElement("span", null, label.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())), /* @__PURE__ */ R.createElement("strong", null, count, /* @__PURE__ */ R.createElement("small", null, (count / unfinished.length * 100).toFixed(1), "%"))))));
-    const graph = /* @__PURE__ */ R.createElement("div", { className: "pm-priority-bars", role: "img", "aria-label": "Enam NOP dengan pekerjaan terlambat atau rejected terbanyak" }, top.map((row) => {
-      const total = row.late + row.rejected;
-      return /* @__PURE__ */ R.createElement("div", { className: "pm-priority-bar-row", key: row.label }, /* @__PURE__ */ R.createElement("div", { className: "pm-priority-bar-head" }, /* @__PURE__ */ R.createElement("span", null, row.label), /* @__PURE__ */ R.createElement("strong", null, total)), /* @__PURE__ */ R.createElement("div", { className: "pm-priority-bar-track" }, /* @__PURE__ */ R.createElement("div", { className: "pm-priority-bar-late", style: { width: `${row.late / axisMax * 100}%` } }), /* @__PURE__ */ R.createElement("div", { className: "pm-priority-bar-rejected", style: { width: `${row.rejected / axisMax * 100}%` } })));
-    }), /* @__PURE__ */ R.createElement("div", { className: "pm-priority-axis" }, /* @__PURE__ */ R.createElement("span", null, "0"), /* @__PURE__ */ R.createElement("span", null, axisMax)));
-    return /* @__PURE__ */ R.createElement("div", { className: "pm-attention-grid" }, /* @__PURE__ */ R.createElement("section", { className: "corporate-panel pm-attention-panel" }, /* @__PURE__ */ R.createElement("div", { className: "pm-attention-heading" }, /* @__PURE__ */ R.createElement("div", null, /* @__PURE__ */ R.createElement("p", null, "PEKERJAAN BELUM SELESAI"), /* @__PURE__ */ R.createElement("h3", null, "Komposisi status PM"))), loading ? /* @__PURE__ */ R.createElement("p", { className: "pm-attention-note" }, "Memuat grafik\u2026") : unfinished.length ? statusBars : /* @__PURE__ */ R.createElement("p", { className: "pm-chart-empty" }, "Tidak ada pekerjaan aktif yang belum selesai.")), /* @__PURE__ */ R.createElement("section", { className: "corporate-panel pm-attention-panel" }, /* @__PURE__ */ R.createElement("div", { className: "pm-attention-heading" }, /* @__PURE__ */ R.createElement("div", null, /* @__PURE__ */ R.createElement("p", null, "PRIORITAS EVALUASI"), /* @__PURE__ */ R.createElement("h3", null, "NOP dengan kendala terbanyak"))), /* @__PURE__ */ R.createElement("div", { className: "pm-chart-key" }, /* @__PURE__ */ R.createElement("span", null, /* @__PURE__ */ R.createElement("i", { style: { background: "#d64b55" } }), "Lewat jadwal \xB7 belum submit"), /* @__PURE__ */ R.createElement("span", null, /* @__PURE__ */ R.createElement("i", { style: { background: "#c87519" } }), "Rejected")), loading ? /* @__PURE__ */ R.createElement("p", { className: "pm-attention-note" }, "Memuat grafik\u2026") : top.length ? graph : /* @__PURE__ */ R.createElement("p", { className: "pm-chart-empty" }, "Tidak ada pekerjaan terlambat atau rejected pada filter ini.")));
+    if (line) lines.push(line);
+    return lines;
+  }
+  function drawChips(context, chips, x, y, width, height, gap = 12) {
+    const cell = (width - gap * (chips.length - 1)) / chips.length;
+    chips.forEach(([label, value2, percent, description], index) => {
+      const left = x + index * (cell + gap);
+      context.fillStyle = "#f1f5f9";
+      context.fillRect(left, y, cell, height);
+      put(context, label.toUpperCase(), left + 14, y + 22, { size: 10.5, weight: 600, color: "#6d7d90", spacing: 0.5 });
+      put(context, String(value2), left + 14, y + 55, { size: 28, weight: 600, color: "#173e68" });
+      if (percent) put(context, percent, left + cell - 14, y + 55, { size: 14, weight: 600, color: "#3979a5", align: "right" });
+      context.font = `500 11px ${FONT}`;
+      wrapText(context, description, cell - 28).slice(0, 2).forEach((line, lineIndex) => put(context, line, left + 14, y + 74 + lineIndex * 15, { size: 11, weight: 500, color: "#6f8094" }));
+    });
+  }
+  window.PMStatusPriorityImage = async function(rows, opts = {}) {
+    if (!opts.skipFonts) await loadImageFonts();
+    const model = buildModel(rows || []), scaleFactor = 2, width = 1600, margin = 40, gap = 24, panelWidth = (width - margin * 2 - gap) / 2, panelTop = 124, panelHeight = 704, height = panelTop + panelHeight + 64;
+    const canvas = opts.createCanvas ? opts.createCanvas(width * scaleFactor, height * scaleFactor) : document.createElement("canvas");
+    canvas.width = width * scaleFactor;
+    canvas.height = height * scaleFactor;
+    const context = canvas.getContext("2d");
+    context.scale(scaleFactor, scaleFactor);
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
+    context.fillStyle = "#173e68";
+    context.fillRect(0, 0, width, 14);
+    put(context, "RINGKASAN OPERASIONAL", margin, 58, { size: 12, weight: 600, color: "#77899e", spacing: 1.6 });
+    put(context, "STATUS & PRIORITAS PM", margin, 92, { size: 27, weight: 600, color: "#263f5f", spacing: 0.8 });
+    put(context, model.period, width - margin, 92, { size: 16, weight: 500, color: "#64748b", align: "right" });
+    const panel2 = (x, title) => {
+      context.fillStyle = "#fbfcfe";
+      context.fillRect(x, panelTop, panelWidth, panelHeight);
+      context.strokeStyle = "#d8e1eb";
+      context.lineWidth = 1;
+      context.strokeRect(x + 0.5, panelTop + 0.5, panelWidth - 1, panelHeight - 1);
+      put(context, title, x + 28, panelTop + 46, { size: 16, weight: 600, color: "#53657a", spacing: 1.3 });
+      put(context, model.period, x + panelWidth - 28, panelTop + 46, { size: 13, weight: 500, color: "#64748b", align: "right" });
+    };
+    const leftX = margin;
+    panel2(leftX, "STATUS PM");
+    const donutX = leftX + 28 + 138, donutY = panelTop + 88 + 138, outer = 116, thick = 32, radius = outer - thick / 2;
+    if (model.total) {
+      let angle = -Math.PI / 2;
+      model.statuses.forEach(([, count], index) => {
+        const span = count / model.total * Math.PI * 2, gapAngle = Math.min(0.03, span * 0.3);
+        context.beginPath();
+        context.arc(donutX, donutY, radius, angle + gapAngle / 2, angle + span - gapAngle / 2);
+        context.strokeStyle = STATUS_COLORS[index % STATUS_COLORS.length];
+        context.lineWidth = thick;
+        context.lineCap = "butt";
+        context.stroke();
+        angle += span;
+      });
+    }
+    put(context, numberFormat.format(model.total), donutX, donutY + 8, { size: 42, weight: 600, color: "#173e68", align: "center" });
+    put(context, "Plan PM", donutX, donutY + 34, { size: 13, weight: 500, color: "#738398", align: "center" });
+    const tableX = leftX + 28 + 276 + 28, tableRight = leftX + panelWidth - 28, rowH = 31;
+    let rowY = panelTop + 98;
+    put(context, "STATUS", tableX, rowY, { size: 10.5, weight: 600, color: "#7b8a9c", spacing: 1 });
+    put(context, "JUMLAH", tableRight - 70, rowY, { size: 10.5, weight: 600, color: "#7b8a9c", align: "right", spacing: 1 });
+    put(context, "%", tableRight, rowY, { size: 10.5, weight: 600, color: "#7b8a9c", align: "right", spacing: 1 });
+    model.statuses.slice(0, 9).forEach(([label, count], index) => {
+      const y = rowY + 10 + index * rowH;
+      context.fillStyle = "#e0e7ef";
+      context.fillRect(tableX, y, tableRight - tableX, 1);
+      context.fillStyle = STATUS_COLORS[index % STATUS_COLORS.length];
+      context.fillRect(tableX, y + 11, 12, 12);
+      put(context, titleCase(label), tableX + 22, y + 21, { size: 13, weight: 500, color: "#607086" });
+      put(context, numberFormat.format(count), tableRight - 70, y + 21, { size: 13.5, weight: 600, color: "#173e68", align: "right" });
+      put(context, percentOf(count, model.total), tableRight, y + 21, { size: 13, weight: 500, color: "#8090a2", align: "right" });
+    });
+    const insightY = panelTop + 460;
+    context.fillStyle = "#dfe6ee";
+    context.fillRect(leftX + 28, insightY, panelWidth - 56, 1);
+    put(context, "RINGKASAN", leftX + 28, insightY + 28, { size: 10.5, weight: 600, color: "#7a8a9d", spacing: 1.4 });
+    drawChips(context, model.statusChips, leftX + 28, insightY + 42, panelWidth - 56, 96);
+    context.font = `500 12px ${FONT}`;
+    put(context, `Persentase dihitung dari ${numberFormat.format(model.total)} Plan PM pada ${model.period}.`, leftX + 28, insightY + 168, { size: 12, weight: 500, color: "#64748b" });
+    const rightX = margin + panelWidth + gap;
+    panel2(rightX, "TOP NOP KENDALA");
+    if (model.top.length) {
+      const scale = 1.12, cx = rightX + panelWidth / 2, cy = panelTop + 250, unit = scale;
+      const pt = (index, value2) => {
+        const [x, y] = radarPoint(model, index, value2);
+        return [cx + (x - RADAR.cx) * unit, cy + (y - RADAR.cy) * unit];
+      };
+      const polygon = (valueOf, fill, stroke, line, dash) => {
+        context.beginPath();
+        model.top.forEach((item, index) => {
+          const [x, y] = pt(index, valueOf(item));
+          index ? context.lineTo(x, y) : context.moveTo(x, y);
+        });
+        context.closePath();
+        if (fill) {
+          context.fillStyle = fill;
+          context.fill();
+        }
+        context.setLineDash(dash || []);
+        context.strokeStyle = stroke;
+        context.lineWidth = line;
+        context.lineJoin = "round";
+        context.stroke();
+        context.setLineDash([]);
+      };
+      [1, 2, 3, 4].forEach((step) => polygon(() => model.scale.step * step, null, "#d8e2ec", 1));
+      model.top.forEach((item, index) => {
+        const [x, y] = pt(index, model.scale.max);
+        context.beginPath();
+        context.moveTo(cx, cy);
+        context.lineTo(x, y);
+        context.strokeStyle = "#d8e2ec";
+        context.lineWidth = 1;
+        context.stroke();
+      });
+      [1, 2, 3, 4].forEach((step) => {
+        const [x, y] = pt(0.5, model.scale.step * step);
+        put(context, String(model.scale.step * step), x, y + 4, { size: 10.5, weight: 500, color: "#8a99ab", align: "center", halo: "#fbfcfe" });
+      });
+      polygon(() => model.average, null, "#8290a3", 1.6, [6, 5]);
+      polygon((item) => item.value, "rgba(57,121,165,.18)", "#3979a5", 3);
+      model.top.forEach((item, index) => {
+        const [x, y] = pt(index, item.value);
+        context.beginPath();
+        context.arc(x, y, 6, 0, Math.PI * 2);
+        context.fillStyle = "#ffffff";
+        context.fill();
+        context.strokeStyle = "#3979a5";
+        context.lineWidth = 3;
+        context.stroke();
+      });
+      const mapX = (x) => cx + (x - RADAR.cx) * unit, mapY = (y) => cy + (y - RADAR.cy) * unit;
+      model.top.forEach((item, index) => {
+        const label = radarLabel(model, index), align = label.anchor === "start" ? "left" : label.anchor === "end" ? "right" : "center";
+        label.lines.forEach((line, lineIndex) => put(context, line.toUpperCase(), mapX(label.x), mapY(label.nameY + lineIndex * 13), { size: 12.5, weight: 600, color: "#596b80", align, spacing: 0.4 }));
+        put(context, String(item.value), mapX(label.x), mapY(label.numberY), { size: 18, weight: 600, color: "#173e68", align });
+      });
+    } else put(context, "Tidak ada kendala pada periode ini.", rightX + panelWidth / 2, panelTop + 260, { size: 15, weight: 500, color: "#64748b", align: "center" });
+    const keyY = panelTop + 470;
+    context.fillStyle = "#3979a5";
+    context.fillRect(rightX + panelWidth / 2 - 170, keyY - 10, 12, 12);
+    put(context, "Jumlah kendala per NOP", rightX + panelWidth / 2 - 150, keyY, { size: 12, weight: 500, color: "#6f8094" });
+    context.setLineDash([5, 4]);
+    context.beginPath();
+    context.moveTo(rightX + panelWidth / 2 + 34, keyY - 4);
+    context.lineTo(rightX + panelWidth / 2 + 56, keyY - 4);
+    context.strokeStyle = "#8290a3";
+    context.lineWidth = 2;
+    context.stroke();
+    context.setLineDash([]);
+    put(context, `Rata-rata ${model.averageLabel}`, rightX + panelWidth / 2 + 64, keyY, { size: 12, weight: 500, color: "#6f8094" });
+    const noteY = panelTop + 500;
+    context.fillStyle = "#dfe6ee";
+    context.fillRect(rightX + 28, noteY + 14, panelWidth - 56, 1);
+    put(context, "RINGKASAN", rightX + 28, noteY + 42, { size: 10.5, weight: 600, color: "#7a8a9d", spacing: 1.4 });
+    drawChips(context, model.nopChips, rightX + 28, noteY + 56, panelWidth - 56, 96);
+    put(context, model.definition, rightX + 28, noteY + 182, { size: 12, weight: 500, color: "#64748b" });
+    const stamp = new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(/* @__PURE__ */ new Date());
+    put(context, `A1 Operations Command Center \xB7 dibuat ${stamp} WIB`, margin, height - 26, { size: 12, weight: 500, color: "#64748b" });
+    return canvas;
+  };
+  function saveBlob(canvas, filename) {
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob), link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }, "image/png");
+  }
+  window.PMAttentionCharts = function({ rows = [], loading }) {
+    const model = buildModel(rows), total = model.total, circumference = 2 * Math.PI * 80;
+    let offset = 0;
+    const download = async () => {
+      try {
+        saveBlob(await window.PMStatusPriorityImage(rows), `status-prioritas-pm-${model.periodKey || "periode-aktif"}.png`);
+      } catch (error) {
+        window.alert("Gambar belum dapat dibuat: " + error.message);
+      }
+    };
+    const donut = /* @__PURE__ */ R.createElement("div", { className: "pm-snippet-donut" }, /* @__PURE__ */ R.createElement("svg", { viewBox: "0 0 220 220", role: "img", "aria-label": `Status PM, ${total} plan` }, /* @__PURE__ */ R.createElement("g", { transform: "rotate(-90 110 110)" }, model.statuses.map(([label, count], index) => {
+      const length = count / Math.max(total, 1) * circumference, gap = 2.2, segment = /* @__PURE__ */ R.createElement("circle", { key: label, cx: "110", cy: "110", r: "80", fill: "none", stroke: STATUS_COLORS[index % STATUS_COLORS.length], strokeWidth: "25", strokeDasharray: `${Math.max(length - gap, 0.8)} ${circumference}`, strokeDashoffset: -offset }, /* @__PURE__ */ R.createElement("title", null, `${titleCase(label)}: ${numberFormat.format(count)} (${percentOf(count, total)})`));
+      offset += length;
+      return segment;
+    }))), /* @__PURE__ */ R.createElement("div", null, /* @__PURE__ */ R.createElement("strong", null, numberFormat.format(total)), /* @__PURE__ */ R.createElement("span", null, "Plan PM")));
+    const polygon = (value2) => model.top.map((item, index) => radarPoint(model, index, value2).slice(0, 2).map((number2) => number2.toFixed(1)).join(",")).join(" ");
+    const radar = /* @__PURE__ */ R.createElement("div", { className: "pm-snippet-radar" }, /* @__PURE__ */ R.createElement("svg", { viewBox: "0 0 520 400", role: "img", "aria-label": "Radar jumlah kendala per NOP" }, [1, 2, 3, 4].map((step) => /* @__PURE__ */ R.createElement("polygon", { key: step, className: "pm-snippet-radar-ring", points: polygon(model.scale.step * step) })), model.top.map((item, index) => {
+      const [x, y] = radarPoint(model, index, model.scale.max);
+      return /* @__PURE__ */ R.createElement("line", { key: item.name, className: "pm-snippet-radar-axis", x1: RADAR.cx, y1: RADAR.cy, x2: x, y2: y });
+    }), [1, 2, 3, 4].map((step) => {
+      const [x, y] = radarPoint(model, 0.5, model.scale.step * step);
+      return /* @__PURE__ */ R.createElement("text", { key: step, className: "pm-snippet-radar-scale", x, y: y + 3, textAnchor: "middle" }, model.scale.step * step);
+    }), /* @__PURE__ */ R.createElement("polygon", { className: "pm-snippet-radar-average", points: polygon(model.average) }), /* @__PURE__ */ R.createElement("polygon", { className: "pm-snippet-radar-area", points: model.top.map((item, index) => radarPoint(model, index, item.value).slice(0, 2).join(",")).join(" ") }), model.top.map((item, index) => {
+      const [x, y] = radarPoint(model, index, item.value), label = radarLabel(model, index);
+      return /* @__PURE__ */ R.createElement("g", { key: item.name }, /* @__PURE__ */ R.createElement("circle", { className: "pm-snippet-radar-point", cx: x, cy: y, r: "5" }, /* @__PURE__ */ R.createElement("title", null, `${item.name}: ${item.value} kendala`)), /* @__PURE__ */ R.createElement("text", { className: "pm-snippet-radar-name", x: label.x, y: label.nameY, textAnchor: label.anchor }, label.lines.map((line, lineIndex) => /* @__PURE__ */ R.createElement("tspan", { key: lineIndex, x: label.x, dy: lineIndex ? 13 : 0 }, line.toUpperCase()))), /* @__PURE__ */ R.createElement("text", { className: "pm-snippet-radar-number", x: label.x, y: label.numberY, textAnchor: label.anchor }, item.value));
+    })));
+    const chip = ([label, value2, percent, description]) => /* @__PURE__ */ R.createElement("div", { className: "pm-snippet-chip", key: label }, /* @__PURE__ */ R.createElement("span", null, label), /* @__PURE__ */ R.createElement("strong", null, value2, percent ? /* @__PURE__ */ R.createElement("em", null, percent) : null), /* @__PURE__ */ R.createElement("small", null, description));
+    const statusTable = /* @__PURE__ */ R.createElement("table", null, /* @__PURE__ */ R.createElement("thead", null, /* @__PURE__ */ R.createElement("tr", null, /* @__PURE__ */ R.createElement("th", null, "Status"), /* @__PURE__ */ R.createElement("th", null, "Jumlah"), /* @__PURE__ */ R.createElement("th", null, "%"))), /* @__PURE__ */ R.createElement("tbody", null, model.statuses.map(([label, count], index) => /* @__PURE__ */ R.createElement("tr", { key: label }, /* @__PURE__ */ R.createElement("td", null, /* @__PURE__ */ R.createElement("i", { style: { background: STATUS_COLORS[index % STATUS_COLORS.length] } }), titleCase(label)), /* @__PURE__ */ R.createElement("td", null, numberFormat.format(count)), /* @__PURE__ */ R.createElement("td", null, percentOf(count, total))))));
+    return /* @__PURE__ */ R.createElement("section", { className: "pm-snippet-visuals", "aria-busy": loading ? "true" : "false" }, /* @__PURE__ */ R.createElement("div", { className: "pm-snippet-head" }, /* @__PURE__ */ R.createElement("div", null, /* @__PURE__ */ R.createElement("p", null, "RINGKASAN OPERASIONAL"), /* @__PURE__ */ R.createElement("h3", null, "STATUS & PRIORITAS PM")), /* @__PURE__ */ R.createElement("button", { type: "button", className: "pm-export-button pm-export-image", onClick: download }, "\u2193 Download Image")), loading ? /* @__PURE__ */ R.createElement("p", { className: "pm-attention-note" }, "Memuat grafik\u2026") : /* @__PURE__ */ R.createElement("div", { className: "pm-snippet-row" }, /* @__PURE__ */ R.createElement("section", { className: "pm-snippet-panel" }, /* @__PURE__ */ R.createElement("header", null, /* @__PURE__ */ R.createElement("h4", null, "STATUS PM"), /* @__PURE__ */ R.createElement("span", null, model.period)), total ? /* @__PURE__ */ R.createElement("div", { className: "pm-snippet-status" }, donut, statusTable) : /* @__PURE__ */ R.createElement("p", { className: "pm-chart-empty" }, "Tidak ada data status PM pada filter ini."), /* @__PURE__ */ R.createElement("div", { className: "pm-snippet-insight" }, /* @__PURE__ */ R.createElement("p", null, "RINGKASAN"), /* @__PURE__ */ R.createElement("div", null, model.statusChips.map(chip)), /* @__PURE__ */ R.createElement("small", { className: "pm-snippet-note" }, `Persentase dihitung dari ${numberFormat.format(total)} Plan PM pada ${model.period}.`))), /* @__PURE__ */ R.createElement("section", { className: "pm-snippet-panel" }, /* @__PURE__ */ R.createElement("header", null, /* @__PURE__ */ R.createElement("h4", null, "TOP NOP KENDALA"), /* @__PURE__ */ R.createElement("span", null, model.period)), model.top.length ? radar : /* @__PURE__ */ R.createElement("p", { className: "pm-chart-empty" }, "Tidak ada kendala pada periode ini."), /* @__PURE__ */ R.createElement("div", { className: "pm-snippet-radar-key" }, /* @__PURE__ */ R.createElement("i", null), " Jumlah kendala per NOP ", /* @__PURE__ */ R.createElement("b", null), " Rata-rata ", model.averageLabel), /* @__PURE__ */ R.createElement("div", { className: "pm-snippet-insight" }, /* @__PURE__ */ R.createElement("p", null, "RINGKASAN"), /* @__PURE__ */ R.createElement("div", { className: "is-three" }, model.nopChips.map(chip)), /* @__PURE__ */ R.createElement("small", { className: "pm-snippet-note" }, model.definition)))));
   };
   const unavailable = "Data belum tersedia";
   const value = (v) => v === null || v === void 0 || v === "" || v === "-" ? unavailable : String(v);
@@ -166,16 +443,16 @@
     }
     render() {
       var _a;
-      const { detail, back, onWindow, SummaryCard } = this.props, { tab } = this.state, { pm, master } = detail, m = master || {}, labels = ["Analisis", "Informasi PM & Genset", "Riwayat Gangguan"];
+      const { detail, back, onSaved, onWindow, SummaryCard } = this.props, { tab } = this.state, { pm, master } = detail, m = master || {}, labels = ["Analisis", "Informasi PM & Genset", "Riwayat Gangguan", "Hasil Evaluasi"];
       const keyDown = (e, i) => {
-        const next = e.key === "ArrowRight" ? (i + 1) % 3 : e.key === "ArrowLeft" ? (i + 2) % 3 : e.key === "Home" ? 0 : e.key === "End" ? 2 : null;
+        const next = e.key === "ArrowRight" ? (i + 1) % 4 : e.key === "ArrowLeft" ? (i + 3) % 4 : e.key === "Home" ? 0 : e.key === "End" ? 3 : null;
         if (next !== null) {
           e.preventDefault();
           this.setState({ tab: next });
           document.getElementById("genset-tab-" + next).focus();
         }
       };
-      return /* @__PURE__ */ R.createElement("div", { className: "genset-detail space-y-4" }, /* @__PURE__ */ R.createElement("header", { className: "genset-header" }, /* @__PURE__ */ R.createElement("div", { className: "genset-identity" }, /* @__PURE__ */ R.createElement("button", { className: "pm-site-back", onClick: back }, "\u2190 Kembali ke PM Genset"), /* @__PURE__ */ R.createElement("p", { className: "pm-site-eyebrow" }, pm.site_id), /* @__PURE__ */ R.createElement("h2", null, value(m.site_name || pm.site_name)), /* @__PURE__ */ R.createElement("p", { className: "genset-note" }, value(pm.ticket_no)), /* @__PURE__ */ R.createElement("div", { className: "genset-header-tags" }, tag("PM Genset", "navy"), tag(m.genset_capacity > 0 ? `${number(m.genset_capacity)} kVA` : unavailable, "gray"), tag(pm.status), tag(/backup/i.test(pm.type_power) ? "Backup Power" : /main/i.test(pm.type_power) ? "Main Power" : value(pm.type_power), "navy")), /* @__PURE__ */ R.createElement("p", { className: "genset-region" }, value(m.nop || pm.nop), " \xB7 ", value(m.regional || pm.regional).replace(/_/g, " "))), /* @__PURE__ */ R.createElement(Map, { master })), /* @__PURE__ */ R.createElement("div", { className: "genset-window" }, detail.anchor ? [/* @__PURE__ */ R.createElement("span", { key: "anchor" }, "Acuan: ", timestamp(detail.anchor), " \xB7 ", detail.anchor_label), /* @__PURE__ */ R.createElement("label", { key: "window" }, "Jendela perbandingan ", /* @__PURE__ */ R.createElement("select", { className: "control", "aria-label": "Jendela perbandingan genset", value: detail.rules.windowDays, onChange: (e) => onWindow(Number(e.target.value)) }, [.../* @__PURE__ */ new Set([detail.rules.windowDays, 7, 14, 30])].sort((a, b) => a - b).map((v) => /* @__PURE__ */ R.createElement("option", { key: v, value: v }, v, " hari"))))] : /* @__PURE__ */ R.createElement("span", null, "Fokus evaluasi: kesiapan pekerjaan dan aset kelistrikan genset")), /* @__PURE__ */ R.createElement("div", { className: "pm-site-tabs", role: "tablist", "aria-label": "Detail PM Genset" }, labels.map((label, i) => /* @__PURE__ */ R.createElement("button", { id: "genset-tab-" + i, key: label, role: "tab", "aria-selected": tab === i, "aria-controls": "genset-panel-" + i, tabIndex: tab === i ? 0 : -1, onClick: () => this.setState({ tab: i }), onKeyDown: (e) => keyDown(e, i) }, label))), /* @__PURE__ */ R.createElement("div", { role: "tabpanel", id: "genset-panel-" + tab, "aria-labelledby": "genset-tab-" + tab }, tab === 0 ? /* @__PURE__ */ R.createElement(Analysis, { detail, SummaryCard }) : tab === 1 ? /* @__PURE__ */ R.createElement(Information, { detail }) : /* @__PURE__ */ R.createElement(History, { detail })));
+      return /* @__PURE__ */ R.createElement("div", { className: "genset-detail space-y-4" }, /* @__PURE__ */ R.createElement("header", { className: "genset-header" }, /* @__PURE__ */ R.createElement("div", { className: "genset-identity" }, /* @__PURE__ */ R.createElement("button", { className: "pm-site-back", onClick: back }, "\u2190 Kembali ke PM Genset"), /* @__PURE__ */ R.createElement("p", { className: "pm-site-eyebrow" }, pm.site_id), /* @__PURE__ */ R.createElement("h2", null, value(m.site_name || pm.site_name)), /* @__PURE__ */ R.createElement("p", { className: "genset-note" }, value(pm.ticket_no)), /* @__PURE__ */ R.createElement("div", { className: "genset-header-tags" }, tag("PM Genset", "navy"), tag(m.genset_capacity > 0 ? `${number(m.genset_capacity)} kVA` : unavailable, "gray"), tag(pm.status), tag(((_a = detail.evaluation) == null ? void 0 : _a.evaluation_status) || "Belum dievaluasi"), tag(/backup/i.test(pm.type_power) ? "Backup Power" : /main/i.test(pm.type_power) ? "Main Power" : value(pm.type_power), "navy")), /* @__PURE__ */ R.createElement("p", { className: "genset-region" }, value(m.nop || pm.nop), " \xB7 ", value(m.regional || pm.regional).replace(/_/g, " "))), /* @__PURE__ */ R.createElement(Map, { master })), /* @__PURE__ */ R.createElement("div", { className: "genset-window" }, detail.anchor ? [/* @__PURE__ */ R.createElement("span", { key: "anchor" }, "Acuan: ", timestamp(detail.anchor), " \xB7 ", detail.anchor_label), /* @__PURE__ */ R.createElement("label", { key: "window" }, "Jendela perbandingan ", /* @__PURE__ */ R.createElement("select", { className: "control", "aria-label": "Jendela perbandingan genset", value: detail.rules.windowDays, onChange: (e) => onWindow(Number(e.target.value)) }, [.../* @__PURE__ */ new Set([detail.rules.windowDays, 7, 14, 30])].sort((a, b) => a - b).map((v) => /* @__PURE__ */ R.createElement("option", { key: v, value: v }, v, " hari"))))] : /* @__PURE__ */ R.createElement("span", null, "Fokus evaluasi: kesiapan pekerjaan dan aset kelistrikan genset")), /* @__PURE__ */ R.createElement("div", { className: "pm-site-tabs", role: "tablist", "aria-label": "Detail PM Genset" }, labels.map((label, i) => /* @__PURE__ */ R.createElement("button", { id: "genset-tab-" + i, key: label, role: "tab", "aria-selected": tab === i, "aria-controls": "genset-panel-" + i, tabIndex: tab === i ? 0 : -1, onClick: () => this.setState({ tab: i }), onKeyDown: (e) => keyDown(e, i) }, label))), /* @__PURE__ */ R.createElement("div", { role: "tabpanel", id: "genset-panel-" + tab, "aria-labelledby": "genset-tab-" + tab }, tab === 0 ? /* @__PURE__ */ R.createElement(Analysis, { detail, SummaryCard }) : tab === 1 ? /* @__PURE__ */ R.createElement(Information, { detail }) : tab === 2 ? /* @__PURE__ */ R.createElement(History, { detail }) : /* @__PURE__ */ R.createElement(Evaluation, { detail, onSaved })));
     }
   }
   class Workspace extends R.Component {
@@ -193,8 +470,6 @@
       const id = `genset|${String(row.ticket_no || "").trim() || `${String(row.site_id).trim().toUpperCase()}|${row.schedule_date}|${row.scope_item_name || ""}`}`;
       try {
         const params = new URLSearchParams({ id });
-        if (this.props.filters?.dateFrom) params.set("date_from", this.props.filters.dateFrom);
-        if (this.props.filters?.dateTo) params.set("date_to", this.props.filters.dateTo);
         if (windowDays !== null) params.set("window_days", windowDays);
         const detail = await request("/api/pm-genset/detail?" + params);
         if (token === this.sequence) this.setState({ detail, windowDays: detail.rules.windowDays }, () => window.scrollTo({ top: 0, behavior: "auto" }));
@@ -212,5 +487,10 @@
       }, onWindow: (days) => this.open(s.selected, days), onSaved: (evaluation) => this.setState((current) => ({ detail: { ...current.detail, evaluation } })) }) : /* @__PURE__ */ R.createElement(RoutinePage, { ...props, onOpenGenset: (row) => this.open(row) }));
     }
   }
+  const PMAttentionChartsBase = window.PMAttentionCharts;
+  window.PMAttentionCharts = function(props) {
+    const chart = /* @__PURE__ */ R.createElement(PMAttentionChartsBase, { ...props });
+    return (props == null ? void 0 : props.kind) === "site" && window.PMPunchlistCoverage ? /* @__PURE__ */ R.createElement(R.Fragment, null, chart, /* @__PURE__ */ R.createElement(window.PMPunchlistCoverage, { rows: props.rows })) : chart;
+  };
   window.PMGensetWorkspace = Workspace;
 })();

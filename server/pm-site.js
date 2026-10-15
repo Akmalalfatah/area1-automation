@@ -3,7 +3,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import {PROJECT_ROOT} from './config.js'
-import {databaseEnabled,getPool,loadPreventiveRows,recordApplicationUpload} from './db.js'
+import {databaseEnabled,getPool,loadPreventiveRows,loadHistoricalPmSiteNotes,recordApplicationUpload} from './db.js'
 import {workOrderKey,isTerminal} from './preventive.js'
 
 export const normalizeSite=value=>String(value??'').trim().toUpperCase()
@@ -114,14 +114,15 @@ export async function siteData({includeKpiB13=false,includePm=true}={}){
   }
   const sourceWhere=includeKpiB13?'':' WHERE source_kind NOT IN (?,?,?,?)'
   const sourceParams=includeKpiB13?[]:kpiB13SourceKinds
-  const [sourceResult,evaluationResult,punchlistResult,pm]=await Promise.all([
+  const [sourceResult,evaluationResult,punchlistResult,historicalNotes,pm]=await Promise.all([
     getPool().query(`SELECT source_kind,filename,upload_date,dataset FROM pm_site_sources${sourceWhere}`,sourceParams),
     getPool().query('SELECT * FROM pm_site_evaluations'),
     getPool().query('SELECT site_id,note,updated_at FROM site_punchlist_notes'),
+    loadHistoricalPmSiteNotes(),
     includePm?loadPreventiveRows():Promise.resolve([])
   ])
   const sources=sourceResult[0],evaluations=evaluationResult[0],punchlistNotes=punchlistResult[0]
-  const data={pm,evaluations,punchlist_notes:punchlistNotes,sources:sources.map(({dataset,...meta})=>meta),quality:[],read_only:false}
+  const data={pm,evaluations,punchlist_notes:[...punchlistNotes,...historicalNotes],sources:sources.map(({dataset,...meta})=>meta),quality:[],read_only:false}
   for(const source of sources){const dataset=safeDataset(source.dataset);data[source.source_kind]=dataset.rows||[];data.quality.push(...(dataset.issues||[]).map(issue=>({...issue,source:source.source_kind})))}
   const [records]=await getPool().query(`SELECT source_kind,payload FROM pm_site_source_rows${sourceWhere} ORDER BY source_kind,row_no`,sourceParams)
   for(const record of records){const payload=typeof record.payload==='string'?JSON.parse(record.payload):record.payload;data[record.source_kind].push(payload)}
@@ -130,13 +131,14 @@ export async function siteData({includeKpiB13=false,includePm=true}={}){
 
 const uploadMonth=value=>String(value||'').slice(0,7)
 const sourceRowsForUploads=async (uploads,{period='',includeKpiB13=true}={})=>{
-  const [punchlistNotes,evaluations]=await Promise.all([
+  const [punchlistNotes,evaluations,historicalNotes]=await Promise.all([
     getPool().query('SELECT site_id,note,updated_at FROM site_punchlist_notes').then(([rows])=>rows),
-    getPool().query('SELECT * FROM pm_site_evaluations').then(([rows])=>rows)
+    getPool().query('SELECT * FROM pm_site_evaluations').then(([rows])=>rows),
+    loadHistoricalPmSiteNotes()
   ])
   // Peningkatan KPI tidak membutuhkan data PM. Hindari membaca snapshot PM
   // yang besar saat hanya kalkulasi B1-B3/SWFM dijalankan.
-  const data={pm:[],evaluations,punchlist_notes:punchlistNotes,sources:uploads.map(({dataset,...meta})=>meta),quality:[],read_only:false}
+  const data={pm:[],evaluations,punchlist_notes:[...punchlistNotes,...historicalNotes],sources:uploads.map(({dataset,...meta})=>meta),quality:[],read_only:false}
   if(uploads.length){
     const ids=uploads.map(upload=>upload.source_upload_id)
     const [records]=await getPool().query('SELECT source_upload_id,payload FROM pm_site_source_upload_rows WHERE source_upload_id IN (?) ORDER BY source_upload_id,row_no',[ids])
@@ -302,23 +304,76 @@ export function listSites(data,filters={}){
   return{rows,options:{nop:option('nop'),regional:option('regional'),status:option('status'),pic:option('pic'),interval:option('interval'),evaluation:option('evaluation')},read_only:!!data.read_only,sources:data.sources||[]}
 }
 
+const PUNCHLIST_RULES=[
+  ['BATTERY','Idle/Tidak Terpakai',/\b(idle|tidak terpakai|dismantle)\b.*\b(batt|batrai|baterai|cdc|vrla|lithium)\b|\b(batt|batrai|baterai|cdc|vrla|lithium)\b.*\b(idle|tidak terpakai|dismantle)\b/i],
+  ['BATTERY','Kabel/MCB/Koneksi Battery Bermasalah',/\b(kabel|mcb|koneksi|terminal)\b.*\b(batt|batrai|baterai|cdc|vrla)\b|\b(batt|batrai|baterai|cdc|vrla)\b.*\b(kabel|mcb|koneksi|terminal)\b/i],
+  ['BATTERY','Rusak/Degraded/Tidak Backup',/\b(batt|batrai|baterai|cdc|vrla|lithium)\b.*\b(rusak|drop|soak|degrad|nok|tidak backup|off)\b|\b(rusak|drop|soak|degrad|nok|tidak backup)\b.*\b(batt|batrai|baterai|cdc|vrla|lithium)\b/i],
+  ['BATTERY','Tidak Ada/Hilang/Perlu Pengadaan',/\b(batt|batrai|baterai|cdc|vrla|lithium)\b.*\b(tidak ada|hilang|pengadaan|kurang)\b|\b(tidak ada|hilang|pengadaan)\b.*\b(batt|batrai|baterai|cdc|vrla|lithium)\b/i],
+  ['GROUNDING','Grounding Rusak/Perlu Perbaikan',/\b(grounding|gronding|bar ground|bc50|busbar|splitjen)\b.*\b(rusak|putus|perbaikan|perlu)\b/i],
+  ['GROUNDING','Grounding Tidak Ada/Tidak Lengkap',/\b(grounding|gronding|bar ground|bc50|busbar|splitjen)\b.*\b(tidak ada|kurang|tidak lengkap|hilang)\b/i],
+  ['ARRESTER','Arrester ACPDB',/\b(arrester|arester)\b.*\bacpdb\b|\bacpdb\b.*\b(arrester|arester)\b/i],
+  ['ARRESTER','Arrester ATS Genset',/\b(arrester|arester)\b.*\bats\b|\bats\b.*\b(arrester|arester)\b/i],
+  ['ARRESTER','Arrester Rectifier',/\b(arrester|arester)\b.*\brect/i],
+  ['ARRESTER','Arrester kWh/PLN',/\b(arrester|arester)\b.*\b(kwh|pln)\b|\b(kwh|pln)\b.*\b(arrester|arester)\b/i],
+  ['RECTIFIER','Controller (NCU/SC/CU) Rusak/Tidak Ada',/\b(ncu|sc200|sc300|controller|cu|mcu|lvd)\b.*\b(rusak|faulty|blank|tidak ada|nok)\b/i],
+  ['RECTIFIER','Modul Rectifier Rusak/Kurang',/\b(modul|module)\b.*\brect|\brect\w*\b.*\b(rusak|faulty|kurang|nok)\b/i],
+  ['RECTIFIER','Fan Rectifier Rusak/Tidak Ada',/\bfan\b.*\brect|\brect\w*\b.*\bfan\b/i],
+  ['BELTING & PENGAMANAN','Battery Belum Belting/Tanpa Pengaman',/\b(batt|batrai|battery)\b.*\b(belting|balting|pengaman|kerangkeng)\b/i],
+  ['BELTING & PENGAMANAN','RBS/BTS Belum Belting/Tanpa Pengaman',/\b(rbs|bts|rack)\b.*\b(belting|balting|pengaman|kerangkeng)\b/i],
+  ['BELTING & PENGAMANAN','Rectifier Belum Belting/Tanpa Pengaman',/\brect\w*\b.*\b(belting|balting|pengaman|kerangkeng)\b/i],
+  ['LAMPU & PENERANGAN','Lampu Tower/OBL',/\b(lampu|obl)\b.*\b(tower|mati|tidak ada|rusak)\b/i],
+  ['LAMPU & PENERANGAN','Lampu Shelter',/\b(lampu)\b.*\bshelter\b/i],
+  ['LAMPU & PENERANGAN','Lampu Halaman/Taman',/\b(lampu)\b.*\b(halaman|taman|mercury)\b/i],
+  ['AC & VENTILASI','AC Rusak/Tidak Ada',/\b(ac|air conditioner)\b.*\b(rusak|mati|tidak ada|nok|perbaikan)\b/i],
+  ['AC & VENTILASI','Exhaust Fan/Blower Rusak/Tidak Ada',/\b(exhaust|blower)\b.*\b(rusak|mati|tidak ada|nok)\b/i],
+  ['AC & VENTILASI','Shelter Panas',/\bshelter\b.*\bpanas\b|\bpanas\b.*\bshelter\b/i],
+  ['PAGAR & KAWAT DURI','Pagar/Pintu Pagar Rusak',/\b(pagar|pintu pagar|tembok pagar)\b.*\b(rusak|tumbang|perbaikan|roboh)\b/i],
+  ['PAGAR & KAWAT DURI','Kawat Duri Rusak/Perlu Peremajaan',/\bkawat duri\b.*\b(rusak|peremajaan|putus|tidak ada)\b/i],
+  ['KEBERSIHAN & LINGKUNGAN','Halaman Semak/Kotor',/\b(semak|kotor|rumput)\b/i],
+  ['KEBERSIHAN & LINGKUNGAN','Dahan/Pohon Masuk Site',/\b(dahan|pohon)\b.*\b(site|masuk)\b/i],
+  ['KEBERSIHAN & LINGKUNGAN','Banjir/Genangan',/\b(banjir|genangan)\b/i],
+  ['GENSET & ATS','Genset Rusak/Tidak Auto',/\bgenset\b.*\b(rusak|tidak auto|off|tidak running|mati)\b/i],
+  ['GENSET & ATS','ATS Bermasalah',/\bats\b.*\b(rusak|bermasalah|peremajaan|nok)\b/i],
+  ['PLN & kWh','PLN Off/Tegangan Tidak Stabil',/\bpln\b.*\b(off|tegangan|phasa|tidak stabil)\b/i],
+  ['PLN & kWh','kWh Meter/Box Panel/Segel Bermasalah',/\b(kwh|meter|box panel|segel)\b.*\b(rusak|tidak ada|bermasalah|nok)\b/i],
+  ['EAS & ALARM','EAS/Alarm Tidak Valid/Relay Rusak',/\b(eas|alarm|relay|mains fail|iob|emua|uim)\b.*\b(rusak|tidak valid|tidak terbaca|nok)\b/i],
+  ['RBS & PERANGKAT RADIO','Antena/MW/RRU Tidak Ada/Rusak',/\b(antena|mw|rru)\b.*\b(rusak|tidak ada|hilang|nok)\b/i],
+  ['RBS & PERANGKAT RADIO','Fan/Filter RBS Rusak',/\b(fan|filter)\b.*\brbs\b.*\b(rusak|nok|tidak ada)\b/i],
+  ['SIPIL & SHELTER','Atap/Asbes Shelter Rusak',/\b(atap|asbes)\b.*\b(shelter|rusak|kropos)\b/i],
+  ['SIPIL & SHELTER','Pondasi/Struktur Rusak/Hilang',/\b(pondasi|struktur|besi siku|brace)\b.*\b(rusak|hilang|perbaikan)\b/i],
+  ['AKSES & KUNCI','Kunci/Gembok Tidak Ada/Tidak Cocok',/\b(kunci|gembok)\b.*\b(tidak ada|hilang|tidak cocok|rusak)\b/i],
+  ['AKSES & KUNCI','Akses Jalan/Masuk Site Bermasalah',/\b(akses jalan|jalan masuk|akses site)\b.*\b(bermasalah|rusak|sulit|tidak bisa)\b/i],
+  ['ASET IDLE','Perangkat/Rack Idle (Perlu Dismantle)',/\b(rack|perangkat|rbs|rectifier|ac)\b.*\b(idle|dismantle|tidak terpakai)\b/i],
+  ['DATA ASET','Data Aset Tidak Sesuai/Kosong',/\b(data aset|data)\b.*\b(kosong|tidak sesuai|sinkron|diluruskan)\b/i],
+  ['PENCURIAN & VANDALISME','Pencurian/Vandalisme',/\b(stolen|kecurian|maling|vandalisme)\b/i],
+  ['SITE DOWN & TRANSMISI','Site Down/Transmisi Loss',/\b(site|bts|transmisi|metro|gpon)\b.*\b(down|loss|off)\b/i],
+  ['KENDALA PEKERJAAN','Cuaca/Hujan',/\b(cuaca|hujan)\b/i],
+  ['KENDALA PEKERJAAN','Tower/Pole Tidak Bisa Dipanjat/K3',/\b(tower|pole)\b.*\b(tidak bisa dipanjat|k3)\b/i]
+]
+export function classifyPunchlistNote(value){
+  const note=String(value||'').trim()
+  if(!note)return{status:'Notes Kosong',findings:[]}
+  if(/^(tidak ada temuan|nihil|no finding)[.!\s]*$/i.test(note))return{status:'Tidak Ada Temuan',findings:[]}
+  const findings=PUNCHLIST_RULES.filter(([, ,pattern])=>pattern.test(note)).map(([category,subcategory])=>({category,subcategory,quote:note,count:1}))
+  if(!findings.length)findings.push({category:'LAINNYA',subcategory:'Lainnya',quote:note,count:1})
+  return{status:'Ada Temuan',findings}
+}
 export async function listPunchlistSites(data,filters={}){
-  if(!databaseEnabled)throw Object.assign(new Error('Penyimpanan Punchlist membutuhkan MySQL. Konfigurasikan database pada server/.env.'),{status:503})
-  const sites=new Map(),masters=new Map((data.master||[]).map(row=>[normalizeSite(row.site_id),row])),pmSiteRows=(data.pm||[]).filter(row=>row.maintenance_kind==='site'),months=[...new Set(pmSiteRows.map(row=>String(row.schedule_date||'').slice(0,7)).filter(value=>/^\d{4}-\d{2}$/.test(value)))].sort().reverse()
-  for(const row of pmSiteRows){
-    if(filters.month&&String(row.schedule_date||'').slice(0,7)!==filters.month)continue
-    const siteId=normalizeSite(row.site_id),master=masters.get(siteId)
-    if(siteId)sites.set(siteId,{site_id:siteId,site_name:master?.site_name||row.site_name||'',nop:master?.nop||row.nop||'',regional:master?.regional||row.regional||''})
-  }
-  const [notes]=await getPool().query('SELECT site_id,note,updated_at FROM site_punchlist_notes ORDER BY updated_at DESC')
-  const bySite=new Map(notes.map(note=>[normalizeSite(note.site_id),note]))
-  const query=String(filters.search||'').trim().toLowerCase()
-  const rows=[...sites.values()].filter(site=>{
-    if(filters.regional&&site.regional!==filters.regional)return false
-    if(filters.nop&&site.nop!==filters.nop)return false
-    return !query||[site.site_id,site.site_name,site.nop,site.regional].join(' ').toLowerCase().includes(query)
-  }).map(site=>({...site,note:bySite.get(site.site_id)?.note||'',updated_at:bySite.get(site.site_id)?.updated_at||null})).sort((a,b)=>a.nop.localeCompare(b.nop)||a.site_id.localeCompare(b.site_id))
-  return{rows,options:{month:months,regional:[...new Set(rows.map(row=>row.regional).filter(Boolean))].sort(),nop:[...new Set(rows.map(row=>row.nop).filter(Boolean))].sort()}}
+  const pmSiteRows=(data.pm||[]).filter(row=>row.maintenance_kind==='site'),months=[...new Set(pmSiteRows.map(row=>String(row.schedule_date||'').slice(0,7)).filter(value=>/^\d{4}-\d{2}$/.test(value)))].sort().reverse()
+  const month=/^\d{4}-\d{2}$/.test(String(filters.month||''))?filters.month:''
+  const end=month?new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5,7)),0)).getUTCDate():null
+  const {search,category,...sourceFilters}=filters
+  const base=listSites(data,{...sourceFilters,date_from:month?`${month}-01`:filters.date_from,date_to:month?`${month}-${String(end).padStart(2,'0')}`:filters.date_to})
+  const query=String(search||'').trim().toLowerCase()
+  const rows=base.rows.map(row=>{const note=String(row.punchlist_note||row.notes||'').trim(),classified=classifyPunchlistNote(note);return{...row,note,status_note:classified.status,findings:classified.findings}}).filter(row=>{
+    if(query&&![row.site_id,row.site_name,row.nop,row.regional,row.note].join(' ').toLowerCase().includes(query))return false
+    return !category||row.findings.some(finding=>finding.category===category)
+  })
+  const regions=[...new Set(rows.map(row=>row.regional).filter(Boolean))].sort()
+  const status_by_regional=['Ada Temuan','Tidak Ada Temuan','Notes Kosong'].map(status=>({status,...Object.fromEntries(regions.map(region=>[region,rows.filter(row=>row.regional===region&&row.status_note===status).length])),total:rows.filter(row=>row.status_note===status).length}))
+  const allFindings=rows.flatMap(row=>row.findings.map(finding=>({...finding,regional:row.regional,site_id:row.site_id,ticket_no:row.ticket_no})))
+  const countBy=(field,extra=[])=>[...new Set(allFindings.map(item=>item[field]))].sort().map(value=>{const items=allFindings.filter(item=>item[field]===value),byRegion=Object.fromEntries(regions.map(region=>[region,items.filter(item=>item.regional===region).length]));return{[field]:value,...Object.fromEntries(extra.map(key=>[key,items[0]?.[key]||''])),...byRegion,total:items.length,affected_sites:new Set(items.map(item=>item.ticket_no||item.site_id)).size}})
+  return{rows,options:{month:months,regional:[...new Set(base.rows.map(row=>row.regional).filter(Boolean))].sort(),nop:[...new Set(base.rows.map(row=>row.nop).filter(Boolean))].sort()},summary:{month,regions,total_tickets:rows.length,total_findings:allFindings.length,status_by_regional,category_counts:countBy('category'),subcategory_counts:countBy('subcategory',['category'])}}
 }
 
 async function syncPunchlistToPmSite(siteId,note){
