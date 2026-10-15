@@ -1530,7 +1530,7 @@ class PunchlistWorkspace extends React.Component {
   constructor(props) {
     super(props);
     const scope = window.PMPunchlistScope || {};
-    this.state = { rows: [], options: { month: [], regional: [], nop: [] }, summary: null, summaryL0: null, search: "", month: scope.month || "", regional: scope.regional || "", nop: scope.nop || "", category: "", notes: {}, loading: true, saving: {}, error: "", message: "", dialogSite: null, dialogStep: "question", dialogNote: "" };
+    this.state = { rows: [], options: { month: [], regional: [], nop: [] }, summary: null, summaryL0: null, summaryLevel: "punchlist_l0", search: "", month: scope.month || "", regional: scope.regional || "", nop: scope.nop || "", category: "", notes: {}, loading: true, saving: {}, error: "", message: "", dialogSite: null, dialogStep: "question", dialogNote: "" };
     this.load = async () => {
       const { search, month, regional, nop, category } = this.state, params = new URLSearchParams();
       if (search) params.set("search", search);
@@ -1730,7 +1730,6 @@ class PunchlistWorkspace extends React.Component {
 
     const summaryView = h("section", { className: "corporate-panel pl-section" },
       h("div", { className: "pl-section-head" }, h("div", null, h("p", { className: "pl-eyebrow" }, "REKAP OTOMATIS — REVIEW L1"), h("h2", { className: "section-title" }, "TEMUAN PM PUNCHLIST"), h("p", { className: "pl-section-desc" }, "Klasifikasi otomatis dari review L1 yang tersimpan di website."))),
-      filters,
       others && Number(others.total) > 0 && h("button", { type: "button", onClick: this.reviewOthers, className: "pl-callout" }, h("span", { className: "pl-callout-text" }, h("small", null, "PERLU PEMETAAN"), h("strong", null, `${number(others.total)} TEMUAN LAINNYA`), h("em", null, "Klik untuk membuka daftar notes")), h(ChevronRight, { size: 19 })),
       h("div", { className: "pl-viz" }, donutCard, topCard, regionalCard),
       tabPanel);
@@ -1738,6 +1737,10 @@ class PunchlistWorkspace extends React.Component {
     const l0SummaryView = h("section", { className: "corporate-panel pl-section" },
       h("div", { className: "pl-section-head" }, h("div", null, h("p", { className: "pl-eyebrow" }, "REKAP OTOMATIS — PUNCHLIST L0"), h("h2", { className: "section-title" }, "TEMUAN PUNCHLIST L0"), h("p", { className: "pl-section-desc" }, "Klasifikasi otomatis dari Notes PM Site yang diisi petugas lapangan."))),
       h("div", { className: "pl-viz" }, l0Donut, l0Top, l0Regional));
+    const summaryTabs = h("div", { className: "pl-level-tabs", role: "tablist", "aria-label": "Pilih rekap PM Punchlist" },
+      h("button", { type: "button", role: "tab", "aria-selected": s.summaryLevel === "punchlist_l0", onClick: () => this.setState({ summaryLevel: "punchlist_l0", category: "" }) }, "PUNCHLIST L0"),
+      h("button", { type: "button", role: "tab", "aria-selected": s.summaryLevel === "review_l1", onClick: () => this.setState({ summaryLevel: "review_l1" }) }, "REVIEW L1"));
+    const selectedSummary = s.summaryLevel === "review_l1" ? summaryView : l0SummaryView;
 
     /* ---------- Halaman ---------- */
     const listTitle = s.category === "LAINNYA" ? "TEMUAN LAINNYA - PERLU PEMETAAN" : "PM PUNCHLIST - GENERAL INFORMATION";
@@ -1750,8 +1753,7 @@ class PunchlistWorkspace extends React.Component {
         h(PreventiveSummaryCard, { label: "TOTAL TEMUAN", value: number(summary.total_findings), detail: `${number(counts.finding)} site dengan temuan`, tone: "orange" })),
       !s.dialogSite && s.error && h("p", { role: "alert", className: "pl-alert is-error" }, s.error),
       s.message && h("p", { role: "status", className: "pl-alert is-success" }, s.message),
-      l0SummaryView,
-      summaryView,
+      h("section", { className: "pl-summary-switch" }, filters, summaryTabs, selectedSummary),
       h("section", { className: "corporate-panel pl-section" },
         h("div", { className: "pl-section-head" },
           h("div", null, h("p", { className: "pl-eyebrow" }, "GENERAL INFORMATION — REVIEW L1"), h("h2", { className: "section-title" }, listTitle), h("p", { className: "pl-section-desc" }, "Filter status review L1 dan buka card site untuk mengisi Action Temuan.")),

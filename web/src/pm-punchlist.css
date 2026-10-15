@@ -15,6 +15,14 @@
 
 /* ---------- Section ---------- */
 .pl-section { padding:20px 22px; }
+.pl-summary-switch > .pl-filters { margin:0 0 12px; padding:16px 22px; border:1px solid #d8e1eb; background:#fff; }
+.pl-level-tabs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); border:1px solid #d8e1eb; border-bottom:0; background:#f4f7fb; }
+.pl-level-tabs button { min-height:64px; border:0; border-bottom:4px solid transparent; background:transparent; color:#5d6e84; font-size:14px; font-weight:600; cursor:pointer; }
+.pl-level-tabs button + button { border-left:1px solid #d8e1eb; }
+.pl-level-tabs button:hover { color:#173e68; background:#f8fafc; }
+.pl-level-tabs button[aria-selected=true] { border-bottom-color:#e27b2b; background:#fff; color:#173e68; }
+.pl-level-tabs button:focus-visible { outline:2px solid #173e68; outline-offset:-3px; }
+.pl-summary-switch > .corporate-panel { border-top:0; }
 .pl-section-head { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
 .pl-eyebrow { margin:0 0 4px; color:#8090a2; font-size:9px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; }
 .pl-section-head h2 { margin:0; }
@@ -240,6 +248,7 @@
 .pl-bar-children > div:last-child .pl-bar-row { border-bottom:0; }
 
 @media (max-width:1200px) { .pl-viz { grid-template-columns:1fr 1fr; } .pl-viz-card:last-child { grid-column:1 / -1; } }
+@media (max-width:640px) { .pl-level-tabs button { min-height:52px; font-size:11px; } .pl-summary-switch > .pl-filters { padding:14px 16px; } }
 @media (max-width:760px) {
   .pl-viz { grid-template-columns:1fr; }
   .pl-donut-wrap { flex-wrap:wrap; justify-content:center; }
