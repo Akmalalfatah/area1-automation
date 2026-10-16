@@ -380,7 +380,10 @@ const NO_FINDING_PATTERNS=[
 const isBriefPunchlistNote=note=>{
   const normalized=String(note||'').trim().replace(/\s+/g,' ')
   const words=normalized.match(/[\p{L}\p{N}]+/gu)||[]
-  return normalized.length<30||words.length<5
+  // Hanya respons ultra-pendek yang tidak punya konteks cukup untuk dipilah.
+  // Catatan yang lebih panjang kembali memakai kamus, lalu dapat dipetakan
+  // Gemini bila tetap belum cocok.
+  return normalized.length<=12&&words.length<=3
 }
 export function classifyPunchlistNote(value){
   const note=String(value||'').trim()
