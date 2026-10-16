@@ -11,7 +11,7 @@ import {databaseEnabled, deleteHistory, initDb, latestPreventiveUpload, listHist
 import {buildAnalysis, buildMttrMetrics, createRun, dashboardPayload, generateReport, loadDataset, loadState, MTTR_TARGETS_BY_COMPONENT, processRun, saveState, uploadAndProcess, uploadTicketMttrSummary, ValidationError} from './services.js'
 import {buildPreventiveDashboard, parsePreventiveWorkbook} from './preventive.js'
 import {patchTemplate} from './export-xlsx.js'
-import {siteData,siteDataForUploadMonth,listSites,listPunchlistSites,savePunchlistNote,analyzeSite,parseSiteSource,saveSiteSource,saveEvaluation} from './pm-site.js'
+import {siteData,siteDataForUploadMonth,listSites,listPunchlistSites,classifyOtherPunchlistNotes,savePunchlistNote,analyzeSite,parseSiteSource,saveSiteSource,saveEvaluation} from './pm-site.js'
 import {workOrderKey} from './preventive.js'
 import {gensetData,analyzeGenset,saveGensetEvaluation,enrichGensetSource} from './pm-genset.js'
 import {preventiveUploadHistory,applicationUploadHistory} from './db.js'
@@ -60,7 +60,7 @@ app.delete('/api/history',asyncHandler(async(req,res)=>{const ids=[...new Set((r
 app.post('/api/preventive/upload',upload.single('file'),asyncHandler(async(req,res)=>{assertXlsx(req.file);assertDate(req.body.upload_date);const dataset=await parsePreventiveWorkbook(req.file.buffer,req.file.originalname);const page=req.body.upload_page||dataset.maintenance_kind;if(!['dashboard','genset','site'].includes(page))throw new HttpError(422,'Halaman upload tidak valid.');if(page!=='dashboard'&&page!==dataset.maintenance_kind)throw new HttpError(422,'Jenis file tidak sesuai halaman PM.');dataset.upload_page=page;const uploadId=crypto.randomUUID(),replaced=await savePreventiveUpload(uploadId,req.body.upload_date,req.file.originalname,dataset);res.json({upload_id:uploadId,upload_date:req.body.upload_date,filename:req.file.originalname,row_count:dataset.row_count,data_month:dataset.data_month,date_start:dataset.date_start,date_end:dataset.date_end,replaced_upload_count:replaced})}))
 app.get('/api/preventive/uploads',asyncHandler(async(req,res)=>res.json({items:await preventiveUploadHistory(req.query.page||'dashboard')})))
 const preventivePeriod=query=>{
-  const period=String(query.date_from||query.date_to||'').slice(0,7)
+  const period=String(query.month||query.date_from||query.date_to||'').slice(0,7)
   return /^\d{4}-\d{2}$/.test(period)?period:null
 }
 const preventiveSourceData=async query=>{
@@ -74,7 +74,8 @@ const preventiveSourceData=async query=>{
     return data
   }
   const snapshot=await siteDataForUploadMonth(period,{includeKpiB13:false})
-  snapshot.data.pm=await loadPreventiveRows({dateFrom:query.date_from,dateTo:query.date_to})
+  const lastDay=new Date(Date.UTC(Number(period.slice(0,4)),Number(period.slice(5,7)),0)).getUTCDate()
+  snapshot.data.pm=await loadPreventiveRows({dateFrom:`${period}-01`,dateTo:`${period}-${String(lastDay).padStart(2,'0')}`})
   return snapshot.data
 }
 const preventiveDashboardPayload=async query=>{const rows=await loadPreventiveRows({dateFrom:query.date_from,dateTo:query.date_to}),source=await preventiveSourceData(query),reviewedRows=enrichWorkConditions(enrichDashboardReview(rows,source),source),payload=buildPreventiveDashboard(reviewedRows,query.date_from,query.date_to,query.nop,query.site_id,'','','','','','','','','',query.regional),general=buildPreventiveDashboard(reviewedRows,query.date_from,query.date_to,query.nop,query.site_id,query.search,query.maintenance_type,query.status,query.pic,query.interval,query.type_power,query.scope_item,query.schedule_state,query.needs_attention,query.regional);payload.rows=enrichWorkConditions(enrichDashboardReview(general.rows,source),source);payload.general_count=payload.rows.length;payload.latest_upload=(await preventiveUploadHistory(query.maintenance_type||'dashboard',true))[0]||null;return payload}
@@ -86,6 +87,7 @@ app.put('/api/pm-genset/evaluation',asyncHandler(async(req,res)=>{const data=awa
 
 app.get('/api/pm-site',asyncHandler(async(req,res)=>res.json(listSites(await preventiveSourceData(req.query),req.query))))
 app.get('/api/punchlist',asyncHandler(async(req,res)=>res.json(await listPunchlistSites(await preventiveSourceData(req.query),req.query))))
+app.post('/api/punchlist/classify-others',asyncHandler(async(req,res)=>res.json(await classifyOtherPunchlistNotes(await preventiveSourceData(req.body||{}),req.body||{},req.body?.limit))))
 app.put('/api/punchlist/:siteId',asyncHandler(async(req,res)=>res.json(await savePunchlistNote(req.params.siteId,req.body))))
 app.post('/api/pm-site/sources/:kind',upload.single('file'),asyncHandler(async(req,res)=>{assertXlsx(req.file);assertDate(req.body.upload_date);const kinds=['master','ggr','inap','swfm','kpi_b13_r01','kpi_b13_r02','kpi_b13_r10'];if(!kinds.includes(req.params.kind))throw new HttpError(422,'Jenis sumber upload tidak valid.');const regionByKind={kpi_b13_r01:'R01_Sumbagut',kpi_b13_r02:'R02_Sumbagsel',kpi_b13_r10:'R10_Sumbagteng'},region=regionByKind[req.params.kind];const dataset=region?await parseKpiB13(req.file.buffer,region):await enrichGensetSource(req.file.buffer,req.params.kind,await parseSiteSource(req.file.buffer,req.params.kind));res.json(await saveSiteSource(req.params.kind,req.file.originalname,req.body.upload_date,dataset))}))
 app.get('/api/pm-site/detail',asyncHandler(async(req,res)=>{const data=await preventiveSourceData(req.query),pm=data.pm?.find(row=>row.maintenance_kind==='site'&&workOrderKey(row)===req.query.id);if(!pm)throw new HttpError(404,'Pekerjaan PM Site tidak ditemukan.');res.json(analyzeSite(pm,data))}))

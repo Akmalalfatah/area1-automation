@@ -33,7 +33,9 @@
 .pl-count b { color:#29496c; font-weight:600; }
 
 /* ---------- Callout "Lainnya" ---------- */
+.pl-callout-actions { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; margin-bottom:16px; align-items:stretch; }
 .pl-callout { display:flex; align-items:center; justify-content:space-between; gap:16px; width:100%; margin-bottom:16px; padding:12px 16px; border:1px solid #ecd2b8; border-left:4px solid #e27b2b; background:#fff7ee; text-align:left; cursor:pointer; transition:background .15s ease,border-color .15s ease; }
+.pl-callout-actions .pl-callout { margin-bottom:0; }
 .pl-callout:hover { background:#fff0de; border-color:#e27b2b; }
 .pl-callout:focus-visible { outline:2px solid #e27b2b; outline-offset:2px; }
 .pl-callout-text { display:grid; gap:2px; }
@@ -41,6 +43,9 @@
 .pl-callout strong { color:#29496c; font-size:13px; font-weight:600; }
 .pl-callout em { color:#708198; font-size:10px; font-style:normal; }
 .pl-callout svg { flex:none; color:#c47d31; }
+.pl-gemini-button { min-width:220px; padding:0 16px; font-size:10px; white-space:nowrap; }
+.pl-gemini-button:disabled { cursor:wait; opacity:.65; }
+@media (max-width:720px) { .pl-callout-actions { grid-template-columns:1fr; } .pl-gemini-button { min-height:40px; width:100%; } }
 
 /* ---------- Recap ---------- */
 .pl-recap-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
@@ -201,6 +206,9 @@
 .pl-rank-track { height:8px; background:#e8eef4; }
 .pl-rank-track i { display:block; height:100%; background:#173e68; }
 .pl-rank li:first-child .pl-rank-track i { background:#b97a33; }
+.pl-rank-select { display:block; width:100%; padding:0; border:0; background:transparent; color:inherit; text-align:left; cursor:pointer; }
+.pl-rank-select:hover p { color:#e27b2b; }
+.pl-rank-select:focus-visible, .pl-bar-row.is-selectable:focus-visible { outline:2px solid #173e68; outline-offset:3px; }
 .pl-stack-list { display:grid; gap:16px; }
 .pl-stack-row p { display:flex; justify-content:space-between; gap:10px; margin:0 0 6px; color:#42536a; font-size:10px; font-weight:600; }
 .pl-stack-row p b { color:#8090a2; font-weight:600; }
@@ -218,6 +226,8 @@
 .pl-tab[aria-selected=true] b { background:#173e68; color:#fff; }
 .pl-tab:focus-visible, .pl-mode button:focus-visible, .pl-bar-toggle:focus-visible { outline:2px solid #173e68; outline-offset:-2px; }
 .pl-mode { display:flex; align-items:center; gap:0; margin:8px 12px; border:1px solid #cbd5e1; border-radius:3px; overflow:hidden; background:#fff; }
+.pl-export-controls { display:flex; align-items:center; gap:8px; padding-right:12px; }
+.pl-export-controls .pl-mode { margin:8px 0; }
 .pl-mode button { padding:6px 14px; border:0; background:#fff; color:#53657a; font-size:10px; font-weight:600; cursor:pointer; }
 .pl-mode button + button { border-left:1px solid #cbd5e1; }
 .pl-mode button[aria-pressed=true] { background:#173e68; color:#fff; }
@@ -225,6 +235,8 @@
 .pl-tabbody .pl-table th { background:#fff; }
 .pl-tabbody .pl-table td:first-child, .pl-tabbody .pl-table th:first-child { padding-left:20px; }
 .pl-tabbody .pl-table td:last-child, .pl-tabbody .pl-table th:last-child { padding-right:20px; }
+.pl-tabbody .pl-table tbody tr.is-selectable { cursor:pointer; }
+.pl-tabbody .pl-table tbody tr.is-selectable:hover td { background:#eef4fa; }
 
 .pl-bars { padding:8px 20px 12px; }
 .pl-region-legend { display:flex; flex-wrap:wrap; gap:6px 16px; margin:4px 0 8px; color:#607086; font-size:10px; font-weight:600; }
@@ -238,6 +250,8 @@
 .pl-bar-seg { display:block; height:100%; }
 .pl-bar-seg + .pl-bar-seg { border-left:1px solid #fff; }
 .pl-bar-total { color:#173e68; font-size:12px; font-weight:700; text-align:right; font-variant-numeric:tabular-nums; }
+.pl-bar-row.is-selectable { width:100%; border:0; background:transparent; color:inherit; text-align:left; cursor:pointer; }
+.pl-bar-row.is-selectable:hover .pl-bar-label { color:#e27b2b; }
 .pl-bar-toggle { display:block; width:100%; padding:0; border:0; background:transparent; text-align:left; cursor:pointer; }
 .pl-bar-toggle:hover .pl-bar-label { color:#e27b2b; }
 .pl-bar-chevron { flex:none; color:#6b7e93; transition:transform .18s ease; }

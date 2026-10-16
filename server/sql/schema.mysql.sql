@@ -55,6 +55,20 @@ CREATE TABLE IF NOT EXISTS site_punchlist_notes (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS site_punchlist_ai_classifications (
+  site_id VARCHAR(128) NOT NULL,
+  source_level ENUM('punchlist_l0','review_l1') NOT NULL,
+  note_hash CHAR(64) NOT NULL,
+  category VARCHAR(180) NOT NULL,
+  subcategory VARCHAR(255) NOT NULL,
+  confidence DECIMAL(5,4) NULL,
+  model VARCHAR(120) NOT NULL,
+  reason VARCHAR(500) NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (site_id,source_level),
+  KEY idx_punchlist_ai_hash (note_hash)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Snapshot sumber dipertahankan per upload agar Peningkatan KPI dapat
 -- membaca sumber pada bulan yang dipilih, bukan hanya sumber aktif terbaru.
 CREATE TABLE IF NOT EXISTS pm_site_source_uploads (

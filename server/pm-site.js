@@ -5,8 +5,10 @@ import crypto from 'node:crypto'
 import {PROJECT_ROOT} from './config.js'
 import {databaseEnabled,getPool,loadPreventiveRows,loadHistoricalPmSiteNotes,recordApplicationUpload} from './db.js'
 import {workOrderKey,isTerminal} from './preventive.js'
+import {generateGeminiJson} from './services.js'
 
 export const normalizeSite=value=>String(value??'').trim().toUpperCase()
+const noteHash=value=>crypto.createHash('sha256').update(String(value||'').trim()).digest('hex')
 const key=value=>normalizeSite(value).replace(/[^A-Z0-9]/g,'')
 const scalar=value=>value&&typeof value==='object'?('result' in value?value.result:'text' in value?value.text:'richText' in value?value.richText.map(x=>x.text).join(''):value):value
 const numeric=value=>{const text=String(value??'').trim().replace(/^'/,'');return text!==''&&Number.isFinite(Number(text))?Number(text):null}
@@ -114,15 +116,16 @@ export async function siteData({includeKpiB13=false,includePm=true}={}){
   }
   const sourceWhere=includeKpiB13?'':' WHERE source_kind NOT IN (?,?,?,?)'
   const sourceParams=includeKpiB13?[]:kpiB13SourceKinds
-  const [sourceResult,evaluationResult,punchlistResult,historicalNotes,pm]=await Promise.all([
+  const [sourceResult,evaluationResult,punchlistResult,aiClassificationResult,historicalNotes,pm]=await Promise.all([
     getPool().query(`SELECT source_kind,filename,upload_date,dataset FROM pm_site_sources${sourceWhere}`,sourceParams),
     getPool().query('SELECT * FROM pm_site_evaluations'),
     getPool().query('SELECT site_id,note,updated_at FROM site_punchlist_notes'),
+    getPool().query('SELECT site_id,source_level,note_hash,category,subcategory,confidence,model,reason,updated_at FROM site_punchlist_ai_classifications'),
     loadHistoricalPmSiteNotes(),
     includePm?loadPreventiveRows():Promise.resolve([])
   ])
-  const sources=sourceResult[0],evaluations=evaluationResult[0],punchlistNotes=punchlistResult[0]
-  const data={pm,evaluations,punchlist_notes:punchlistNotes.map(row=>({...row,source:'review_l1'})),historical_notes:historicalNotes.map(row=>({...row,source:'punchlist_l0'})),sources:sources.map(({dataset,...meta})=>meta),quality:[],read_only:false}
+  const sources=sourceResult[0],evaluations=evaluationResult[0],punchlistNotes=punchlistResult[0],ai_classifications=aiClassificationResult[0]
+  const data={pm,evaluations,punchlist_notes:punchlistNotes.map(row=>({...row,source:'review_l1'})),ai_classifications,historical_notes:historicalNotes.map(row=>({...row,source:'punchlist_l0'})),sources:sources.map(({dataset,...meta})=>meta),quality:[],read_only:false}
   for(const source of sources){const dataset=safeDataset(source.dataset);data[source.source_kind]=dataset.rows||[];data.quality.push(...(dataset.issues||[]).map(issue=>({...issue,source:source.source_kind})))}
   const [records]=await getPool().query(`SELECT source_kind,payload FROM pm_site_source_rows${sourceWhere} ORDER BY source_kind,row_no`,sourceParams)
   for(const record of records){const payload=typeof record.payload==='string'?JSON.parse(record.payload):record.payload;data[record.source_kind].push(payload)}
@@ -131,14 +134,15 @@ export async function siteData({includeKpiB13=false,includePm=true}={}){
 
 const uploadMonth=value=>String(value||'').slice(0,7)
 const sourceRowsForUploads=async (uploads,{period='',includeKpiB13=true}={})=>{
-  const [punchlistNotes,evaluations,historicalNotes]=await Promise.all([
+  const [punchlistNotes,evaluations,aiClassifications,historicalNotes]=await Promise.all([
     getPool().query('SELECT site_id,note,updated_at FROM site_punchlist_notes').then(([rows])=>rows),
     getPool().query('SELECT * FROM pm_site_evaluations').then(([rows])=>rows),
+    getPool().query('SELECT site_id,source_level,note_hash,category,subcategory,confidence,model,reason,updated_at FROM site_punchlist_ai_classifications').then(([rows])=>rows),
     loadHistoricalPmSiteNotes()
   ])
   // Peningkatan KPI tidak membutuhkan data PM. Hindari membaca snapshot PM
   // yang besar saat hanya kalkulasi B1-B3/SWFM dijalankan.
-  const data={pm:[],evaluations,punchlist_notes:punchlistNotes.map(row=>({...row,source:'review_l1'})),historical_notes:historicalNotes.map(row=>({...row,source:'punchlist_l0'})),sources:uploads.map(({dataset,...meta})=>meta),quality:[],read_only:false}
+  const data={pm:[],evaluations,punchlist_notes:punchlistNotes.map(row=>({...row,source:'review_l1'})),ai_classifications:aiClassifications,historical_notes:historicalNotes.map(row=>({...row,source:'punchlist_l0'})),sources:uploads.map(({dataset,...meta})=>meta),quality:[],read_only:false}
   if(uploads.length){
     const ids=uploads.map(upload=>upload.source_upload_id)
     const [records]=await getPool().query('SELECT source_upload_id,payload FROM pm_site_source_upload_rows WHERE source_upload_id IN (?) ORDER BY source_upload_id,row_no',[ids])
@@ -221,7 +225,7 @@ const category=value=>{const text=normalizeSite(value);if(/POWER|ENERGY|PLN|GENS
 const indices=new WeakMap()
 function siteIndex(data){
   if(indices.has(data))return indices.get(data)
-  const master=new Map((data.master||[]).map(row=>[normalizeSite(row.site_id),row])),incidents=new Map(),evaluations=new Map(),punchlistsL0=new Map(),reviewsL1=new Map()
+  const master=new Map((data.master||[]).map(row=>[normalizeSite(row.site_id),row])),incidents=new Map(),evaluations=new Map(),punchlistsL0=new Map(),reviewsL1=new Map(),aiClassifications=new Map()
   for(const row of [...(data.swfm||[]),...(data.inap||[]),...(data.ggr||[])]){const site=normalizeSite(row.site_id);if(!incidents.has(site))incidents.set(site,[]);incidents.get(site).push(row)}
   for(const row of data.evaluations||[])evaluations.set(`${normalizeSite(row.site_id)}|${row.pm_ticket_no}`,row)
   // L0 adalah notes dari file PM Site (pencatatan lapangan). L1 adalah review
@@ -229,7 +233,8 @@ function siteIndex(data){
   for(const row of data.pm||[])if(row.maintenance_kind==='site'&&String(row.notes||'').trim())punchlistsL0.set(normalizeSite(row.site_id),{site_id:normalizeSite(row.site_id),note:String(row.notes).trim(),updated_at:row._updated_at||null})
   for(const row of data.historical_notes||[])if(!punchlistsL0.has(normalizeSite(row.site_id)))punchlistsL0.set(normalizeSite(row.site_id),row)
   for(const row of data.punchlist_notes||[])if(String(row.source||'review_l1')==='review_l1')reviewsL1.set(normalizeSite(row.site_id),row)
-  const index={master,incidents,evaluations,punchlistsL0,reviewsL1};indices.set(data,index);return index
+  for(const row of data.ai_classifications||[])aiClassifications.set(`${String(row.source_level||'review_l1')}|${normalizeSite(row.site_id)}`,row)
+  const index={master,incidents,evaluations,punchlistsL0,reviewsL1,aiClassifications};indices.set(data,index);return index
 }
 export function scheduleLabel(pm,today=new Date().toISOString().slice(0,10)){
   const status=key(pm.status)
@@ -365,6 +370,9 @@ export function classifyPunchlistNote(value){
   if(!findings.length)findings.push({category:'LAINNYA',subcategory:'Lainnya',quote:note,count:1})
   return{status:'Ada Temuan',findings}
 }
+const isOthers=classified=>classified.status==='Ada Temuan'&&classified.findings.length===1&&classified.findings[0]?.category==='LAINNYA'
+const punchlistTaxonomy=()=>[...new Map(PUNCHLIST_RULES.map(([category,subcategory])=>[`${category}|${subcategory}`,{category,subcategory}])).values()]
+const aiFinding=(row,note)=>row&&row.note_hash===noteHash(note)&&row.category&&row.subcategory?{status:'Ada Temuan',findings:[{category:row.category,subcategory:row.subcategory,quote:note,count:1,source:'gemini',confidence:Number(row.confidence)||null}]}:null
 export async function listPunchlistSites(data,filters={}){
   const pmSiteRows=(data.pm||[]).filter(row=>row.maintenance_kind==='site'),months=[...new Set(pmSiteRows.map(row=>String(row.schedule_date||'').slice(0,7)).filter(value=>/^\d{4}-\d{2}$/.test(value)))].sort().reverse()
   const month=/^\d{4}-\d{2}$/.test(String(filters.month||''))?filters.month:''
@@ -372,9 +380,10 @@ export async function listPunchlistSites(data,filters={}){
   const {search,category,...sourceFilters}=filters
   const base=listSites(data,{...sourceFilters,date_from:month?`${month}-01`:filters.date_from,date_to:month?`${month}-${String(end).padStart(2,'0')}`:filters.date_to})
   const query=String(search||'').trim().toLowerCase()
+  const aiClassifications=siteIndex(data).aiClassifications
   const summarize=level=>{
     const field=level==='punchlist_l0'?'punchlist_l0_note':'review_l1_note'
-    const rows=base.rows.map(row=>{const note=String(row[field]||'').trim(),classified=classifyPunchlistNote(note),updated_at=level==='punchlist_l0'?row.punchlist_l0_updated_at:row.review_l1_updated_at;return{...row,note,updated_at:updated_at||null,punchlist_l0_note:String(row.punchlist_l0_note||'').trim(),review_l1_note:String(row.review_l1_note||'').trim(),status_note:classified.status,findings:classified.findings}}).filter(row=>{
+    const rows=base.rows.map(row=>{const note=String(row[field]||'').trim(),local=classifyPunchlistNote(note),stored=aiClassifications.get(`${level}|${normalizeSite(row.site_id)}`),classified=isOthers(local)?aiFinding(stored,note)||local:local,updated_at=level==='punchlist_l0'?row.punchlist_l0_updated_at:row.review_l1_updated_at;return{...row,note,updated_at:updated_at||null,punchlist_l0_note:String(row.punchlist_l0_note||'').trim(),review_l1_note:String(row.review_l1_note||'').trim(),status_note:classified.status,findings:classified.findings}}).filter(row=>{
       if(query&&![row.site_id,row.site_name,row.nop,row.regional,row.note].join(' ').toLowerCase().includes(query))return false
       return !category||row.findings.some(finding=>finding.category===category)
     })
@@ -386,6 +395,30 @@ export async function listPunchlistSites(data,filters={}){
   }
   const reviewL1=summarize('review_l1'),punchlistL0=summarize('punchlist_l0')
   return{rows:reviewL1.rows,l0_rows:punchlistL0.rows,options:{month:months,regional:[...new Set(base.rows.map(row=>row.regional).filter(Boolean))].sort(),nop:[...new Set(base.rows.map(row=>row.nop).filter(Boolean))].sort()},summary:reviewL1.summary,l0_summary:punchlistL0.summary}
+}
+
+export async function classifyOtherPunchlistNotes(data,filters={},limit=20){
+  if(!databaseEnabled)throw Object.assign(new Error('Klasifikasi Gemini membutuhkan MySQL untuk menyimpan hasil.'),{status:503})
+  const level=filters.level==='punchlist_l0'?'punchlist_l0':'review_l1',result=await listPunchlistSites(data,filters),rawRows=level==='punchlist_l0'?result.l0_rows:result.rows,index=siteIndex(data)
+  const candidates=[...new Map(rawRows.filter(row=>isOthers(classifyPunchlistNote(row.note))).filter(row=>{
+    const stored=index.aiClassifications.get(`${level}|${normalizeSite(row.site_id)}`)
+    return !stored||stored.note_hash!==noteHash(row.note)
+  }).map(row=>[normalizeSite(row.site_id),row])).values()].slice(0,Math.max(1,Math.min(25,Number(limit)||20)))
+  if(!candidates.length)return{processed:0,remaining:0,message:'Tidak ada temuan Lainnya baru untuk diproses.'}
+  const taxonomy=punchlistTaxonomy(),allowed=new Set(taxonomy.map(item=>`${item.category}|${item.subcategory}`))
+  // Gemini may decide a note is still too ambiguous. Store that decision too so
+  // the same unchanged note is not sent repeatedly on every batch run.
+  allowed.add('LAINNYA|Lainnya')
+  const instruction=`Anda adalah pengklasifikasi temuan preventive maintenance telekomunikasi Indonesia. Klasifikasikan HANYA catatan yang diberikan ke salah satu pasangan kategori dan subkategori yang tersedia. Tangani typo, singkatan, dan variasi penulisan secara konservatif. Jangan membuat kategori/subkategori baru. Kembalikan JSON murni berbentuk {"items":[{"site_id":"...","category":"...","subcategory":"...","confidence":0.0,"reason":"maksimal 12 kata"}]}. Jika tidak yakin, gunakan kategori LAINNYA dan subkategori Lainnya.`
+  const payload={taxonomy,notes:candidates.map(row=>({site_id:normalizeSite(row.site_id),note:String(row.note).slice(0,3000)}))}
+  const generated=await generateGeminiJson(instruction,payload),items=Array.isArray(generated.data?.items)?generated.data.items:[],bySite=new Map(items.map(item=>[normalizeSite(item.site_id),item])),accepted=[]
+  for(const row of candidates){
+    const item=bySite.get(normalizeSite(row.site_id)),pair=`${String(item?.category||'')}|${String(item?.subcategory||'')}`
+    if(!item||!allowed.has(pair))continue
+    accepted.push([normalizeSite(row.site_id),level,noteHash(row.note),item.category,item.subcategory,Math.max(0,Math.min(1,Number(item.confidence)||0)),generated.model,String(item.reason||'').slice(0,500)])
+  }
+  if(accepted.length)await getPool().query('INSERT INTO site_punchlist_ai_classifications(site_id,source_level,note_hash,category,subcategory,confidence,model,reason) VALUES ? ON DUPLICATE KEY UPDATE note_hash=VALUES(note_hash),category=VALUES(category),subcategory=VALUES(subcategory),confidence=VALUES(confidence),model=VALUES(model),reason=VALUES(reason),updated_at=CURRENT_TIMESTAMP',[accepted])
+  return{processed:accepted.length,skipped:candidates.length-accepted.length,remaining:Math.max(0,candidates.length-accepted.length),model:generated.model,message:`${accepted.length} temuan Lainnya diproses Gemini.`}
 }
 
 export async function savePunchlistNote(siteId,input){

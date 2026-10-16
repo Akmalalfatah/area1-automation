@@ -244,3 +244,26 @@ export async function generateReport(prompt,analysis){
   for(const {model,key} of providers)for(let attempt=0;attempt<3;attempt++){try{const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(45000)});const data=await response.json();if(!response.ok)throw new Error(`Gemini API error (${response.status}) pada ${model}: ${data.error?.message||response.statusText}`);const text=data.candidates?.flatMap(x=>x.content?.parts||[]).map(x=>x.text).filter(Boolean).join('\n').trim();if(!text)throw new Error('Gemini API tidak mengembalikan output text.');return text}catch(error){errors.push(error.message);if(attempt<2)await sleep(1000*2**attempt+Math.random()*500)}}
   return generateLocalReport(analysis)
 }
+
+export async function generateGeminiJson(instruction,payload,{model=process.env.GEMINI_PUNCHLIST_MODEL||process.env.GEMINI_MODEL||'gemini-3.5-flash-lite'}={}){
+  const primaryKey=process.env.GEMINI_API_KEY||'',fallbackKey=process.env.GEMINI_FALLBACK_API_KEY||primaryKey
+  if(!primaryKey&&!fallbackKey)throw Object.assign(new Error('Gemini API belum dikonfigurasi. Isi GEMINI_API_KEY pada server/.env.'),{status:503})
+  const providers=[
+    {model,key:primaryKey||fallbackKey},
+    {model:process.env.GEMINI_FALLBACK_MODEL||'gemini-3.5-flash',key:fallbackKey||primaryKey}
+  ].filter((item,index,items)=>item.model&&item.key&&items.findIndex(other=>other.model===item.model&&other.key===item.key)===index)
+  const errors=[]
+  for(const provider of providers)for(let attempt=0;attempt<2;attempt++){
+    try{
+      const body={systemInstruction:{parts:[{text:instruction}]},generationConfig:{temperature:0,responseMimeType:'application/json'},contents:[{role:'user',parts:[{text:JSON.stringify(payload)}]}]}
+      const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(provider.model)}:generateContent?key=${encodeURIComponent(provider.key)}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(45000)})
+      const data=await response.json()
+      if(!response.ok)throw new Error(`Gemini API error (${response.status}) pada ${provider.model}: ${data.error?.message||response.statusText}`)
+      const text=data.candidates?.flatMap(candidate=>candidate.content?.parts||[]).map(part=>part.text).filter(Boolean).join('\n').trim()
+      if(!text)throw new Error('Gemini API tidak mengembalikan JSON.')
+      const clean=text.replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim()
+      return {data:JSON.parse(clean),model:provider.model}
+    }catch(error){errors.push(error.message);if(attempt<1)await sleep(800+Math.random()*300)}
+  }
+  throw Object.assign(new Error(`Klasifikasi Gemini gagal: ${errors.at(-1)||'respons tidak valid'}`),{status:502})
+}
