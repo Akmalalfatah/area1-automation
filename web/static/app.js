@@ -1532,7 +1532,7 @@ class PunchlistWorkspace extends React.Component {
   constructor(props) {
     super(props);
     const scope = window.PMPunchlistScope || {};
-    this.state = { rows: [], l0Rows: [], options: { month: [], regional: [], nop: [] }, taxonomy: [], summary: null, summaryL0: null, summaryLevel: "punchlist_l0", search: "", month: scope.month || "", regional: scope.regional || "", nop: scope.nop || "", category: "", findingFilter: null, notes: {}, loading: true, saving: {}, classifying: false, manualSite: null, manualCategory: "", manualSubcategory: "", manualSaving: false, error: "", message: "", dialogSite: null, dialogStep: "question", dialogNote: "" };
+    this.state = { rows: [], l0Rows: [], options: { month: [], regional: [], nop: [] }, taxonomy: [], summary: null, summaryL0: null, summaryLevel: "punchlist_l0", search: "", month: scope.month || "", regional: scope.regional || "", nop: scope.nop || "", category: "", findingFilter: null, notes: {}, loading: true, saving: {}, classifying: false, autoReloads: 0, manualSite: null, manualCategory: "", manualSubcategory: "", manualSaving: false, error: "", message: "", dialogSite: null, dialogStep: "question", dialogNote: "" };
     this.load = async () => {
       const { search, month, regional, nop, category } = this.state, params = new URLSearchParams();
       if (search) params.set("search", search);
@@ -1544,7 +1544,9 @@ class PunchlistWorkspace extends React.Component {
       try {
         const data = await api(`/api/punchlist${params.size ? `?${params}` : ""}`), notes = {};
         for (const row of data.rows || []) notes[row.site_id] = row.note || "";
-        this.setState({ rows: data.rows || [], l0Rows: data.l0_rows || [], options: data.options || { month: [], regional: [], nop: [] }, taxonomy: data.taxonomy || [], summary: data.summary || null, summaryL0: data.l0_summary || null, notes });
+        const autoReload = !!data.auto_classification && this.state.autoReloads < 12;
+        this.setState((state) => ({ rows: data.rows || [], l0Rows: data.l0_rows || [], options: data.options || { month: [], regional: [], nop: [] }, taxonomy: data.taxonomy || [], summary: data.summary || null, summaryL0: data.l0_summary || null, notes, autoReloads: autoReload ? state.autoReloads + 1 : 0 }));
+        if (autoReload) window.setTimeout(() => this.load(), 1e4);
       } catch (error) {
         this.setState({ error: error.message });
       } finally {
@@ -1581,7 +1583,7 @@ class PunchlistWorkspace extends React.Component {
       this.setState((state) => ({ saving: { ...state.saving, [siteId]: true }, error: "", message: "" }));
       try {
         const note = noteOverride === void 0 ? this.state.notes[siteId] || "" : noteOverride;
-        const saved = await api(`/api/punchlist/${encodeURIComponent(siteId)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note }) });
+        const saved = await api(`/api/punchlist/${encodeURIComponent(siteId)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note, month: this.state.month }) });
         this.setState((state) => ({ rows: state.rows.map((row) => row.site_id === siteId ? { ...row, note: saved.note, updated_at: saved.updated_at } : row), notes: { ...state.notes, [siteId]: saved.note || "" }, dialogSite: null, dialogStep: "question", dialogNote: "", message: saved.note ? `Catatan ${siteId} berhasil disimpan.` : `Catatan ${siteId} dihapus.` }));
       } catch (error) {
         this.setState({ error: error.message });
@@ -1654,9 +1656,9 @@ class PunchlistWorkspace extends React.Component {
 
     /* ---------- Daftar site ---------- */
     const cell = (label, value, extra) => h("div", { className: "pl-cell" }, h("p", { className: "pl-label" }, label), h("p", { className: `pl-value ${extra || ""}` }, value));
-    const cards = visibleRows.map((row) => {
+    const cards = visibleRows.map((row, index) => {
       const st = stateOf(row), note = noteOf(row);
-      return h("details", { key: row.site_id, className: `pl-card is-${st}` },
+      return h("details", { key: `${row.site_id}-${row.schedule_date || ""}-${row.ticket_no || ""}-${index}`, className: `pl-card is-${st}` },
         h("summary", { className: "pl-card-summary" },
           h("div", { className: "pl-card-head" },
             cell("SITE ID", row.site_id, "is-id"),
@@ -1799,8 +1801,7 @@ class PunchlistWorkspace extends React.Component {
 
     const levelTitle = activeLevel === "punchlist_l0" ? "PUNCHLIST L0" : "REVIEW L1", levelDescription = activeLevel === "punchlist_l0" ? "Klasifikasi otomatis dari Notes PM Site yang diisi petugas lapangan." : "Klasifikasi otomatis dari review L1 yang tersimpan di website.";
     const othersCallout = others && Number(others.total) > 0 && h("div", { className: "pl-callout-actions" },
-      h("button", { type: "button", onClick: this.reviewOthers, className: "pl-callout" }, h("span", { className: "pl-callout-text" }, h("small", null, "PERLU PEMETAAN"), h("strong", null, `${number(others.total)} TEMUAN LAINNYA`), h("em", null, "Buka daftar notes yang belum cocok dengan kamus")), h(ChevronRight, { size: 19 })),
-      h("button", { type: "button", disabled: s.classifying, onClick: this.classifyOthers, className: "btn-primary pl-gemini-button" }, s.classifying ? "MEMPROSES ANTREAN GEMINI..." : "KLASIFIKASIKAN LAINNYA DENGAN GEMINI"));
+      h("button", { type: "button", onClick: this.reviewOthers, className: "pl-callout" }, h("span", { className: "pl-callout-text" }, h("small", null, "KLASIFIKASI OTOMATIS"), h("strong", null, `${number(others.total)} TEMUAN LAINNYA`), h("em", null, "Diproses otomatis oleh Gemini; buka hanya untuk review manual yang masih Lainnya")), h(ChevronRight, { size: 19 })));
     const summaryView = h("section", { className: "corporate-panel pl-section" },
       h("div", { className: "pl-section-head" }, h("div", null, h("p", { className: "pl-eyebrow" }, `REKAP OTOMATIS — ${levelTitle}`), h("h2", { className: "section-title" }, `TEMUAN ${levelTitle}`), h("p", { className: "pl-section-desc" }, levelDescription))),
       othersCallout,

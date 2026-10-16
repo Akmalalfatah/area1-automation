@@ -382,7 +382,11 @@ export function classifyPunchlistNote(value){
   // kerusakan tidak boleh menyembunyikan temuan tersebut.
   if(findings.length)return{status:'Ada Temuan',findings}
   const positive=POSITIVE_NOTE_PATTERN.test(note),concern=NEGATIVE_NOTE_PATTERN.test(note)
-  if(NO_FINDING_PATTERNS.some(pattern=>pattern.test(note))||(positive&&!concern))return{status:'Tidak Ada Temuan',findings:[]}
+  // Indikasi masalah selalu menjadi prioritas. Contoh: "site baik, tetapi
+  // battery rusak" tetap Ada Temuan; kata "baik" tidak boleh mengubahnya
+  // menjadi Tidak Ada Temuan.
+  if(concern)return{status:'Ada Temuan',findings:[{category:'LAINNYA',subcategory:'Lainnya',quote:note,count:1}]}
+  if(NO_FINDING_PATTERNS.some(pattern=>pattern.test(note))||positive)return{status:'Tidak Ada Temuan',findings:[]}
   return{status:'Ada Temuan',findings:[{category:'LAINNYA',subcategory:'Lainnya',quote:note,count:1}]}
 }
 const isOthers=classified=>classified.status==='Ada Temuan'&&classified.findings.length===1&&classified.findings[0]?.category==='LAINNYA'
@@ -394,11 +398,15 @@ export async function listPunchlistSites(data,filters={}){
   const end=month?new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5,7)),0)).getUTCDate():null
   const {search,category,...sourceFilters}=filters
   const base=listSites(data,{...sourceFilters,date_from:month?`${month}-01`:filters.date_from,date_to:month?`${month}-${String(end).padStart(2,'0')}`:filters.date_to})
+  // Satu site dapat memiliki beberapa ticket pada bulan yang sama. Punchlist adalah
+  // catatan per site, sehingga gunakan satu record terbaru per Site ID agar card,
+  // hitungan, dan filter status tidak berulang atau saling tertukar.
+  const uniqueRows=[...new Map((base.rows||[]).filter(row=>normalizeSite(row.site_id)).map(row=>[normalizeSite(row.site_id),row])).values()]
   const query=String(search||'').trim().toLowerCase()
   const aiClassifications=siteIndex(data).aiClassifications
   const summarize=level=>{
     const field=level==='punchlist_l0'?'punchlist_l0_note':'review_l1_note'
-    const rows=base.rows.map(row=>{const note=String(row[field]||'').trim(),local=classifyPunchlistNote(note),stored=aiClassifications.get(`${level}|${normalizeSite(row.site_id)}`),classified=isOthers(local)?aiFinding(stored,note)||local:local,updated_at=level==='punchlist_l0'?row.punchlist_l0_updated_at:row.review_l1_updated_at;return{...row,note,updated_at:updated_at||null,punchlist_l0_note:String(row.punchlist_l0_note||'').trim(),review_l1_note:String(row.review_l1_note||'').trim(),status_note:classified.status,findings:classified.findings}}).filter(row=>{
+    const rows=uniqueRows.map(row=>{const note=String(row[field]||'').trim(),local=classifyPunchlistNote(note),stored=aiClassifications.get(`${level}|${normalizeSite(row.site_id)}`),classified=isOthers(local)?aiFinding(stored,note)||local:local,updated_at=level==='punchlist_l0'?row.punchlist_l0_updated_at:row.review_l1_updated_at;return{...row,note,updated_at:updated_at||null,punchlist_l0_note:String(row.punchlist_l0_note||'').trim(),review_l1_note:String(row.review_l1_note||'').trim(),status_note:classified.status,findings:classified.findings}}).filter(row=>{
       if(query&&![row.site_id,row.site_name,row.nop,row.regional,row.note].join(' ').toLowerCase().includes(query))return false
       return !category||row.findings.some(finding=>finding.category===category)
     })
@@ -409,7 +417,7 @@ export async function listPunchlistSites(data,filters={}){
     return{rows,summary:{level,month,regions,total_tickets:rows.length,total_findings:allFindings.length,status_by_regional,category_counts:countBy('category'),subcategory_counts:countBy('subcategory',['category'])}}
   }
   const reviewL1=summarize('review_l1'),punchlistL0=summarize('punchlist_l0')
-  return{rows:reviewL1.rows,l0_rows:punchlistL0.rows,options:{month:months,regional:[...new Set(base.rows.map(row=>row.regional).filter(Boolean))].sort(),nop:[...new Set(base.rows.map(row=>row.nop).filter(Boolean))].sort()},taxonomy:punchlistTaxonomy(),summary:reviewL1.summary,l0_summary:punchlistL0.summary}
+  return{rows:reviewL1.rows,l0_rows:punchlistL0.rows,options:{month:months,regional:[...new Set(uniqueRows.map(row=>row.regional).filter(Boolean))].sort(),nop:[...new Set(uniqueRows.map(row=>row.nop).filter(Boolean))].sort()},taxonomy:punchlistTaxonomy(),summary:reviewL1.summary,l0_summary:punchlistL0.summary}
 }
 
 export async function classifyOtherPunchlistNotes(data,filters={},limit=20){
