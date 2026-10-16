@@ -364,8 +364,8 @@ const PUNCHLIST_RULES=[
 ]
 // Kamus status dipakai sebelum Gemini. Kata positif hanya dianggap aman apabila
 // tidak ditemukan indikasi negatif pada catatan yang sama.
-const POSITIVE_NOTE_WORDS=['aman','normal','baik','bagus','oke','ok','good','clear','fine','ready','stabil','layak','bersih','rapi','lengkap','aktif','berfungsi','beroperasi','valid','sesuai','optimal','sehat','prima','terkendali','mantap','safe','normalisasi']
-const NEGATIVE_NOTE_WORDS=['rusak','kerusakan','perbaikan','perbaiki','diperbaiki','penggantian','ganti','pengadaan','tidak aktif','nonaktif','mati','off','down','gagal','fail','error','alarm','fault','bermasalah','masalah','kendala','gangguan','tidak berfungsi','tidak normal','tidak baik','tidak layak','tidak sesuai','hilang','kurang','bocor','retak','patah','putus','kendor','longgar','karat','korosi','aus','soak','drop','panas','overheat','kotor','semak','terhalang','roboh','tumbang','miring','pecah','blank','tidak terbaca','tidak ada','nok','tidak backup','tidak auto','tidak running','tidak hidup','tidak menyala','tidak jalan','tidak bisa','macet','lemah','berisik','getar','terbakar','terkelupas','terlepas','tercabut','tidak lengkap']
+const POSITIVE_NOTE_WORDS=['aman','normal','baik','bagus','oke','ok','good','clear','fine','ready','stabil','layak','bersih','rapi','lengkap','aktif','berfungsi','beroperasi','valid','sesuai','optimal','sehat','prima','terkendali','mantap','safe','normalisasi','done','selesai','sudah selesai','telah selesai','selesai dikerjakan','selesai semua','beres','tuntas','complete','completed','finish','finished','resolved','all good','no issue','no problem']
+const NEGATIVE_NOTE_WORDS=['rusak','kerusakan','perbaikan','perbaiki','diperbaiki','penggantian','ganti','pengadaan','tidak aktif','nonaktif','dinonaktifkan','disabled','disable','deactivated','mati','off','down','outage','gagal','fail','error','alarm','fault','bermasalah','masalah','kendala','gangguan','tidak berfungsi','tidak normal','tidak baik','tidak layak','tidak sesuai','tidak tersedia','belum tersedia','tidak terpasang','belum terpasang','belum ada','not active','not available','unavailable','not ready','not working','not operational','not functioning','out of service','missing','hilang','kurang','bocor','retak','patah','putus','kendor','longgar','karat','korosi','aus','soak','drop','panas','overheat','kotor','semak','terhalang','roboh','tumbang','miring','pecah','blank','tidak terbaca','tidak ada','nok','tidak backup','tidak auto','tidak running','tidak hidup','tidak menyala','tidak jalan','tidak bisa','macet','lemah','berisik','getar','terbakar','terkelupas','terlepas','tercabut','tidak lengkap']
 const phrasePattern=words=>new RegExp(`(?:^|[^a-z])(?:${words.map(word=>word.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/\s+/g,'\\s+')).join('|')})(?=$|[^a-z])`,'i')
 const POSITIVE_NOTE_PATTERN=phrasePattern(POSITIVE_NOTE_WORDS)
 const NEGATIVE_NOTE_PATTERN=phrasePattern(NEGATIVE_NOTE_WORDS)
@@ -374,9 +374,21 @@ const NO_FINDING_PATTERNS=[
   /^(?:tidak ada|tidak ditemukan|tidak terdapat)\s+(?:temuan|kendala|masalah|issue|gangguan|kerusakan)[.!;,\s]*$/i,
   /^(?:no\s*(?:finding|findings|issue|issues|problem|problems)|all\s*good|good\s*condition)[.!;,\s]*$/i
 ]
+// Catatan yang sangat singkat belum cukup menjelaskan kondisi site. Catatan
+// tersebut tetap tercatat sebagai Ada Temuan > Lainnya agar diperiksa manual,
+// bukan diasumsikan aman atau dikirim ke klasifikasi otomatis Gemini.
+const isBriefPunchlistNote=note=>{
+  const normalized=String(note||'').trim().replace(/\s+/g,' ')
+  const words=normalized.match(/[\p{L}\p{N}]+/gu)||[]
+  return normalized.length<30||words.length<5
+}
 export function classifyPunchlistNote(value){
   const note=String(value||'').trim()
   if(!note)return{status:'Notes Kosong',findings:[]}
+  // Hanya pernyataan eksplisit bahwa tidak ada temuan yang boleh langsung
+  // menjadi aman, meskipun teksnya singkat.
+  if(NO_FINDING_PATTERNS.some(pattern=>pattern.test(note)))return{status:'Tidak Ada Temuan',findings:[]}
+  if(isBriefPunchlistNote(note))return{status:'Ada Temuan',findings:[{category:'LAINNYA',subcategory:'Lainnya',quote:note,count:1,source:'manual-review'}]}
   const findings=PUNCHLIST_RULES.filter(([, ,pattern])=>pattern.test(note)).map(([category,subcategory])=>({category,subcategory,quote:note,count:1}))
   // Temuan spesifik selalu menang; kata positif di kalimat yang juga memuat
   // kerusakan tidak boleh menyembunyikan temuan tersebut.
@@ -386,7 +398,7 @@ export function classifyPunchlistNote(value){
   // battery rusak" tetap Ada Temuan; kata "baik" tidak boleh mengubahnya
   // menjadi Tidak Ada Temuan.
   if(concern)return{status:'Ada Temuan',findings:[{category:'LAINNYA',subcategory:'Lainnya',quote:note,count:1}]}
-  if(NO_FINDING_PATTERNS.some(pattern=>pattern.test(note))||positive)return{status:'Tidak Ada Temuan',findings:[]}
+  if(positive)return{status:'Tidak Ada Temuan',findings:[]}
   return{status:'Ada Temuan',findings:[{category:'LAINNYA',subcategory:'Lainnya',quote:note,count:1}]}
 }
 const isOthers=classified=>classified.status==='Ada Temuan'&&classified.findings.length===1&&classified.findings[0]?.category==='LAINNYA'
@@ -423,7 +435,7 @@ export async function listPunchlistSites(data,filters={}){
 export async function classifyOtherPunchlistNotes(data,filters={},limit=20){
   if(!databaseEnabled)throw Object.assign(new Error('Klasifikasi Gemini membutuhkan MySQL untuk menyimpan hasil.'),{status:503})
   const level=filters.level==='punchlist_l0'?'punchlist_l0':'review_l1',result=await listPunchlistSites(data,filters),rawRows=level==='punchlist_l0'?result.l0_rows:result.rows,index=siteIndex(data)
-  const candidatePool=[...new Map(rawRows.filter(row=>isOthers(classifyPunchlistNote(row.note))).filter(row=>{
+  const candidatePool=[...new Map(rawRows.filter(row=>isOthers(classifyPunchlistNote(row.note))&&!isBriefPunchlistNote(row.note)).filter(row=>{
     const stored=index.aiClassifications.get(`${level}|${normalizeSite(row.site_id)}`)
     return !stored||stored.note_hash!==noteHash(row.note)
   }).map(row=>[normalizeSite(row.site_id),row])).values()]

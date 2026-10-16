@@ -1739,6 +1739,11 @@ button { cursor: pointer; }
 .pm-export-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
 .pm-export-button { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:34px; border:1px solid transparent; border-radius:4px; padding:0 12px; font-size:10px; font-weight:600; letter-spacing:.01em; transition:filter .15s ease,transform .15s ease; }
 .pm-export-button:hover { filter:brightness(.93); transform:translateY(-1px); }
+.pm-snippet-visuals .pm-export-image, .pm-cov-actions .pm-export-image { gap:7px; font-size:0; }
+.pm-snippet-visuals .pm-export-image::before, .pm-cov-actions .pm-export-image::before { width:14px; height:14px; content:""; background:center / 14px 14px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v12m0 0 4-4m-4 4-4-4M5 21h14'/%3E%3C/svg%3E"); }
+.pm-snippet-visuals .pm-export-image::after, .pm-cov-actions .pm-export-image::after { content:"Download Image"; font-size:10px; font-weight:600; letter-spacing:.01em; }
+.pm-genset-visuals .pm-snippet-panel:first-child { display:flex; flex-direction:column; }
+.pm-genset-visuals .pm-snippet-panel:first-child::after { display:block; margin-top:auto; border-top:1px solid #dfe6ee; padding:12px 0 1px; color:#65758a; font-size:10px; font-weight:500; line-height:1.6; white-space:pre-line; content:"FOKUS OPERASIONAL\A Prioritaskan ticket menunggu approval serta status Take Out dan Rejected."; }
 .pm-export-excel { border-color:#257947; background:#368b55; color:#fff; }
 .pm-export-image { border-color:#27628b; background:#3979a5; color:#fff; }
 .kpi-export-share { border:1px solid #257947; background:#368b55; color:#fff; }
