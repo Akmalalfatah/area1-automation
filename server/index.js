@@ -11,7 +11,7 @@ import {databaseEnabled, deleteHistory, initDb, latestPreventiveUpload, listHist
 import {buildAnalysis, buildMttrMetrics, createRun, dashboardPayload, generateReport, loadDataset, loadState, MTTR_TARGETS_BY_COMPONENT, processRun, saveState, uploadAndProcess, uploadTicketMttrSummary, ValidationError} from './services.js'
 import {buildPreventiveDashboard, parsePreventiveWorkbook} from './preventive.js'
 import {patchTemplate} from './export-xlsx.js'
-import {siteData,siteDataForUploadMonth,listSites,listPunchlistSites,classifyOtherPunchlistNotes,savePunchlistNote,analyzeSite,parseSiteSource,saveSiteSource,saveEvaluation} from './pm-site.js'
+import {siteData,siteDataForUploadMonth,listSites,listPunchlistSites,classifyOtherPunchlistNotes,savePunchlistManualClassification,savePunchlistNote,analyzeSite,parseSiteSource,saveSiteSource,saveEvaluation} from './pm-site.js'
 import {workOrderKey} from './preventive.js'
 import {gensetData,analyzeGenset,saveGensetEvaluation,enrichGensetSource} from './pm-genset.js'
 import {preventiveUploadHistory,applicationUploadHistory} from './db.js'
@@ -88,6 +88,7 @@ app.put('/api/pm-genset/evaluation',asyncHandler(async(req,res)=>{const data=awa
 app.get('/api/pm-site',asyncHandler(async(req,res)=>res.json(listSites(await preventiveSourceData(req.query),req.query))))
 app.get('/api/punchlist',asyncHandler(async(req,res)=>res.json(await listPunchlistSites(await preventiveSourceData(req.query),req.query))))
 app.post('/api/punchlist/classify-others',asyncHandler(async(req,res)=>res.json(await classifyOtherPunchlistNotes(await preventiveSourceData(req.body||{}),req.body||{},req.body?.limit))))
+app.put('/api/punchlist/classification',asyncHandler(async(req,res)=>res.json(await savePunchlistManualClassification(await preventiveSourceData(req.body||{}),req.body||{}))))
 app.put('/api/punchlist/:siteId',asyncHandler(async(req,res)=>res.json(await savePunchlistNote(req.params.siteId,req.body))))
 app.post('/api/pm-site/sources/:kind',upload.single('file'),asyncHandler(async(req,res)=>{assertXlsx(req.file);assertDate(req.body.upload_date);const kinds=['master','ggr','inap','swfm','kpi_b13_r01','kpi_b13_r02','kpi_b13_r10'];if(!kinds.includes(req.params.kind))throw new HttpError(422,'Jenis sumber upload tidak valid.');const regionByKind={kpi_b13_r01:'R01_Sumbagut',kpi_b13_r02:'R02_Sumbagsel',kpi_b13_r10:'R10_Sumbagteng'},region=regionByKind[req.params.kind];const dataset=region?await parseKpiB13(req.file.buffer,region):await enrichGensetSource(req.file.buffer,req.params.kind,await parseSiteSource(req.file.buffer,req.params.kind));res.json(await saveSiteSource(req.params.kind,req.file.originalname,req.body.upload_date,dataset))}))
 app.get('/api/pm-site/detail',asyncHandler(async(req,res)=>{const data=await preventiveSourceData(req.query),pm=data.pm?.find(row=>row.maintenance_kind==='site'&&workOrderKey(row)===req.query.id);if(!pm)throw new HttpError(404,'Pekerjaan PM Site tidak ditemukan.');res.json(analyzeSite(pm,data))}))

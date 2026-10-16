@@ -1532,7 +1532,7 @@ class PunchlistWorkspace extends React.Component {
   constructor(props) {
     super(props);
     const scope = window.PMPunchlistScope || {};
-    this.state = { rows: [], l0Rows: [], options: { month: [], regional: [], nop: [] }, summary: null, summaryL0: null, summaryLevel: "punchlist_l0", search: "", month: scope.month || "", regional: scope.regional || "", nop: scope.nop || "", category: "", findingFilter: null, notes: {}, loading: true, saving: {}, classifying: false, error: "", message: "", dialogSite: null, dialogStep: "question", dialogNote: "" };
+    this.state = { rows: [], l0Rows: [], options: { month: [], regional: [], nop: [] }, taxonomy: [], summary: null, summaryL0: null, summaryLevel: "punchlist_l0", search: "", month: scope.month || "", regional: scope.regional || "", nop: scope.nop || "", category: "", findingFilter: null, notes: {}, loading: true, saving: {}, classifying: false, manualSite: null, manualCategory: "", manualSubcategory: "", manualSaving: false, error: "", message: "", dialogSite: null, dialogStep: "question", dialogNote: "" };
     this.load = async () => {
       const { search, month, regional, nop, category } = this.state, params = new URLSearchParams();
       if (search) params.set("search", search);
@@ -1544,7 +1544,7 @@ class PunchlistWorkspace extends React.Component {
       try {
         const data = await api(`/api/punchlist${params.size ? `?${params}` : ""}`), notes = {};
         for (const row of data.rows || []) notes[row.site_id] = row.note || "";
-        this.setState({ rows: data.rows || [], l0Rows: data.l0_rows || [], options: data.options || { month: [], regional: [], nop: [] }, summary: data.summary || null, summaryL0: data.l0_summary || null, notes });
+        this.setState({ rows: data.rows || [], l0Rows: data.l0_rows || [], options: data.options || { month: [], regional: [], nop: [] }, taxonomy: data.taxonomy || [], summary: data.summary || null, summaryL0: data.l0_summary || null, notes });
       } catch (error) {
         this.setState({ error: error.message });
       } finally {
@@ -1558,10 +1558,17 @@ class PunchlistWorkspace extends React.Component {
     this.clearFindingFilter = () => this.setState({ findingFilter: null });
     this.classifyOthers = async () => {
       const { search, month, regional, nop, category, summaryLevel } = this.state;
-      this.setState({ classifying: true, error: "", message: "" });
+      this.setState({ classifying: true, error: "", message: "Memulai antrean Gemini…" });
       try {
-        const result = await api("/api/punchlist/classify-others", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ search, month, regional, nop, category, level: summaryLevel, limit: 20 }) });
-        this.setState({ message: result.message || "Klasifikasi Gemini selesai." });
+        let processed = 0, classified = 0, manualReview = 0, remaining = 1, batches = 0;
+        while (remaining > 0 && batches < 12) {
+          const result = await api("/api/punchlist/classify-others", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ search, month, regional, nop, category, level: summaryLevel, limit: 25 }) });
+          processed += Number(result.processed || 0); classified += Number(result.classified || 0); manualReview += Number(result.manual_review || 0); remaining = Number(result.remaining || 0); batches++;
+          if (!Number(result.processed || 0)) break;
+          this.setState({ message: `Gemini memproses ${processed} catatan…` });
+        }
+        const suffix = remaining > 0 ? ` ${remaining} catatan masih dalam antrean; jalankan kembali untuk melanjutkan.` : "";
+        this.setState({ message: processed ? `${classified} temuan berhasil dipetakan Gemini. ${manualReview} tetap Lainnya untuk review manual.${suffix}` : "Tidak ada temuan Lainnya baru untuk diproses." });
         await this.load();
       } catch (error) {
         this.setState({ error: error.message });
@@ -1589,6 +1596,26 @@ class PunchlistWorkspace extends React.Component {
       if (!this.state.dialogNote.trim()) return this.setState({ error: "Temuan tidak boleh kosong. Pilih Tidak Ada Temuan bila tidak ada catatan." });
       this.save(this.state.dialogSite.site_id, this.state.dialogNote);
     };
+    this.openManualReview = (row) => {
+      const first = (this.state.taxonomy || [])[0] || {};
+      this.setState({ manualSite: row, manualCategory: first.category || "", manualSubcategory: first.subcategory || "", error: "" });
+    };
+    this.closeManualReview = () => this.setState({ manualSite: null, manualCategory: "", manualSubcategory: "", manualSaving: false });
+    this.saveManualReview = async () => {
+      const { manualSite, manualCategory, manualSubcategory, summaryLevel, month, regional, nop } = this.state;
+      if (!manualSite || !manualCategory || !manualSubcategory) return this.setState({ error: "Pilih kategori dan sub kategori terlebih dahulu." });
+      this.setState({ manualSaving: true, error: "", message: "" });
+      try {
+        const result = await api("/api/punchlist/classification", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ site_id: manualSite.site_id, level: summaryLevel, month, regional, nop, category: manualCategory, subcategory: manualSubcategory }) });
+        this.setState({ message: result.message || "Klasifikasi manual tersimpan." });
+        this.closeManualReview();
+        await this.load();
+      } catch (error) {
+        this.setState({ error: error.message });
+      } finally {
+        this.setState({ manualSaving: false });
+      }
+    };
   }
   componentDidMount() { this.load(); }
   render() {
@@ -1597,7 +1624,7 @@ class PunchlistWorkspace extends React.Component {
     const activeLevel = s.summaryLevel || "punchlist_l0", activeRows = activeLevel === "punchlist_l0" ? s.l0Rows : s.rows;
     const noteOfLevel = (row, level) => String(level === "review_l1" ? s.notes[row.site_id] || row.note || "" : row.note || row.punchlist_l0_note || "").trim();
     const noteOf = (row) => noteOfLevel(row, activeLevel);
-    const stateOfLevel = (row, level) => { const note = noteOfLevel(row, level); return !note ? "empty" : /^tidak ada temuan\.?$/i.test(note) ? "clear" : "finding"; };
+    const stateOfLevel = (row, level) => { const note = noteOfLevel(row, level); return !note ? "empty" : row.status_note === "Tidak Ada Temuan" || /^tidak ada temuan\.?$/i.test(note) ? "clear" : "finding"; };
     const stateOf = (row) => stateOfLevel(row, activeLevel);
     const chipLabel = { empty: "Belum dicatat", clear: "Tidak ada temuan", finding: "Ada temuan" };
     const counts = { empty: 0, clear: 0, finding: 0 };
@@ -1643,7 +1670,7 @@ class PunchlistWorkspace extends React.Component {
           h("div", { className: `pl-note ${note ? "" : "is-empty"}` }, h("p", { className: "pl-label" }, activeLevel === "punchlist_l0" ? "CATATAN PUNCHLIST L0" : "CATATAN REVIEW L1"), h("p", null, note || "Belum ada catatan")),
           h("div", { className: "pl-aside" },
             h("div", null, h("p", { className: "pl-label" }, "TERAKHIR DISIMPAN"), h("p", { className: "pl-value" }, row.updated_at ? wibDateTime(row.updated_at) : "Belum ada catatan")),
-            activeLevel === "review_l1" ? h("button", { type: "button", disabled: !!s.saving[row.site_id], onClick: () => this.openAction(row), className: "btn-primary pl-action" }, note ? "UBAH TEMUAN" : "ACTION TEMUAN") : h("span", { className: "pl-source-note" }, "Dari Notes PM Site"))));
+            (row.findings || []).some((finding) => finding.category === "LAINNYA") ? h("button", { type: "button", disabled: s.manualSaving, onClick: () => this.openManualReview(row), className: "btn-primary pl-action" }, "REVIEW KATEGORI") : activeLevel === "review_l1" ? h("button", { type: "button", disabled: !!s.saving[row.site_id], onClick: () => this.openAction(row), className: "btn-primary pl-action" }, note ? "UBAH TEMUAN" : "ACTION TEMUAN") : h("span", { className: "pl-source-note" }, "Dari Notes PM Site"))));
     });
 
     /* ---------- Dialog Action Temuan ---------- */
@@ -1664,6 +1691,24 @@ class PunchlistWorkspace extends React.Component {
           h("header", null, h("div", null, h("h3", null, "Action Temuan"), h("p", null, `${site.site_id}${site.site_name ? ` - ${site.site_name}` : ""}`)), h("button", { type: "button", "aria-label": "Tutup", disabled: saving, onClick: this.closeAction }, h(X, { size: 18 }))),
           s.dialogStep === "question" ? question : textForm));
       cards.push(ReactDOM.createPortal(dialog, document.body, "punchlist-action-modal"));
+    }
+
+    /* Catatan yang Gemini tetap tandai LAINNYA dipetakan satu per satu di sini. */
+    if (s.manualSite) {
+      const site = s.manualSite, saving = !!s.manualSaving;
+      const categoryOptions = [...new Set((s.taxonomy || []).map((item) => item.category).filter(Boolean))];
+      const subcategoryOptions = (s.taxonomy || []).filter((item) => item.category === s.manualCategory).map((item) => item.subcategory);
+      const dialog = h("div", { className: "pm-upload-history-overlay", onClick: (event) => { if (event.target === event.currentTarget && !saving) this.closeManualReview(); } },
+        h("section", { role: "dialog", "aria-modal": true, "aria-label": "Review kategori temuan", className: "pm-upload-history-dialog pl-dialog" },
+          h("header", null, h("div", null, h("h3", null, "Review Kategori Temuan"), h("p", null, `${site.site_id}${site.site_name ? ` - ${site.site_name}` : ""}`)), h("button", { type: "button", "aria-label": "Tutup", disabled: saving, onClick: this.closeManualReview }, h(X, { size: 18 }))),
+          h("div", { className: "pl-dialog-body" },
+            h("p", { className: "pl-dialog-text" }, "Gemini belum yakin dengan kategori catatan ini. Pilih pemetaan yang paling tepat; hasilnya disimpan untuk catatan saat ini."),
+            h("div", { className: "pl-note" }, h("p", { className: "pl-label" }, "CATATAN"), h("p", null, noteOf(site) || "-")),
+            h("label", null, h("span", { className: "filter-label" }, "KATEGORI"), h("select", { className: "control", value: s.manualCategory, onChange: (event) => { const nextCategory = event.target.value, firstSub = (s.taxonomy || []).find((item) => item.category === nextCategory)?.subcategory || ""; this.setState({ manualCategory: nextCategory, manualSubcategory: firstSub }); } }, ...categoryOptions.map((value) => h("option", { key: value, value }, value)))),
+            h("label", null, h("span", { className: "filter-label" }, "SUB KATEGORI"), h("select", { className: "control", value: s.manualSubcategory, onChange: (event) => this.setState({ manualSubcategory: event.target.value }) }, ...subcategoryOptions.map((value) => h("option", { key: value, value }, value)))),
+            s.error && h("p", { role: "alert", className: "pl-alert is-error" }, s.error),
+            h("div", { className: "pl-dialog-actions" }, h("button", { type: "button", disabled: saving, onClick: this.closeManualReview, className: "btn-secondary" }, "BATAL"), h("button", { type: "button", disabled: saving, onClick: this.saveManualReview, className: "btn-primary" }, saving ? "MENYIMPAN..." : "SIMPAN KATEGORI")))));
+      cards.push(ReactDOM.createPortal(dialog, document.body, "punchlist-manual-review-modal"));
     }
 
     /* ---------- Rekap otomatis ---------- */
@@ -1755,7 +1800,7 @@ class PunchlistWorkspace extends React.Component {
     const levelTitle = activeLevel === "punchlist_l0" ? "PUNCHLIST L0" : "REVIEW L1", levelDescription = activeLevel === "punchlist_l0" ? "Klasifikasi otomatis dari Notes PM Site yang diisi petugas lapangan." : "Klasifikasi otomatis dari review L1 yang tersimpan di website.";
     const othersCallout = others && Number(others.total) > 0 && h("div", { className: "pl-callout-actions" },
       h("button", { type: "button", onClick: this.reviewOthers, className: "pl-callout" }, h("span", { className: "pl-callout-text" }, h("small", null, "PERLU PEMETAAN"), h("strong", null, `${number(others.total)} TEMUAN LAINNYA`), h("em", null, "Buka daftar notes yang belum cocok dengan kamus")), h(ChevronRight, { size: 19 })),
-      h("button", { type: "button", disabled: s.classifying, onClick: this.classifyOthers, className: "btn-primary pl-gemini-button" }, s.classifying ? "MEMPROSES GEMINI..." : "PROSES LAINNYA DENGAN GEMINI"));
+      h("button", { type: "button", disabled: s.classifying, onClick: this.classifyOthers, className: "btn-primary pl-gemini-button" }, s.classifying ? "MEMPROSES ANTREAN GEMINI..." : "KLASIFIKASIKAN LAINNYA DENGAN GEMINI"));
     const summaryView = h("section", { className: "corporate-panel pl-section" },
       h("div", { className: "pl-section-head" }, h("div", null, h("p", { className: "pl-eyebrow" }, `REKAP OTOMATIS — ${levelTitle}`), h("h2", { className: "section-title" }, `TEMUAN ${levelTitle}`), h("p", { className: "pl-section-desc" }, levelDescription))),
       othersCallout,

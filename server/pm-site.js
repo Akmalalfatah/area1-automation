@@ -362,13 +362,28 @@ const PUNCHLIST_RULES=[
   ['KENDALA PEKERJAAN','Cuaca/Hujan',/\b(cuaca|hujan)\b/i],
   ['KENDALA PEKERJAAN','Tower/Pole Tidak Bisa Dipanjat/K3',/\b(tower|pole)\b.*\b(tidak bisa dipanjat|k3)\b/i]
 ]
+// Kamus status dipakai sebelum Gemini. Kata positif hanya dianggap aman apabila
+// tidak ditemukan indikasi negatif pada catatan yang sama.
+const POSITIVE_NOTE_WORDS=['aman','normal','baik','bagus','oke','ok','good','clear','fine','ready','stabil','layak','bersih','rapi','lengkap','aktif','berfungsi','beroperasi','valid','sesuai','optimal','sehat','prima','terkendali','mantap','safe','normalisasi']
+const NEGATIVE_NOTE_WORDS=['rusak','kerusakan','perbaikan','perbaiki','diperbaiki','penggantian','ganti','pengadaan','tidak aktif','nonaktif','mati','off','down','gagal','fail','error','alarm','fault','bermasalah','masalah','kendala','gangguan','tidak berfungsi','tidak normal','tidak baik','tidak layak','tidak sesuai','hilang','kurang','bocor','retak','patah','putus','kendor','longgar','karat','korosi','aus','soak','drop','panas','overheat','kotor','semak','terhalang','roboh','tumbang','miring','pecah','blank','tidak terbaca','tidak ada','nok','tidak backup','tidak auto','tidak running','tidak hidup','tidak menyala','tidak jalan','tidak bisa','macet','lemah','berisik','getar','terbakar','terkelupas','terlepas','tercabut','tidak lengkap']
+const phrasePattern=words=>new RegExp(`(?:^|[^a-z])(?:${words.map(word=>word.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/\s+/g,'\\s+')).join('|')})(?=$|[^a-z])`,'i')
+const POSITIVE_NOTE_PATTERN=phrasePattern(POSITIVE_NOTE_WORDS)
+const NEGATIVE_NOTE_PATTERN=phrasePattern(NEGATIVE_NOTE_WORDS)
+const NO_FINDING_PATTERNS=[
+  /^(?:site\s*)?(?:aman|normal|baik|bagus|oke|ok|good|clear|fine|ready|stabil|layak|bersih|rapi|lengkap|aktif|berfungsi|beroperasi|valid|sesuai|optimal|sehat|prima|nihil|normal semua|semua baik|kondisi baik|kondisi normal|kondisi aman|berfungsi baik)[.!;,\s]*$/i,
+  /^(?:tidak ada|tidak ditemukan|tidak terdapat)\s+(?:temuan|kendala|masalah|issue|gangguan|kerusakan)[.!;,\s]*$/i,
+  /^(?:no\s*(?:finding|findings|issue|issues|problem|problems)|all\s*good|good\s*condition)[.!;,\s]*$/i
+]
 export function classifyPunchlistNote(value){
   const note=String(value||'').trim()
   if(!note)return{status:'Notes Kosong',findings:[]}
-  if(/^(tidak ada temuan|nihil|no finding)[.!\s]*$/i.test(note))return{status:'Tidak Ada Temuan',findings:[]}
   const findings=PUNCHLIST_RULES.filter(([, ,pattern])=>pattern.test(note)).map(([category,subcategory])=>({category,subcategory,quote:note,count:1}))
-  if(!findings.length)findings.push({category:'LAINNYA',subcategory:'Lainnya',quote:note,count:1})
-  return{status:'Ada Temuan',findings}
+  // Temuan spesifik selalu menang; kata positif di kalimat yang juga memuat
+  // kerusakan tidak boleh menyembunyikan temuan tersebut.
+  if(findings.length)return{status:'Ada Temuan',findings}
+  const positive=POSITIVE_NOTE_PATTERN.test(note),concern=NEGATIVE_NOTE_PATTERN.test(note)
+  if(NO_FINDING_PATTERNS.some(pattern=>pattern.test(note))||(positive&&!concern))return{status:'Tidak Ada Temuan',findings:[]}
+  return{status:'Ada Temuan',findings:[{category:'LAINNYA',subcategory:'Lainnya',quote:note,count:1}]}
 }
 const isOthers=classified=>classified.status==='Ada Temuan'&&classified.findings.length===1&&classified.findings[0]?.category==='LAINNYA'
 const punchlistTaxonomy=()=>[...new Map(PUNCHLIST_RULES.map(([category,subcategory])=>[`${category}|${subcategory}`,{category,subcategory}])).values()]
@@ -394,16 +409,17 @@ export async function listPunchlistSites(data,filters={}){
     return{rows,summary:{level,month,regions,total_tickets:rows.length,total_findings:allFindings.length,status_by_regional,category_counts:countBy('category'),subcategory_counts:countBy('subcategory',['category'])}}
   }
   const reviewL1=summarize('review_l1'),punchlistL0=summarize('punchlist_l0')
-  return{rows:reviewL1.rows,l0_rows:punchlistL0.rows,options:{month:months,regional:[...new Set(base.rows.map(row=>row.regional).filter(Boolean))].sort(),nop:[...new Set(base.rows.map(row=>row.nop).filter(Boolean))].sort()},summary:reviewL1.summary,l0_summary:punchlistL0.summary}
+  return{rows:reviewL1.rows,l0_rows:punchlistL0.rows,options:{month:months,regional:[...new Set(base.rows.map(row=>row.regional).filter(Boolean))].sort(),nop:[...new Set(base.rows.map(row=>row.nop).filter(Boolean))].sort()},taxonomy:punchlistTaxonomy(),summary:reviewL1.summary,l0_summary:punchlistL0.summary}
 }
 
 export async function classifyOtherPunchlistNotes(data,filters={},limit=20){
   if(!databaseEnabled)throw Object.assign(new Error('Klasifikasi Gemini membutuhkan MySQL untuk menyimpan hasil.'),{status:503})
   const level=filters.level==='punchlist_l0'?'punchlist_l0':'review_l1',result=await listPunchlistSites(data,filters),rawRows=level==='punchlist_l0'?result.l0_rows:result.rows,index=siteIndex(data)
-  const candidates=[...new Map(rawRows.filter(row=>isOthers(classifyPunchlistNote(row.note))).filter(row=>{
+  const candidatePool=[...new Map(rawRows.filter(row=>isOthers(classifyPunchlistNote(row.note))).filter(row=>{
     const stored=index.aiClassifications.get(`${level}|${normalizeSite(row.site_id)}`)
     return !stored||stored.note_hash!==noteHash(row.note)
-  }).map(row=>[normalizeSite(row.site_id),row])).values()].slice(0,Math.max(1,Math.min(25,Number(limit)||20)))
+  }).map(row=>[normalizeSite(row.site_id),row])).values()]
+  const candidates=candidatePool.slice(0,Math.max(1,Math.min(25,Number(limit)||20)))
   if(!candidates.length)return{processed:0,remaining:0,message:'Tidak ada temuan Lainnya baru untuk diproses.'}
   const taxonomy=punchlistTaxonomy(),allowed=new Set(taxonomy.map(item=>`${item.category}|${item.subcategory}`))
   // Gemini may decide a note is still too ambiguous. Store that decision too so
@@ -412,13 +428,30 @@ export async function classifyOtherPunchlistNotes(data,filters={},limit=20){
   const instruction=`Anda adalah pengklasifikasi temuan preventive maintenance telekomunikasi Indonesia. Klasifikasikan HANYA catatan yang diberikan ke salah satu pasangan kategori dan subkategori yang tersedia. Tangani typo, singkatan, dan variasi penulisan secara konservatif. Jangan membuat kategori/subkategori baru. Kembalikan JSON murni berbentuk {"items":[{"site_id":"...","category":"...","subcategory":"...","confidence":0.0,"reason":"maksimal 12 kata"}]}. Jika tidak yakin, gunakan kategori LAINNYA dan subkategori Lainnya.`
   const payload={taxonomy,notes:candidates.map(row=>({site_id:normalizeSite(row.site_id),note:String(row.note).slice(0,3000)}))}
   const generated=await generateGeminiJson(instruction,payload),items=Array.isArray(generated.data?.items)?generated.data.items:[],bySite=new Map(items.map(item=>[normalizeSite(item.site_id),item])),accepted=[]
+  let classified=0,manualReview=0
   for(const row of candidates){
     const item=bySite.get(normalizeSite(row.site_id)),pair=`${String(item?.category||'')}|${String(item?.subcategory||'')}`
-    if(!item||!allowed.has(pair))continue
-    accepted.push([normalizeSite(row.site_id),level,noteHash(row.note),item.category,item.subcategory,Math.max(0,Math.min(1,Number(item.confidence)||0)),generated.model,String(item.reason||'').slice(0,500)])
+    const choice=item&&allowed.has(pair)?item:{category:'LAINNYA',subcategory:'Lainnya',confidence:0,reason:'Gemini belum yakin; perlu review manual.'}
+    if(choice.category==='LAINNYA')manualReview++;else classified++
+    accepted.push([normalizeSite(row.site_id),level,noteHash(row.note),choice.category,choice.subcategory,Math.max(0,Math.min(1,Number(choice.confidence)||0)),generated.model,String(choice.reason||'').slice(0,500)])
   }
   if(accepted.length)await getPool().query('INSERT INTO site_punchlist_ai_classifications(site_id,source_level,note_hash,category,subcategory,confidence,model,reason) VALUES ? ON DUPLICATE KEY UPDATE note_hash=VALUES(note_hash),category=VALUES(category),subcategory=VALUES(subcategory),confidence=VALUES(confidence),model=VALUES(model),reason=VALUES(reason),updated_at=CURRENT_TIMESTAMP',[accepted])
-  return{processed:accepted.length,skipped:candidates.length-accepted.length,remaining:Math.max(0,candidates.length-accepted.length),model:generated.model,message:`${accepted.length} temuan Lainnya diproses Gemini.`}
+  const remaining=Math.max(0,candidatePool.length-candidates.length)
+  return{processed:accepted.length,classified,manual_review:manualReview,remaining,model:generated.model,message:`${classified} temuan dipetakan Gemini; ${manualReview} tetap Lainnya untuk review manual.${remaining?` Sisa antrean ${remaining}.`:''}`}
+}
+
+export async function savePunchlistManualClassification(data,input={}){
+  if(!databaseEnabled)throw Object.assign(new Error('Review manual membutuhkan MySQL untuk menyimpan hasil.'),{status:503})
+  const level=input.level==='punchlist_l0'?'punchlist_l0':'review_l1',siteId=normalizeSite(input.site_id)
+  const allowed=new Set(punchlistTaxonomy().map(item=>`${item.category}|${item.subcategory}`))
+  const category=String(input.category||'').trim(),subcategory=String(input.subcategory||'').trim()
+  if(!siteId||!allowed.has(`${category}|${subcategory}`))throw Object.assign(new Error('Kategori dan sub kategori review tidak valid.'),{status:422})
+  const snapshot=await listPunchlistSites(data,{month:input.month||'',regional:input.regional||'',nop:input.nop||''})
+  const rows=level==='punchlist_l0'?snapshot.l0_rows:snapshot.rows
+  const row=rows.find(item=>normalizeSite(item.site_id)===siteId),note=String(row?.note||'').trim()
+  if(!note)throw Object.assign(new Error('Catatan site tidak ditemukan pada filter aktif.'),{status:404})
+  await getPool().query('INSERT INTO site_punchlist_ai_classifications(site_id,source_level,note_hash,category,subcategory,confidence,model,reason) VALUES(?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE note_hash=VALUES(note_hash),category=VALUES(category),subcategory=VALUES(subcategory),confidence=VALUES(confidence),model=VALUES(model),reason=VALUES(reason),updated_at=CURRENT_TIMESTAMP',[siteId,level,noteHash(note),category,subcategory,1,'manual-review','Dipetakan melalui review manual.'])
+  return{site_id:siteId,level,category,subcategory,message:`${siteId} dipetakan ke ${category} — ${subcategory}.`}
 }
 
 export async function savePunchlistNote(siteId,input){
