@@ -16,6 +16,7 @@ import {workOrderKey} from './preventive.js'
 import {gensetData,analyzeGenset,saveGensetEvaluation,enrichGensetSource} from './pm-genset.js'
 import {preventiveUploadHistory,applicationUploadHistory} from './db.js'
 import {buildKpiB13Summaries,parseKpiB13} from './kpi-b13.js'
+import {rcaDashboard,rcaSnapshots,rcaTemplate,syncRcaGoogle} from './rca.js'
 
 const app=express(), upload=multer({storage:multer.memoryStorage(),limits:{fileSize:25*1024*1024}})
 app.use(express.json({limit:'1mb'}))
@@ -23,6 +24,11 @@ app.use('/static',express.static(`${WEB_DIR}/static`))
 app.get('/',(_req,res)=>res.sendFile(`${WEB_DIR}/index.html`))
 app.get('/api/health',(_req,res)=>res.json({status:'ok',runtime:'node'}))
 app.get('/api/config',(_req,res)=>res.json({regions:REGION_NOPS,default_prompt:DEFAULT_REPORT_PROMPT,database_enabled:databaseEnabled}))
+
+app.get('/api/rca/snapshots',asyncHandler(async(_req,res)=>res.json({items:await rcaSnapshots()})))
+app.post('/api/rca/sync',asyncHandler(async(req,res)=>res.json(await syncRcaGoogle({sheetName:req.body?.sheet_name||''}))))
+app.get('/api/rca/dashboard',asyncHandler(async(req,res)=>res.json(await rcaDashboard(req.query))))
+app.post('/api/rca/template',asyncHandler(async(req,res)=>res.json(await rcaTemplate(req.body||{}))))
 
 app.post('/api/runs',asyncHandler(async(_req,res)=>res.json(await createRun(RUNS_DIR))))
 app.get('/api/runs/:id',asyncHandler(async(req,res)=>{try{res.json(await loadState(RUNS_DIR,req.params.id))}catch(error){const dataset=await loadDataset(RUNS_DIR,req.params.id).catch(()=>null);if(!dataset)throw error;res.json({id:req.params.id,upload:null,processed:true,report:null,prompt:'',history:true})}}))

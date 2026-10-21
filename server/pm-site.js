@@ -383,7 +383,7 @@ const isBriefPunchlistNote=note=>{
   // Hanya respons ultra-pendek yang tidak punya konteks cukup untuk dipilah.
   // Catatan yang lebih panjang kembali memakai kamus, lalu dapat dipetakan
   // Gemini bila tetap belum cocok.
-  return normalized.length<=12&&words.length<=3
+  return normalized.length<=12&&words.length<=2
 }
 export function classifyPunchlistNote(value){
   const note=String(value||'').trim()
