@@ -2,7 +2,7 @@
   {
     "sheet_name": "RCA 16:00",
     "source_updated_at": null,
-    "synced_at": "2026-10-21T03:38:54.986Z",
+    "synced_at": "2026-10-21T04:45:48.445Z",
     "row_count": 243,
     "rows": [
       {
@@ -18,6 +18,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Other",
+        "arc": "Comcase",
+        "arcd": "Comcase Plan Dismantle",
         "validation": "Total_down (alarm hilang dari feed)",
         "sheet_name": "RCA 16:00"
       },
@@ -34,6 +36,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Commcase",
+        "arc": "Comcase",
+        "arcd": "Comcase dengan komunitas warga",
         "validation": "Total_down (alarm hilang dari feed)",
         "sheet_name": "RCA 16:00"
       },
@@ -50,6 +54,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Commcase",
+        "arc": "Comcase",
+        "arcd": "Comcase, site sudah dismantle sepihak",
         "validation": "Partial_down",
         "sheet_name": "RCA 16:00"
       },
@@ -66,6 +72,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 16:00"
       },
@@ -82,6 +90,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Other",
+        "arc": "BTS USO",
+        "arcd": "BTS USO",
         "validation": "Total_down (alarm hilang dari feed)",
         "sheet_name": "RCA 16:00"
       },
@@ -98,6 +108,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down (alarm hilang dari feed)",
         "sheet_name": "RCA 16:00"
       },
@@ -114,6 +126,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Vandalism",
+        "arcd": "Totaly Stolen",
         "validation": "Partial_down",
         "sheet_name": "RCA 16:00"
       },
@@ -130,6 +144,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 16:00"
       },
@@ -146,6 +162,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Commcase",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down (alarm hilang dari feed)",
         "sheet_name": "RCA 16:00"
       },
@@ -162,6 +180,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Comcase",
+        "arcd": "Comcase Sewa Lahan",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 16:00"
       },
@@ -178,6 +198,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Aktivitas",
+        "arc": "Dismantle",
+        "arcd": "Black site",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 16:00"
       },
@@ -194,6 +216,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Other",
+        "arc": "Renewal Issue",
+        "arcd": "Site dismantled issue IMB",
         "validation": "Partial_down",
         "sheet_name": "RCA 16:00"
       },
@@ -210,6 +234,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "RAN & Power",
+        "arc": "Stolen",
+        "arcd": "Stolen Modul RBS, Waiting part WH025 belum lengkap",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -226,6 +252,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Access Issue",
+        "arcd": "Block Akses, FU to DMT",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -242,6 +270,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -258,6 +288,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Other",
+        "arc": "",
+        "arcd": "",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 16:00"
       },
@@ -274,6 +306,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Aktivitas",
+        "arc": "Dismantle",
+        "arcd": "Dismantle Site, Blacksite",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 16:00"
       },
@@ -290,6 +324,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Stolen",
+        "arcd": "Totally Stolen, Waiting part WH025 belum lengkap",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -306,6 +342,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Aktivitas",
+        "arc": "Dismantle",
+        "arcd": "Dismantle Site, Blacksite",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 16:00"
       },
@@ -322,6 +360,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Dismantle",
+        "arcd": "Site Relokasi",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 16:00"
       },
@@ -338,6 +378,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Vandalism",
+        "arcd": "Stolen RRU & Kabel power",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -354,6 +396,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen Rectifier & RBS",
         "validation": "Partial_down",
         "sheet_name": "RCA 16:00"
       },
@@ -370,6 +414,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Vandalism",
+        "arcd": "Stolen Ant. GPS, kabel power & kabel coaxial & Belting kabinet BTS",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -386,6 +432,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 16:00"
       },
@@ -402,6 +450,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "",
+        "arcd": "",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 16:00"
       },
@@ -418,6 +468,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Vandalism",
+        "arcd": "Dibakar OTK, waiting part optik, plan recovery 21 Oktober 2026",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -434,6 +486,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "IDU Rip NEC Faulty | INC54011773",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -450,6 +504,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen kabel power, waiting kabel power RRU",
         "validation": "Total_down (alarm hilang dari feed)",
         "sheet_name": "RCA 16:00"
       },
@@ -466,6 +522,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen kabel power, waiting kabel power RRU",
         "validation": "Partial_down (traffic 2/5 NE nol)",
         "sheet_name": "RCA 16:00"
       },
@@ -482,6 +540,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Hardware Faulty",
+        "arcd": "Baseband Faulty",
         "validation": "Partial_down",
         "sheet_name": "RCA 16:00"
       },
@@ -498,6 +558,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen kabel power, waiting kabel power RRU",
         "validation": "Partial_down (traffic 1/6 NE nol)",
         "sheet_name": "RCA 16:00"
       },
@@ -514,6 +576,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down (traffic 3/9 NE nol)",
         "sheet_name": "RCA 16:00"
       },
@@ -530,6 +594,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Vandalism",
+        "arcd": "Impact stolen PTN STB003",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -546,6 +612,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Stolen",
+        "arcd": "Stolen modul NEC, impact simpul STB003 stolen modul NEC support material dari Padang",
         "validation": "Partial_down",
         "sheet_name": "RCA 16:00"
       },
@@ -562,6 +630,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Stolen",
+        "arcd": "Stolen modul NEC support material dari Padang",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -578,6 +648,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen Kabel RRU",
         "validation": "Partial_down (traffic 1/2 NE nol)",
         "sheet_name": "RCA 16:00"
       },
@@ -594,6 +666,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Other",
+        "arc": "Hardware",
+        "arcd": "RRU PRoblem",
         "validation": "Partial_down (traffic 3/6 NE nol)",
         "sheet_name": "RCA 16:00"
       },
@@ -610,6 +684,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Dismantle",
+        "arcd": "Pergantian SIte ID ( COA123)",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 16:00"
       },
@@ -626,6 +702,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Access Issue",
+        "arcd": "Block akses, problem imbas petir",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -642,6 +720,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "FO CUT ( INC54007208)",
         "validation": "Partial_down",
         "sheet_name": "RCA 16:00"
       },
@@ -658,6 +738,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "stolen kabel power RRU",
         "validation": "Partial_down (traffic 1/5 NE nol)",
         "sheet_name": "RCA 16:00"
       },
@@ -674,6 +756,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "stolen",
+        "arcd": "stolen kabel power RRU",
         "validation": "Partial_down (traffic 1/3 NE nol)",
         "sheet_name": "RCA 16:00"
       },
@@ -690,6 +774,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "FO CUT TBG ( INC54022381)",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -706,6 +792,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down (traffic 1/5 NE nol)",
         "sheet_name": "RCA 16:00"
       },
@@ -722,6 +810,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Access Issue",
+        "arcd": "Block akses, problem imbas petir",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -738,6 +828,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -754,6 +846,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Partial_down (traffic 1/4 NE nol)",
         "sheet_name": "RCA 16:00"
       },
@@ -770,6 +864,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "optic problem",
+        "arcd": "optic rru broken",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 16:00"
       },
@@ -786,6 +882,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Vandalism",
+        "arcd": "Stolen kabel power, waiting kabel power RRU",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 16:00"
       },
@@ -802,6 +900,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen kabel power, waiting kabel power RRU",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -818,6 +918,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down (traffic 1/6 NE nol)",
         "sheet_name": "RCA 16:00"
       },
@@ -834,6 +936,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen Kabel RRU & Optic Putus",
         "validation": "Partial_down (traffic 5/6 NE nol)",
         "sheet_name": "RCA 16:00"
       },
@@ -850,6 +954,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Comcase",
+        "arcd": "Comcase TP TBG ( TSP000000018079)",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -866,6 +972,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "Impact HUb RIP PYB022 ( INC5409877)",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -882,6 +990,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "Impact HUb RIP PYB022 ( INC5409877)",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -898,6 +1008,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen kabel power, terkendala hujan replan recovery Selasa 20 Okt 2026",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -914,6 +1026,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "Limit akses waiting permit PT EXXON",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -930,6 +1044,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -946,6 +1062,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Tramsmisi",
+        "arcd": "RAU faulty",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -962,6 +1080,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down",
         "sheet_name": "RCA 16:00"
       },
@@ -978,6 +1098,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Hardware",
+        "arc": "BTS USO",
+        "arcd": "BTS USO",
         "validation": "Total_down (alarm hilang dari feed)",
         "sheet_name": "RCA 16:00"
       },
@@ -994,6 +1116,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1010,6 +1134,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Other",
+        "arc": "Hardware",
+        "arcd": "RRU PRoblem",
         "validation": "Partial_down (traffic 1/5 NE nol)",
         "sheet_name": "RCA 16:00"
       },
@@ -1026,6 +1152,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "",
+        "arcd": "",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 16:00"
       },
@@ -1042,6 +1170,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen Kabel RRU",
         "validation": "Partial_down (traffic 5/6 NE nol)",
         "sheet_name": "RCA 16:00"
       },
@@ -1058,6 +1188,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN Off, Pohon Tumbang",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1074,6 +1206,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN Off, Pohon Tumbang",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1090,6 +1224,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "Impact RIP Faulty( INC5409877)",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1106,6 +1242,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1122,6 +1260,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1138,6 +1278,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1154,6 +1296,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Other",
+        "arc": "Hardware",
+        "arcd": "Cell Down impact VSWR",
         "validation": "Partial_down (traffic 1/3 NE nol)",
         "sheet_name": "RCA 16:00"
       },
@@ -1170,6 +1314,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "Hardware faulty, reroute vlan via RIP HWI",
         "validation": "Partial_down (traffic 1/6 NE nol)",
         "sheet_name": "RCA 16:00"
       },
@@ -1186,6 +1332,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "HW",
+        "arcd": "GPS faulty",
         "validation": "Partial_down (traffic 2/5 NE nol)",
         "sheet_name": "RCA 16:00"
       },
@@ -1202,6 +1350,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down (traffic 4/9 NE nol)",
         "sheet_name": "RCA 16:00"
       },
@@ -1218,6 +1368,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "FO CUT Impact longsor jalur sipirok ( INC54121929 )",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1234,6 +1386,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Commcase",
+        "arc": "Comcase",
+        "arcd": "Comcase sejak 2020 terkait kepemilikan lahan",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1250,6 +1404,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "FO CUT Impact longsor jalur sipirok ( INC54111644)",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1266,6 +1422,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen Kabel RRU",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1282,6 +1440,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN Off site diatas bukit",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1298,6 +1458,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Metro loss",
+        "arcd": "Metro-E loss, INC54113592",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1314,6 +1476,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Stolen",
+        "arcd": "Stolen Kabel RRU",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 16:00"
       },
@@ -1330,6 +1494,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Transport",
+        "arc": "Stolen",
+        "arcd": "Stolen Kabel RRU",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 16:00"
       },
@@ -1346,6 +1512,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "Impact FO CUT HUB PYB928 ( INC54125460)",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1362,6 +1530,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Stolen",
+        "arcd": "Stolen kabel power Recty to RBS",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1378,6 +1548,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Metro loss",
+        "arcd": "Metro-E loss, INC54114439",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1394,6 +1566,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Metro loss",
+        "arcd": "Metro-E loss, INC54114439",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1410,6 +1584,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Metro loss",
+        "arcd": "Metro-E loss, INC54114439",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1426,6 +1602,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Metro loss",
+        "arcd": "Metro-E loss, INC54114439",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1442,6 +1620,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1458,6 +1638,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Metro loss",
+        "arcd": "Metro-E loss, INC54114734",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1474,6 +1656,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1490,6 +1674,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1506,6 +1692,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1522,6 +1710,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1538,6 +1728,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1554,6 +1746,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1570,6 +1764,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1586,6 +1782,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1602,6 +1800,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1618,6 +1818,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1634,6 +1836,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1650,6 +1854,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1666,6 +1872,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1682,6 +1890,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1698,6 +1908,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1714,6 +1926,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1730,6 +1944,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1746,6 +1962,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1762,6 +1980,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1778,6 +1998,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1794,6 +2016,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1810,6 +2034,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1826,6 +2052,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1842,6 +2070,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1858,6 +2088,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1874,6 +2106,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1890,6 +2124,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1906,6 +2142,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "FO CUT ( INC54125460)",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1922,6 +2160,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1938,6 +2178,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1954,6 +2196,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1970,6 +2214,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -1986,6 +2232,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2002,6 +2250,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2018,6 +2268,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2034,6 +2286,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2050,6 +2304,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2066,6 +2322,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2082,6 +2340,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2098,6 +2358,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2114,6 +2376,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "PLN Off",
+        "arcd": "SCD OTW to site",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2130,6 +2394,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2146,6 +2412,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2162,6 +2430,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2178,6 +2448,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2194,6 +2466,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2210,6 +2484,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "FO Cut",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2226,6 +2502,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "Impact Simpul STB045 FO Cut",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2242,6 +2520,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "Impact Simpul STB045 FO Cut",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2258,6 +2538,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "Impact Simpul STB045 FO Cut",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2274,6 +2556,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "Impact Simpul STB045 FO Cut",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2290,6 +2574,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "Impact Simpul STB045 FO Cut",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2306,6 +2592,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2322,6 +2610,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2338,6 +2628,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2354,6 +2646,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Metro loss",
+        "arcd": "Metro-E loss, INC54107947",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2370,6 +2664,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2386,6 +2682,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "FO CUT ( INC54124488)",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2402,6 +2700,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2418,6 +2718,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Other",
+        "arcd": "BTS UP",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2434,6 +2736,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2450,6 +2754,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2466,6 +2772,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2482,6 +2790,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2498,6 +2808,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2514,6 +2826,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2530,6 +2844,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2546,6 +2862,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2562,6 +2880,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2578,6 +2898,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2594,6 +2916,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2610,6 +2934,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2626,6 +2952,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2642,6 +2970,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2658,6 +2988,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2674,6 +3006,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2690,6 +3024,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2706,6 +3042,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2722,6 +3060,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "Impact Simpul LGS062 PLN Off diatas bukit",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2738,6 +3078,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2754,6 +3096,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2770,6 +3114,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2786,6 +3132,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2802,6 +3150,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2818,6 +3168,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Akses",
+        "arcd": "Limit akses, waiting permit",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2834,6 +3186,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2850,6 +3204,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2866,6 +3222,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2882,6 +3240,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Metro loss",
+        "arcd": "Metro-E loss, INC54128158",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2898,6 +3258,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Metro loss",
+        "arcd": "Metro-E loss, INC54127808",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2914,6 +3276,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Metro loss",
+        "arcd": "Metro-E loss, INC54127808",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2930,6 +3294,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Metro loss",
+        "arcd": "Metro-E loss, INC54127808",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2946,6 +3312,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Metro loss",
+        "arcd": "Metro-E loss, INC54127821",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2962,6 +3330,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "BPS OTW",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2978,6 +3348,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF, BPS dijalankan after troubleshoot site lain",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -2994,6 +3366,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF, BPS dijalankan after troubleshoot site lain",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3010,6 +3384,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3026,6 +3402,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Activity",
+        "arcd": "Troubleshoot",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3042,6 +3420,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "pln off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3058,6 +3438,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN Off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3074,6 +3456,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "Lan Cable Dipotong OTK",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3090,6 +3474,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3106,6 +3492,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "pln off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3122,6 +3510,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN Off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3138,6 +3528,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "pln off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3154,6 +3546,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "pln off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3170,6 +3564,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "pln off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3186,6 +3582,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "pln off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3202,6 +3600,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "pln off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3218,6 +3618,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "pln off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3234,6 +3636,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN Off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3250,6 +3654,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3266,6 +3672,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF, BPS dijalankan after troubleshoot site lain",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3282,6 +3690,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "PLN Off",
+        "arcd": "SCD OTW to site",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3298,6 +3708,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "PLN Off",
+        "arcd": "SCD OTW to site",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3314,6 +3726,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "PLN Off",
+        "arcd": "SCD OTW to site",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3330,6 +3744,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "PLN Off",
+        "arcd": "SCD OTW to site",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3346,6 +3762,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3362,6 +3780,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3378,6 +3798,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3394,6 +3816,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3410,6 +3834,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3426,6 +3852,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3442,6 +3870,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3458,6 +3888,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3474,6 +3906,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3490,6 +3924,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3506,6 +3942,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3522,6 +3960,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3538,6 +3978,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3554,6 +3996,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3570,6 +4014,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Activity",
+        "arcd": "Activity Upg L700",
         "validation": "Partial_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3586,6 +4032,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3602,6 +4050,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "PLN Off",
+        "arcd": "SCD OTW to site",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3618,6 +4068,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN Off",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3634,6 +4086,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Other",
+        "arc": "Hardware",
+        "arcd": "RRU Problem",
         "validation": "Partial_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3650,6 +4104,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN Off",
         "validation": "Partial_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3666,6 +4122,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Other",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3682,6 +4140,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3698,6 +4158,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN Off",
         "validation": "Partial_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3714,6 +4176,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "TN hang, clear reset power",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3730,6 +4194,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "BPS Otw check",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3746,6 +4212,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "Need Rebalancing di MBO109",
         "validation": "Partial_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3762,6 +4230,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3778,6 +4248,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3794,6 +4266,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3810,6 +4284,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF | Backup",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3826,6 +4302,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3842,6 +4320,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3858,6 +4338,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "PLN Off",
+        "arcd": "SCD OTW to site",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3874,6 +4356,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "CN Problem",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       },
@@ -3890,6 +4374,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "BPS Otw check",
         "validation": "Total_down",
         "sheet_name": "RCA 16:00"
       }
@@ -3898,7 +4384,7 @@
   {
     "sheet_name": "RCA 20/10/2026 10:00",
     "source_updated_at": "2026-10-20 10:00:00",
-    "synced_at": "2026-10-21T03:38:54.986Z",
+    "synced_at": "2026-10-21T04:45:48.445Z",
     "row_count": 223,
     "rows": [
       {
@@ -3914,6 +4400,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Other",
+        "arc": "Comcase",
+        "arcd": "Comcase Plan Dismantle",
         "validation": "Total_down (alarm hilang dari feed)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -3930,6 +4418,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Commcase",
+        "arc": "Comcase",
+        "arcd": "Comcase dengan komunitas warga",
         "validation": "Total_down (alarm hilang dari feed)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -3946,6 +4436,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Commcase",
+        "arc": "Comcase",
+        "arcd": "Comcase, site sudah dismantle sepihak",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -3962,6 +4454,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "#REF!",
+        "arcd": "#N/A",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -3978,6 +4472,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Other",
+        "arc": "BTS USO",
+        "arcd": "BTS USO",
         "validation": "Total_down (alarm hilang dari feed)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -3994,6 +4490,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Vandalism",
+        "arcd": "Stolen Kabel Power",
         "validation": "Total_down (alarm hilang dari feed)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4010,6 +4508,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Vandalism",
+        "arcd": "Totaly Stolen",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4026,6 +4526,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Vandalism",
+        "arcd": "Totally Stolen",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4042,6 +4544,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Commcase",
+        "arc": "Comcase",
+        "arcd": "Comcase",
         "validation": "Total_down (alarm hilang dari feed)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4058,6 +4562,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Comcase",
+        "arcd": "*gagal renewal ( Plan relok )*",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4074,6 +4580,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Aktivitas",
+        "arc": "Dismantle",
+        "arcd": "Black Site",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4090,6 +4598,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Other",
+        "arc": "Renewal Issue",
+        "arcd": "Site dismantled issue IMB",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4106,6 +4616,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "RAN & Power",
+        "arc": "Stolen",
+        "arcd": "Stolen Modul RBS, Waiting part WH025 belum lengkap",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4122,6 +4634,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Vandalism",
+        "arcd": "Totally Stolen",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4138,6 +4652,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Other",
+        "arc": "Change Site ID",
+        "arcd": "Change Site ID menjadi SDK012",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4154,6 +4670,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Aktivitas",
+        "arc": "Other",
+        "arcd": "Dismantle",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4170,6 +4688,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Stolen",
+        "arcd": "Totally Stolen, Waiting part WH025 belum lengkap",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4186,6 +4706,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Aktivitas",
+        "arc": "Other",
+        "arcd": "Dismantle",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4202,6 +4724,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Other",
+        "arc": "Dismantle",
+        "arcd": "*gagal renewal ( Plan relok )*",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4218,6 +4742,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Vandalism",
+        "arcd": "Stolen RRU & Kabel power",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4234,6 +4760,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen Rectifier & RBS",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4250,6 +4778,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Vandalism",
+        "arcd": "Stolen Ant. GPS, kabel power & kabel coaxial & Belting kabinet BTS",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4266,6 +4796,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Vandalism",
+        "arcd": "Stolen Kabel Power RRU",
         "validation": "Partial_down (traffic 4/7 NE nol)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4282,6 +4814,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Vandalism",
+        "arcd": "Stolen",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4298,6 +4832,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Vandalism",
+        "arcd": "Dibakar OTK, waiting part optik, plan recovery 21 Oktober 2026",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4314,6 +4850,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "power",
+        "arcd": "Actual UP",
         "validation": "Partial_down (traffic 1/6 NE nol)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4330,6 +4868,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen Kabel power rru",
         "validation": "Total_down (alarm hilang dari feed)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4346,6 +4886,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen kabel power, waiting kabel power RRU",
         "validation": "Partial_down (traffic 2/5 NE nol)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4362,6 +4904,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "UP",
         "validation": "Partial_down (traffic 1/5 NE nol)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4378,6 +4922,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Hardware Faulty",
+        "arcd": "Baseband Faulty",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4394,6 +4940,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen kabel power, waiting kabel power RRU",
         "validation": "Partial_down (traffic 1/6 NE nol)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4410,6 +4958,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Vandalism",
+        "arcd": "Impact stolen PTN STB003",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4426,6 +4976,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Stolen",
+        "arcd": "Stolen modul NEC support material dari Padang",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4442,6 +4994,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Stolen",
+        "arcd": "Stolen modul NEC, impact simpul STB003 stolen modul NEC support material dari Padang",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4458,6 +5012,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "vandalism",
+        "arcd": "Stolen kabel power RRU",
         "validation": "Partial_down (traffic 1/2 NE nol)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4474,6 +5030,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Dismantle",
+        "arcd": "*dbase (change sid ke COA123)*",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4490,6 +5048,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Access Issue",
+        "arcd": "Block akses, problem imbas petir",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4506,6 +5066,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Vandalism",
+        "arcd": "Stolen Kabel Power RRU",
         "validation": "Partial_down (traffic 1/6 NE nol)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4522,6 +5084,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen Kabel power rru",
         "validation": "Partial_down (traffic 1/3 NE nol)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4538,6 +5102,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "other",
+        "arcd": "SCD pinlok",
         "validation": "Partial_down (traffic 1/5 NE nol)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4554,6 +5120,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Comcase",
+        "arcd": "Comcase",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4570,6 +5138,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Hardware",
+        "arcd": "optic rru broken",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4586,6 +5156,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Vandalism",
+        "arcd": "Stolen kabel power, waiting kabel power RRU",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4602,6 +5174,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen kabel power, waiting kabel power RRU",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4618,6 +5192,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen Kabel Power",
         "validation": "Partial_down (traffic 1/6 NE nol)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4634,6 +5210,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen Kabel power rru",
         "validation": "Partial_down (traffic 2/6 NE nol)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4650,6 +5228,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "vandalism",
+        "arcd": "Stolen kabel power RRU",
         "validation": "Partial_down (traffic 5/6 NE nol)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4666,6 +5246,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Other",
+        "arc": "Comcase",
+        "arcd": "Comcase TP TBG ( TSP000000018079)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4682,6 +5264,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "Impact HUb RIP PYB022 ( INC5409877)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4698,6 +5282,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "Impact HUb RIP PYB022 ( INC5409877)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4714,6 +5300,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen kabel power, terkendala hujan replan recovery Selasa 20 Okt 2026",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4730,6 +5318,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "Limit akses waiting permit PT EXXON",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4746,6 +5336,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "vandalism",
+        "arcd": "Baseband stolen",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4762,6 +5354,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Hadware Faulty",
+        "arcd": "RAU Faulty",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4778,6 +5372,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Other",
+        "arcd": "actual UP",
         "validation": "Partial_down (traffic 2/3 NE nol)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4794,6 +5390,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Hardware",
+        "arc": "BTS USO",
+        "arcd": "BTS USO",
         "validation": "Total_down (alarm hilang dari feed)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4810,6 +5408,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "ONT problem",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4826,6 +5426,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "vandalism",
+        "arcd": "Stolen Kabel RRU",
         "validation": "Partial_down (traffic 1/8 NE nol)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4842,6 +5444,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "vandalism",
+        "arcd": "Stolen kabel power RRU",
         "validation": "Partial_down (traffic 1/5 NE nol)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4858,6 +5462,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen Kabel Power",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4874,6 +5480,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "vandalism",
+        "arcd": "Stolen kabel power RRU",
         "validation": "Partial_down (traffic 5/6 NE nol)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4890,6 +5498,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "Gangguan pln tuang tumbang_impact tkn760",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4906,6 +5516,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "Gangguan pln tuang tumbang",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4922,6 +5534,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "UP",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4938,6 +5552,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "UP",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4954,6 +5570,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Transport",
+        "arc": "Power",
+        "arcd": "Power_Actual",
         "validation": "Partial_down (traffic 1/3 NE nol)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4970,6 +5588,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "UP",
         "validation": "Partial_down (traffic 4/9 NE nol)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -4986,6 +5606,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "FO CUT Impact longsor jalur sipirok ( INC54121929 )",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5002,6 +5624,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Commcase",
+        "arc": "Comcase",
+        "arcd": "Commcase, Sengketa Lahan",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5018,6 +5642,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "FO CUT Impact longsor jalur sipirok ( INC54111644)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5034,6 +5660,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN Off site diatas bukit",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5050,6 +5678,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "vandalism",
+        "arcd": "Stolen kabel power RRU",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5066,6 +5696,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "vandalism",
+        "arcd": "Stolen kabel power RRU",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5082,6 +5714,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "Impact RIP Faulty( INC5409877)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5098,6 +5732,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Stolen",
+        "arcd": "Stolen kabel power Recty to RBS",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5114,6 +5750,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Metro loss",
+        "arcd": "Metro-E loss, INC54114439",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5130,6 +5768,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5146,6 +5786,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5162,6 +5804,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5178,6 +5822,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5194,6 +5840,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Other",
+        "arc": "#N/A",
+        "arcd": "#N/A",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5210,6 +5858,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5226,6 +5876,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5242,6 +5894,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Power",
+        "arcd": "UP",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5258,6 +5912,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5274,6 +5930,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5290,6 +5948,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "Solacrcell",
         "validation": "Total_down (alarm hilang dari feed)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5306,6 +5966,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "transport",
+        "arcd": "MMU Telkom Faulty",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5322,6 +5984,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "Impact Simpul LGS062 PLN Off diatas bukit",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5338,6 +6002,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Hardware Faulty",
+        "arcd": "Baseband Faulty",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5354,6 +6020,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5370,6 +6038,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5386,6 +6056,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Comcase",
+        "arcd": "blok akses terkait gaji PJS,TP DMT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5402,6 +6074,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Comcase",
+        "arcd": "Actual site sudah up",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5418,6 +6092,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Comcase",
+        "arcd": "Actual site sudah up",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5434,6 +6110,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Comcase",
+        "arcd": "Actual site sudah up",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5450,6 +6128,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Comcase",
+        "arcd": "Actual site sudah up",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5466,6 +6146,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "FO CUT ( INC54134303)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5482,6 +6164,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "RIP Tekom ( INC54105308)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5498,6 +6182,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Comcase",
+        "arcd": "Actual site sudah up",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5514,6 +6200,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "Pemadaman PLN, Can't Back Up karena Access",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5530,6 +6218,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "Pemadaman PLN, Can't Back Up karena Access tidak bisa dilalui",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5546,6 +6236,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "Pemadaman PLN, Can't Back Up karena Access longsor",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5562,6 +6254,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Other",
+        "arcd": "Sewa lahan combat habis",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5578,6 +6272,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "#N/A",
+        "arcd": "#N/A",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5594,6 +6290,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5610,6 +6308,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5626,6 +6326,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "trafo pln shot (sudah UP)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5642,6 +6344,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "Impact BGE293 down",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5658,6 +6362,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5674,6 +6380,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5690,6 +6398,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5706,6 +6416,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5722,6 +6434,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5738,6 +6452,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5754,6 +6470,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5770,6 +6488,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5786,6 +6506,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5802,6 +6524,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5818,6 +6542,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "Gangguan pln tuang tumbang",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5834,6 +6560,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "Gangguan pln tuang tumbang",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5850,6 +6578,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "SCD OTW to site",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5866,6 +6596,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "Power, gak bisa bak up",
         "validation": "Total_down (alarm hilang dari feed)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5882,6 +6614,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "CN Faulty",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5898,6 +6632,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "#N/A",
+        "arcd": "#N/A",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5914,6 +6650,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "SCD OTW to site",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5930,6 +6668,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5946,6 +6686,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5962,6 +6704,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5978,6 +6722,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "fo cut ( INC54139861)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -5994,6 +6740,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Transport",
+        "arcd": "fo cut ( INC54139861)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6010,6 +6758,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "fo cut ( INC54139861)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6026,6 +6776,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "fo cut ( INC54139861)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6042,6 +6794,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "Gangguan pln tuang tumbang",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6058,6 +6812,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "vandalism",
+        "arcd": "Stolen kabel RRU",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6074,6 +6830,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Other",
+        "arc": "FO Cut",
+        "arcd": "Actual site sudah up",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6090,6 +6848,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "FO Cut",
+        "arcd": "Actual site sudah up",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6106,6 +6866,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "FO Cut",
+        "arcd": "Actual site sudah up",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6122,6 +6884,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "fo cut ( INC54139861)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6138,6 +6902,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "POWER PLN OFF",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6154,6 +6920,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "impack FO Cut  ALU",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6170,6 +6938,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Hardware Hang",
+        "arcd": "Minilink Hang",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6186,6 +6956,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "FO Cut",
+        "arcd": "FO Cut",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6202,6 +6974,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "#N/A",
+        "arcd": "#N/A",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6218,6 +6992,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "#N/A",
+        "arcd": "#N/A",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6234,6 +7010,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "Pemadaman PLN",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6250,6 +7028,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Power",
+        "arcd": "UP",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6266,6 +7046,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "Masih Impact Banjir",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6282,6 +7064,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "Masih Impact Banjir",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6298,6 +7082,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Hardware",
+        "arcd": "Baseband faulty",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6314,6 +7100,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6330,6 +7118,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "transport",
+        "arcd": "Transport Problem di HUB RAP950",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6346,6 +7136,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "transport",
+        "arcd": "Transport Problem di HUB RAP950",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6362,6 +7154,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "transport",
+        "arcd": "Transport Problem di HUB RAP950",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6378,6 +7172,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "transport",
+        "arcd": "Transport Problem di HUB RAP950",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6394,6 +7190,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "transport",
+        "arcd": "Transport Problem di HUB RAP950",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6410,6 +7208,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "UP",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6426,6 +7226,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "transport",
+        "arcd": "Transport Problem di HUB RAP950",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6442,6 +7244,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "PLN Off",
+        "arcd": "SCD OTW to site",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6458,6 +7262,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "#N/A",
+        "arcd": "#N/A",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6474,6 +7280,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "transport rip problem",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6490,6 +7298,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "Suspect MCB KWH Trip Team OTW",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6506,6 +7316,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "Metro loss",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6522,6 +7334,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "Power, PLN Off",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6538,6 +7352,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "FO Cut",
+        "arcd": "FO Cut",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6554,6 +7370,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "FO Cut",
+        "arcd": "FO Cut",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6570,6 +7388,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "FO Cut",
+        "arcd": "FO Cut",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6586,6 +7406,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "Masih Impact Banjir",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6602,6 +7424,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "Masih Impact Banjir",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6618,6 +7442,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Metro loss",
+        "arcd": "Metro-E loss, INC54114439",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6634,6 +7460,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "FO cut telkom",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6650,6 +7478,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "POWER PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6666,6 +7496,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Metro loss",
+        "arcd": "Metro-E loss, INC54114439",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6682,6 +7514,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "Power, PLN Off",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6698,6 +7532,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6714,6 +7550,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "power",
+        "arcd": "POWER PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6730,6 +7568,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "Transport Problem, lagi di troubleshoot",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6746,6 +7586,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "Power, PLN Off",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6762,6 +7604,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6778,6 +7622,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN off , actual sudah up",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6794,6 +7640,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Akses",
+        "arcd": "Limit akses, waiting permit",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6810,6 +7658,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "FO Cut",
+        "arcd": "Actual site sudah up",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6826,6 +7676,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6842,6 +7694,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Metro loss",
+        "arcd": "Metro-E loss, INC54114439",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6858,6 +7712,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "UP",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6874,6 +7730,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "POWER PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6890,6 +7748,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6906,6 +7766,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "Power_Actual",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6922,6 +7784,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "Kabel Transport Problem",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6938,6 +7802,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Other",
+        "arcd": "Tim Masih OTW Pengecekan, Under I",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6954,6 +7820,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6970,6 +7838,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "Impact FO CUT RAP724",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -6986,6 +7856,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "suspect power problem team otw",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7002,6 +7874,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "Power_Actual",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7018,6 +7892,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Hardrware",
+        "arcd": "hardware problem faulty pdu0202",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7034,6 +7910,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7050,6 +7928,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7066,6 +7946,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7082,6 +7964,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7098,6 +7982,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "Masih Impact Banjir",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7114,6 +8000,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "Actual UP",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7130,6 +8018,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "Power_Actual",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7146,6 +8036,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "Power_Actual",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7162,6 +8054,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "Power_Actual",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7178,6 +8072,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "Power_Actual",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7194,6 +8090,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "Kabel LAN putus",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7210,6 +8108,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7226,6 +8126,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7242,6 +8144,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7258,6 +8162,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "TN hang",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7274,6 +8180,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7290,6 +8198,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7306,6 +8216,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7322,6 +8234,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7338,6 +8252,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN off",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7354,6 +8270,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Power",
+        "arcd": "PLN off",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7370,6 +8288,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7386,6 +8306,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Hardware Faulty",
+        "arcd": "RRU Faulty",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7402,6 +8324,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Other",
+        "arcd": "Actual UP",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7418,6 +8342,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7434,6 +8360,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN off",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7450,6 +8378,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "PLN Off",
+        "arcd": "SCD OTW to site",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       },
@@ -7466,6 +8396,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Tras",
+        "arcd": "Transmisi Problem",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 10:00"
       }
@@ -7474,7 +8406,7 @@
   {
     "sheet_name": "RCA 20/10/2026 16:00",
     "source_updated_at": "2026-10-20 16:00:00",
-    "synced_at": "2026-10-21T03:38:54.986Z",
+    "synced_at": "2026-10-21T04:45:48.445Z",
     "row_count": 254,
     "rows": [
       {
@@ -7490,6 +8422,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Other",
+        "arc": "Comcase",
+        "arcd": "Comcase Plan Dismantle",
         "validation": "Total_down (alarm hilang dari feed)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7506,6 +8440,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Commcase",
+        "arc": "Comcase",
+        "arcd": "Comcase dengan komunitas warga",
         "validation": "Total_down (alarm hilang dari feed)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7522,6 +8458,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Commcase",
+        "arc": "Comcase",
+        "arcd": "Comcase, site sudah dismantle sepihak",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7538,6 +8476,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7554,6 +8494,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Other",
+        "arc": "BTS USO",
+        "arcd": "BTS USO",
         "validation": "Total_down (alarm hilang dari feed)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7570,6 +8512,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Vandalism",
+        "arcd": "Stolen Kabel Power",
         "validation": "Total_down (alarm hilang dari feed)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7586,6 +8530,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Vandalism",
+        "arcd": "Totaly Stolen",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7602,6 +8548,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Vandalism",
+        "arcd": "Totally Stolen",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7618,6 +8566,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Commcase",
+        "arc": "Comcase",
+        "arcd": "Comcase",
         "validation": "Total_down (alarm hilang dari feed)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7634,6 +8584,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Comcase",
+        "arcd": "*gagal renewal ( Plan relok )*",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7650,6 +8602,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Aktivitas",
+        "arc": "Dismantle",
+        "arcd": "Black Site, Dismantle",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7666,6 +8620,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Other",
+        "arc": "Dismantle",
+        "arcd": "Site dismantled issue IMB",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7682,6 +8638,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "RAN & Power",
+        "arc": "Stolen",
+        "arcd": "Stolen Modul RBS, Waiting part WH025 belum lengkap",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7698,6 +8656,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Vandalism",
+        "arcd": "Totally Stolen",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7714,6 +8674,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Other",
+        "arc": "Change Site ID",
+        "arcd": "Change Site ID menjadi SDK012",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7730,6 +8692,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Aktivitas",
+        "arc": "Dismantle",
+        "arcd": "Dismantle",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7746,6 +8710,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Stolen",
+        "arcd": "Totally Stolen, Waiting part WH025 belum lengkap",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7762,6 +8728,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Aktivitas",
+        "arc": "Dismantle",
+        "arcd": "Dismantle",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7778,6 +8746,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Other",
+        "arc": "Dismantle",
+        "arcd": "Dismantle,  *gagal renewal ( Plan relok )*",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7794,6 +8764,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Vandalism",
+        "arcd": "Stolen RRU & Kabel power",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7810,6 +8782,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen Rectifier & RBS",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7826,6 +8800,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Vandalism",
+        "arcd": "Stolen Ant. GPS, kabel power & kabel coaxial & Belting kabinet BTS",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7842,6 +8818,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Vandalism",
+        "arcd": "Dibakar OTK, waiting part optik, plan recovery 21 Oktober 2026",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7858,6 +8836,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen Kabel power rru",
         "validation": "Total_down (alarm hilang dari feed)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7874,6 +8854,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen kabel power, waiting kabel power RRU",
         "validation": "Partial_down (traffic 2/5 NE nol)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7890,6 +8872,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Hardware Faulty",
+        "arcd": "Baseband Faulty",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7906,6 +8890,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen kabel power, waiting kabel power RRU",
         "validation": "Partial_down (traffic 1/6 NE nol)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7922,6 +8908,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Vandalism",
+        "arcd": "Impact stolen PTN STB003",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7938,6 +8926,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Stolen",
+        "arcd": "Stolen modul NEC support material dari Padang",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7954,6 +8944,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Stolen",
+        "arcd": "Stolen modul NEC, impact simpul STB003 stolen modul NEC support material dari Padang",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7970,6 +8962,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down (traffic 6/10 NE nol)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -7986,6 +8980,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "vandalism",
+        "arcd": "Stolen kabel power RRU",
         "validation": "Partial_down (traffic 1/2 NE nol)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8002,6 +8998,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Comcase",
+        "arcd": "Comcase",
         "validation": "Partial_down (traffic 3/5 NE nol)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8018,6 +9016,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Dismantle",
+        "arcd": "Dismantle, *dbase (change sid ke COA123)*",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8034,6 +9034,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Access Issue",
+        "arcd": "Block akses, problem imbas petir",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8050,6 +9052,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "Impact Simpul LGS062 PLN Off diatas bukit",
         "validation": "Partial_down (traffic 2/5 NE nol)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8066,6 +9070,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen Kabel power rru",
         "validation": "Partial_down (traffic 1/3 NE nol)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8082,6 +9088,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Hardware",
+        "arcd": "optic rru broken",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8098,6 +9106,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Vandalism",
+        "arcd": "Stolen kabel power, waiting kabel power RRU",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8114,6 +9124,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen kabel power, waiting kabel power RRU",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8130,6 +9142,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen Kabel Power",
         "validation": "Partial_down (traffic 1/6 NE nol)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8146,6 +9160,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "vandalism",
+        "arcd": "Stolen kabel power RRU",
         "validation": "Partial_down (traffic 5/6 NE nol)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8162,6 +9178,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Comcase",
+        "arcd": "Comcase TP TBG ( TSP000000018079)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8178,6 +9196,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "Impact HUb RIP PYB022 ( INC5409877)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8194,6 +9214,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "Impact HUb RIP PYB022 ( INC5409877)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8210,6 +9232,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "Limit akses waiting permit PT EXXON",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8226,6 +9250,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "vandalism",
+        "arcd": "Baseband stolen",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8242,6 +9268,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Hadware Faulty",
+        "arcd": "RAU Faulty",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8258,6 +9286,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Other",
+        "arcd": "actual UP",
         "validation": "Partial_down (traffic 2/3 NE nol)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8274,6 +9304,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Hardware",
+        "arc": "BTS USO",
+        "arcd": "BTS USO",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8290,6 +9322,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "ONT problem",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8306,6 +9340,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "vandalism",
+        "arcd": "Stolen kabel power RRU",
         "validation": "Partial_down (traffic 1/5 NE nol)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8322,6 +9358,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "Stolen",
+        "arcd": "Stolen Kabel Power",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8338,6 +9376,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "vandalism",
+        "arcd": "Stolen kabel power RRU",
         "validation": "Partial_down (traffic 5/6 NE nol)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8354,6 +9394,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "Gangguan pln tuang tumbang_impact tkn760",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8370,6 +9412,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "Gangguan pln tuang tumbang",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8386,6 +9430,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "UP",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8402,6 +9448,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "UP",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8418,6 +9466,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Transport",
+        "arc": "Power",
+        "arcd": "Power_Actual",
         "validation": "Partial_down (traffic 1/3 NE nol)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8434,6 +9484,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "UP",
         "validation": "Partial_down (traffic 4/9 NE nol)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8450,6 +9502,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "FO CUT Impact longsor jalur sipirok ( INC54121929 )",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8466,6 +9520,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Commcase",
+        "arc": "Comcase",
+        "arcd": "Commcase, Sengketa Lahan",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8482,6 +9538,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "FO CUT Impact longsor jalur sipirok ( INC54111644)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8498,6 +9556,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN Off site diatas bukit",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8514,6 +9574,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "vandalism",
+        "arcd": "Stolen kabel power RRU",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8530,6 +9592,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Stolen",
+        "arc": "vandalism",
+        "arcd": "Stolen kabel power RRU",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8546,6 +9610,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Metro loss",
+        "arcd": "Metro-E loss, INC54114439",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8562,6 +9628,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Other",
+        "arc": "",
+        "arcd": "",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8578,6 +9646,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8594,6 +9664,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down (traffic 2/8 NE nol)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8610,6 +9682,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Hardware Faulty",
+        "arcd": "Baseband Faulty",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8626,6 +9700,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Comcase",
+        "arcd": "blok akses terkait gaji PJS,TP DMT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8642,6 +9718,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down (traffic 2/7 NE nol)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8658,6 +9736,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Comcase",
+        "arcd": "Actual site sudah up",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8674,6 +9754,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Comcase",
+        "arcd": "Actual site sudah up",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8690,6 +9772,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Comcase",
+        "arcd": "Actual site sudah up",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8706,6 +9790,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Comcase",
+        "arcd": "Actual site sudah up",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8722,6 +9808,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "FO CUT ( INC54134303)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8738,6 +9826,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "RIP Tekom ( INC54105308)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8754,6 +9844,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Comcase",
+        "arcd": "Actual site sudah up",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8770,6 +9862,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "Pemadaman PLN, Can't Back Up karena Access longsor",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8786,6 +9880,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Other",
+        "arcd": "Sewa lahan combat habis",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8802,6 +9898,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8818,6 +9916,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "Impact BGE293 down",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8834,6 +9934,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8850,6 +9952,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8866,6 +9970,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8882,6 +9988,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8898,6 +10006,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8914,6 +10024,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8930,6 +10042,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8946,6 +10060,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8962,6 +10078,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "FO CUT",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8978,6 +10096,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "SCD OTW to site",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -8994,6 +10114,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "fo cut ( INC54139861)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9010,6 +10132,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "fo cut ( INC54139861)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9026,6 +10150,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "fo cut ( INC54139861)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9042,6 +10168,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "fo cut ( INC54139861)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9058,6 +10186,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "POWER PLN OFF",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9074,6 +10204,8 @@
         "alarm_5g": "",
         "info_alarm": "traffic",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "impack FO Cut  ALU",
         "validation": "Traffic_zero (tanpa alarm)",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9090,6 +10222,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Transport",
+        "arcd": "fo cut ( INC54139861)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9106,6 +10240,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "FO Cut",
+        "arcd": "FO Cut",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9122,6 +10258,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "Pemadaman PLN",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9138,6 +10276,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "transport",
+        "arcd": "Transport Problem di HUB RAP950",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9154,6 +10294,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "transport",
+        "arcd": "Transport Problem di HUB RAP950",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9170,6 +10312,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "transport",
+        "arcd": "Transport Problem di HUB RAP950",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9186,6 +10330,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "transport",
+        "arcd": "Transport Problem di HUB RAP950",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9202,6 +10348,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "transport",
+        "arcd": "Transport Problem di HUB RAP950",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9218,6 +10366,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "transport",
+        "arcd": "Transport Problem di HUB RAP950",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9234,6 +10384,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "PLN Off",
+        "arcd": "SCD OTW to site",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9250,6 +10402,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "FO Cut",
+        "arcd": "FO Cut",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9266,6 +10420,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "FO Cut",
+        "arcd": "FO Cut",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9282,6 +10438,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "FO Cut",
+        "arcd": "FO Cut",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9298,6 +10456,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "POWER PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9314,6 +10474,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "power",
+        "arcd": "Power, PLN Off",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9330,6 +10492,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "power",
+        "arcd": "POWER PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9346,6 +10510,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9362,6 +10528,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Other",
+        "arcd": "Tim Masih OTW Pengecekan, Under I",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9378,6 +10546,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9394,6 +10564,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9410,6 +10582,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9426,6 +10600,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9442,6 +10618,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9458,6 +10636,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9474,6 +10654,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9490,6 +10672,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9506,6 +10690,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9522,6 +10708,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9538,6 +10726,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9554,6 +10744,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9570,6 +10762,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9586,6 +10780,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9602,6 +10798,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9618,6 +10816,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9634,6 +10834,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "vandalism",
+        "arcd": "Stolen kabel RRU",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9650,6 +10852,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9666,6 +10870,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "Impact RIP Faulty( INC5409877)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9682,6 +10888,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9698,6 +10906,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9714,6 +10924,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9730,6 +10942,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9746,6 +10960,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9762,6 +10978,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9778,6 +10996,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9794,6 +11014,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9810,6 +11032,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9826,6 +11050,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9842,6 +11068,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9858,6 +11086,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9874,6 +11104,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9890,6 +11122,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9906,6 +11140,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9922,6 +11158,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9938,6 +11176,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9954,6 +11194,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9970,6 +11212,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -9986,6 +11230,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10002,6 +11248,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10018,6 +11266,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10034,6 +11284,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10050,6 +11302,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10066,6 +11320,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10082,6 +11338,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10098,6 +11356,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10114,6 +11374,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10130,6 +11392,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10146,6 +11410,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10162,6 +11428,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10178,6 +11446,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10194,6 +11464,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10210,6 +11482,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10226,6 +11500,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10242,6 +11518,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10258,6 +11536,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10274,6 +11554,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10290,6 +11572,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10306,6 +11590,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10322,6 +11608,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10338,6 +11626,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10354,6 +11644,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10370,6 +11662,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10386,6 +11680,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10402,6 +11698,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10418,6 +11716,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10434,6 +11734,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10450,6 +11752,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10466,6 +11770,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10482,6 +11788,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10498,6 +11806,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10514,6 +11824,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10530,6 +11842,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10546,6 +11860,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10562,6 +11878,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10578,6 +11896,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10594,6 +11914,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10610,6 +11932,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10626,6 +11950,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10642,6 +11968,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10658,6 +11986,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "fo cut ( INC54164295)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10674,6 +12004,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "fo cut ( INC54164295)",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10690,6 +12022,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10706,6 +12040,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10722,6 +12058,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10738,6 +12076,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10754,6 +12094,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10770,6 +12112,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10786,6 +12130,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "Power",
+        "arcd": "Power_Actual",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10802,6 +12148,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "vandalism",
+        "arcd": "Stolen Kabel RRU",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10818,6 +12166,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10834,6 +12184,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10850,6 +12202,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10866,6 +12220,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "SCD OTW to site",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10882,6 +12238,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10898,6 +12256,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10914,6 +12274,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10930,6 +12292,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Akses",
+        "arcd": "Limit akses, waiting permit",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10946,6 +12310,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10962,6 +12328,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10978,6 +12346,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -10994,6 +12364,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11010,6 +12382,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11026,6 +12400,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11042,6 +12418,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11058,6 +12436,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11074,6 +12454,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11090,6 +12472,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11106,6 +12490,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11122,6 +12508,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11138,6 +12526,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11154,6 +12544,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Transport",
+        "arcd": "Kabel Transport Problem",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11170,6 +12562,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11186,6 +12580,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11202,6 +12598,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11218,6 +12616,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11234,6 +12634,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Metro loss",
+        "arcd": "Metro-E loss, INC54114439",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11250,6 +12652,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11266,6 +12670,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11282,6 +12688,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Stolen",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11298,6 +12706,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11314,6 +12724,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11330,6 +12742,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11346,6 +12760,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "Actual UP",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11362,6 +12778,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11378,6 +12796,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "transport",
+        "arcd": "MMU Telkom Faulty",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11394,6 +12814,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "Power",
+        "arcd": "PLN OFF",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11410,6 +12832,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11426,6 +12850,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11442,6 +12868,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Partial_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11458,6 +12886,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11474,6 +12904,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11490,6 +12922,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11506,6 +12940,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Power",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11522,6 +12958,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       },
@@ -11538,6 +12976,8 @@
         "alarm_5g": "",
         "info_alarm": "open",
         "root_cause": "Transport",
+        "arc": "",
+        "arcd": "",
         "validation": "Total_down",
         "sheet_name": "RCA 20/10/2026 16:00"
       }

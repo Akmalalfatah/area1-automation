@@ -19,7 +19,10 @@ const fieldAliases={
   tech:['tech_conc','tech','technology','verifikasi'],down_date:['down_date','event_time','downdate'],
   duration_minutes:['durasi_alarm_menit','duration_minutes','duration'],duration_text:['duration_down','durasi','cat_down','aging_group'],
   alarm_2g:['alarm_name_2g','alarm_2g'],alarm_4g:['alarm_name_4g','alarm_4g'],alarm_5g:['alarm_name_5g','alarm_5g'],
-  info_alarm:['info_alarm','info'],root_cause:['root_cause','rootcause'],validation:['validasi_down','validation']
+  info_alarm:['info_alarm','info'],root_cause:['root_cause','rootcause'],
+  arc:['actual_root_casue','actualrootcasue','actual_root_cause','actualrootcause','arc','a_r_c','arc_category','arc_issue','analysis_root_cause','root_cause_category'],
+  arcd:['actual_root_casue_detail','actualrootcasuedetail','actual_root_cause_detail','actualrootcausedetail','arc_detail','arcd','arc_d','a_r_c_d','arc_description','arc_desc','analysis_root_cause_detail','root_cause_detail'],
+  validation:['validasi_down','validation']
 }
 
 async function config(){
@@ -62,15 +65,27 @@ async function googleJson(url,token){
   return body
 }
 
-const findField=(headers,names)=>names.map(name=>headers.get(name)).find(index=>index!==undefined)
+const findField=(headers,names)=>{
+  const exact=names.map(name=>headers.get(name)).find(index=>index!==undefined)
+  if(exact!==undefined)return exact
+  for(const [header,index] of headers){if(names.some(name=>header.startsWith(`${name}_`)||header.endsWith(`_${name}`)))return index}
+  return undefined
+}
+const actualRootField=(headers,detail)=>{
+  for(const [header,index] of headers){
+    const isActualRoot=header.includes('actual')&&header.includes('root')&&header.includes('ca')
+    if(isActualRoot&&(detail?header.includes('detail'):!header.includes('detail')))return index
+  }
+  return undefined
+}
 const number=value=>{const parsed=Number(String(value??'').replace(/,/g,''));return Number.isFinite(parsed)?parsed:null}
 function parseRows(values,sheetName){
   const header=(values?.[0]||[]).map(slug),columns=new Map(header.map((name,index)=>[name,index]))
-  const get=(row,key)=>{const index=findField(columns,fieldAliases[key]||[]);return index===undefined?'':asText(row[index])}
+  const get=(row,key)=>{let index=findField(columns,fieldAliases[key]||[]);if(index===undefined&&key==='arc')index=actualRootField(columns,false);if(index===undefined&&key==='arcd')index=actualRootField(columns,true);return index===undefined?'':asText(row[index])}
   const rows=[]
   for(const source of (values||[]).slice(1)){
     const site_id=get(source,'site_id');if(!site_id)continue
-    rows.push({site_id,site_name:get(source,'site_name'),nop:get(source,'nop'),tech:get(source,'tech'),down_date:get(source,'down_date'),duration_minutes:number(get(source,'duration_minutes')),duration_text:get(source,'duration_text'),alarm_2g:get(source,'alarm_2g'),alarm_4g:get(source,'alarm_4g'),alarm_5g:get(source,'alarm_5g'),info_alarm:get(source,'info_alarm'),root_cause:get(source,'root_cause'),validation:get(source,'validation'),sheet_name:sheetName})
+    rows.push({site_id,site_name:get(source,'site_name'),nop:get(source,'nop'),tech:get(source,'tech'),down_date:get(source,'down_date'),duration_minutes:number(get(source,'duration_minutes')),duration_text:get(source,'duration_text'),alarm_2g:get(source,'alarm_2g'),alarm_4g:get(source,'alarm_4g'),alarm_5g:get(source,'alarm_5g'),info_alarm:get(source,'info_alarm'),root_cause:get(source,'root_cause'),arc:get(source,'arc'),arcd:get(source,'arcd'),validation:get(source,'validation'),sheet_name:sheetName})
   }
   return rows
 }
@@ -90,10 +105,11 @@ function bucket(row){
   return '0-4hrs'
 }
 function durationOrder(label){return ['>1day','12-24hrs','8-12hrs','4-8hrs','0-4hrs'].indexOf(label)}
+function arcValue(row){return compact(row.arc)||'Under Investigation'}
+function arcdValue(row){return compact(row.arcd)||'Under Investigation'}
+function arcArcdText(row){return [compact(row.arc),compact(row.arcd)].filter(Boolean).join(' · ')||'Under Investigation'}
 function alarmText(row){
-  const alarms=[row.alarm_2g,row.alarm_4g,row.alarm_5g].map(compact).filter(Boolean)
-  const details=[...alarms,row.root_cause].filter(Boolean).join(' · ')
-  return details||compact(row.info_alarm)||'-'
+  return arcArcdText(row)
 }
 function templateDate(value){
   const text=asText(value).replace('T',' ').replace(/\.\d+Z?$/,'').replace(/Z$/,'')
@@ -139,7 +155,7 @@ export async function syncRcaGoogle({sheetName='' }={}){
   const metadata=await googleJson(base,token),sheets=(metadata.sheets||[]).map(item=>item.properties?.title).filter(name=>name&&(/^RCA\b/i.test(name)))
   const selected=sheetName?[sheetName]:sheets;if(!selected.length)throw Object.assign(new Error('Tidak ada sheet RCA yang dapat disinkronkan.'),{status:422})
   if(sheetName&&!sheets.includes(sheetName))throw Object.assign(new Error('Snapshot RCA yang dipilih tidak ditemukan di Google Sheets.'),{status:404})
-  const params=new URLSearchParams();for(const name of selected)params.append('ranges',`'${name.replace(/'/g,"''")}'!A:Z`)
+  const params=new URLSearchParams();for(const name of selected)params.append('ranges',`'${name.replace(/'/g,"''")}'!A:AZ`)
   const result=await googleJson(`${base}/values:batchGet?${params.toString()}`,token),syncedAt=new Date().toISOString()
   const snapshots=(result.valueRanges||[]).map((range,index)=>{const name=selected[index],rows=parseRows(range.values||[],name);return {sheet_name:name,source_updated_at:dateFromSheetName(name),synced_at:syncedAt,row_count:rows.length,rows}})
   await saveRcaSnapshots(snapshots)
@@ -149,9 +165,9 @@ export async function syncRcaGoogle({sheetName='' }={}){
 export async function rcaDashboard(query={}){
   const snapshot=await snapshotByName(asText(query.sheet));if(!snapshot)throw Object.assign(new Error('Belum ada snapshot RCA. Jalankan Sinkronkan RCA terlebih dahulu.'),{status:404})
   const allRows=await addMaster(snapshot.rows||[]),nop=asText(query.nop),duration=asText(query.duration),rootCause=asText(query.root_cause),search=asText(query.search).toLowerCase()
-  const rows=allRows.filter(row=>(!nop||row.nop===nop)&&(!duration||bucket(row)===duration)&&(!rootCause||row.root_cause===rootCause)&&(!search||[row.site_id,row.site_name,row.nop,row.root_cause,row.info_alarm].join(' ').toLowerCase().includes(search))).map(row=>({...row,duration_bucket:bucket(row)})).sort((a,b)=>durationOrder(a.duration_bucket)-durationOrder(b.duration_bucket)||String(a.down_date).localeCompare(String(b.down_date)))
+  const rows=allRows.filter(row=>(!nop||row.nop===nop)&&(!duration||bucket(row)===duration)&&(!rootCause||arcArcdText(row)===rootCause)&&(!search||[row.site_id,row.site_name,row.nop,row.arc,row.arcd,row.info_alarm].join(' ').toLowerCase().includes(search))).map(row=>({...row,duration_bucket:bucket(row)})).sort((a,b)=>durationOrder(a.duration_bucket)-durationOrder(b.duration_bucket)||String(a.down_date).localeCompare(String(b.down_date)))
   const countBy=(items,key)=>Object.entries(items.reduce((out,row)=>{const value=key(row)||'Tidak tersedia';out[value]=(out[value]||0)+1;return out},{})).map(([label,value])=>({label,value})).sort((a,b)=>b.value-a.value)
-  return {snapshot:{sheet_name:snapshot.sheet_name,source_updated_at:snapshot.source_updated_at,synced_at:snapshot.synced_at,row_count:Number(snapshot.row_count||allRows.length)},filters:{nop_options:[...new Set(allRows.map(row=>row.nop).filter(Boolean))].sort(),duration_options:['>1day','12-24hrs','8-12hrs','4-8hrs','0-4hrs'],root_cause_options:[...new Set(allRows.map(row=>row.root_cause).filter(Boolean))].sort()},summary:{total:rows.length,over_day:rows.filter(row=>row.duration_bucket==='>1day').length,nop_affected:new Set(rows.map(row=>row.nop).filter(Boolean)).size},by_root_cause:countBy(rows,row=>row.root_cause),by_nop:countBy(rows,row=>row.nop),by_duration:countBy(rows,row=>row.duration_bucket),rows}
+  return {snapshot:{sheet_name:snapshot.sheet_name,source_updated_at:snapshot.source_updated_at,synced_at:snapshot.synced_at,row_count:Number(snapshot.row_count||allRows.length)},filters:{nop_options:[...new Set(allRows.map(row=>row.nop).filter(Boolean))].sort(),duration_options:['>1day','12-24hrs','8-12hrs','4-8hrs','0-4hrs'],root_cause_options:[...new Set(allRows.map(arcArcdText))].sort()},summary:{total:rows.length,over_day:rows.filter(row=>row.duration_bucket==='>1day').length,nop_affected:new Set(rows.map(row=>row.nop).filter(Boolean)).size},by_arc:countBy(rows,arcValue),by_arcd:countBy(rows,arcdValue),by_nop:countBy(rows,row=>row.nop),by_duration:countBy(rows,row=>row.duration_bucket),rows}
 }
 
 export async function rcaTemplate(query={}){
