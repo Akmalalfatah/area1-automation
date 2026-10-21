@@ -1,0 +1,15 @@
+/* RCA uses semi-bold emphasis consistently; no heavy bold weights. */
+.rca-workspace h1,
+.rca-workspace h2,
+.rca-workspace h3,
+.rca-workspace strong,
+.rca-workspace b,
+.rca-workspace th,
+.rca-workspace button,
+.rca-workspace .section-title,
+.rca-workspace .pm-img-eyebrow,
+.rca-workspace .rca-filter label,
+.rca-workspace .rca-metric p,
+.rca-workspace .rca-duration {
+  font-weight: 600 !important;
+}
