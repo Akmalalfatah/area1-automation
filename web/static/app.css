@@ -2374,3 +2374,6 @@ button { cursor: pointer; }
   .preventive-progress-table thead th:nth-child(2), .preventive-progress-table tbody tr.preventive-nop-row > th.preventive-progress-nop { min-width:150px; }
   .preventive-progress-table tbody tr.preventive-nop-row > th.preventive-progress-regional { min-width:104px; font-size:11px; }
 }
+
+/* Jarak filter utama eKPI mengikuti ritme section lain. */
+.kpi-main-filterbar { margin-top:16px; }
