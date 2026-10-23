@@ -47,7 +47,12 @@ app.get('/api/runs/:id/mttr-boosting',asyncHandler(async(req,res)=>{
   const b13Rows=combinedKpiB13Rows(data),swfmSummaries=deriveTicketMttrByNop(data,names),kpiSummaries=buildKpiB13Summaries(b13Rows,names)
   const ticket_summaries=mergeTicketSummaries(names,swfmSummaries,kpiSummaries,period)
   const available_periods=sourceSnapshot.available_periods
-  res.json({period,available_periods,ticket_summaries:withoutSimulationRows(ticket_summaries),debug:buildBoostingDebug(ticket_summaries),source:sourceSnapshot.historical?'Snapshot file berdasarkan bulan tanggal upload: KPIData B.1-B.3 dengan fallback Ticket SWFM':'KPIData B.1-B.3 dengan fallback Ticket SWFM'})
+  const kpiB13Sources=(data.sources||[]).filter(source=>String(source.source_kind||'').startsWith('kpi_b13'))
+  const sourceDates=kpiB13Sources.flatMap(source=>[source.date_start,source.date_end]).map(value=>String(value||'').slice(0,10)).filter(value=>/^\d{4}-\d{2}-\d{2}$/.test(value)).sort()
+  const rowDates=b13Rows.map(row=>String(row.occurred_at||'').slice(0,10)).filter(value=>/^\d{4}-\d{2}-\d{2}$/.test(value)).sort()
+  const dates=sourceDates.length?sourceDates:rowDates
+  const data_window={start:dates[0]||null,end:dates.at(-1)||null,records:b13Rows.filter(row=>String(row.occurred_at||'').slice(0,7)===period).length,sources:kpiB13Sources.map(source=>({regional:source.regional||'',filename:source.filename||'',upload_date:String(source.upload_date||'').slice(0,10)}))}
+  res.json({period,available_periods,ticket_summaries:withoutSimulationRows(ticket_summaries),debug:buildBoostingDebug(ticket_summaries),data_window,source:sourceSnapshot.historical?'Snapshot file berdasarkan bulan tanggal upload: KPIData B.1-B.3 dengan fallback Ticket SWFM':'KPIData B.1-B.3 dengan fallback Ticket SWFM'})
 }))
 
 app.post('/api/runs/:id/report',asyncHandler(async(req,res)=>{

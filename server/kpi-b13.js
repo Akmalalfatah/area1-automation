@@ -49,7 +49,8 @@ export async function parseKpiB13(buffer,expectedRegion=null){
     if(!allowed.size)throw Object.assign(new Error('Regional KPIData B.1-B.3 tidak dikenali.'),{status:422})
     if(outside.length)throw Object.assign(new Error(`Isi file tidak sesuai ${expectedRegion}: ditemukan ${outside.join(', ')}.`),{status:422})
   }
-  return {rows,row_count:rows.length,issues,sheet:sheet.name,regional:expectedRegion,periods:[...new Set(rows.map(row=>row.period).filter(Boolean))].sort()}
+  const sourceDates=rows.map(row=>String(row.occurred_at||'').slice(0,10)).filter(value=>/^\d{4}-\d{2}-\d{2}$/.test(value)).sort()
+  return {rows,row_count:rows.length,issues,sheet:sheet.name,regional:expectedRegion,periods:[...new Set(rows.map(row=>row.period).filter(Boolean))].sort(),date_start:sourceDates[0]||null,date_end:sourceDates.at(-1)||null}
 }
 
 export function buildKpiB13Summaries(rows,nopNames,period=null){

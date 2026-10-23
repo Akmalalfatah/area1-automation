@@ -13,6 +13,12 @@ const slug=value=>asText(value).toLowerCase().replace(/[^a-z0-9]+/g,'_').replace
 const json=value=>JSON.stringify(value)
 const base64url=value=>Buffer.from(value).toString('base64url')
 const compact=value=>asText(value).replace(/\s+/g,' ')
+// "NA" pada sumber RCA berarti root cause belum tersedia, bukan sebuah kategori.
+// Perlakukan juga variasi penulisan umum agar nilai valid di kolom lainnya tetap dipakai.
+const rcaValue=value=>{
+  const text=compact(value)
+  return /^(?:n\/?a|n\.a\.?)$/i.test(text)?'':text
+}
 
 const fieldAliases={
   site_id:['site_id','siteid','site'],site_name:['site_name','sitename','site_name_'],nop:['nop'],
@@ -105,9 +111,9 @@ function bucket(row){
   return '0-4hrs'
 }
 function durationOrder(label){return ['>1day','12-24hrs','8-12hrs','4-8hrs','0-4hrs'].indexOf(label)}
-function arcValue(row){return compact(row.arc)||'Under Investigation'}
-function arcdValue(row){return compact(row.arcd)||'Under Investigation'}
-function arcArcdText(row){return [compact(row.arc),compact(row.arcd)].filter(Boolean).join(' · ')||'Under Investigation'}
+function arcValue(row){return rcaValue(row.arc)||'Under Investigation'}
+function arcdValue(row){return rcaValue(row.arcd)||'Under Investigation'}
+function arcArcdText(row){return [rcaValue(row.arc),rcaValue(row.arcd)].filter(Boolean).join(' · ')||'Under Investigation'}
 function alarmText(row){
   return arcArcdText(row)
 }

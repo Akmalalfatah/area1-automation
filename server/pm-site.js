@@ -142,7 +142,8 @@ const sourceRowsForUploads=async (uploads,{period='',includeKpiB13=true}={})=>{
   ])
   // Peningkatan KPI tidak membutuhkan data PM. Hindari membaca snapshot PM
   // yang besar saat hanya kalkulasi B1-B3/SWFM dijalankan.
-  const data={pm:[],evaluations,punchlist_notes:punchlistNotes.map(row=>({...row,source:'review_l1'})),ai_classifications:aiClassifications,historical_notes:historicalNotes.map(row=>({...row,source:'punchlist_l0'})),sources:uploads.map(({dataset,...meta})=>meta),quality:[],read_only:false}
+  const sourceMeta=upload=>{const dataset=safeDataset(upload.dataset);return{...Object.fromEntries(Object.entries(upload).filter(([key])=>key!=='dataset')),...Object.fromEntries(['row_count','date_start','date_end','periods','regional','sheet'].filter(key=>dataset[key]!==undefined).map(key=>[key,dataset[key]]))}}
+  const data={pm:[],evaluations,punchlist_notes:punchlistNotes.map(row=>({...row,source:'review_l1'})),ai_classifications:aiClassifications,historical_notes:historicalNotes.map(row=>({...row,source:'punchlist_l0'})),sources:uploads.map(sourceMeta),quality:[],read_only:false}
   if(uploads.length){
     const ids=uploads.map(upload=>upload.source_upload_id)
     const [records]=await getPool().query('SELECT source_upload_id,payload FROM pm_site_source_upload_rows WHERE source_upload_id IN (?) ORDER BY source_upload_id,row_no',[ids])
@@ -169,7 +170,7 @@ const sourceRowsForUploads=async (uploads,{period='',includeKpiB13=true}={})=>{
       for(const source of fallbackSources){
         const dataset=safeDataset(source.dataset)
         data[source.source_kind]=rowsByKind.get(source.source_kind)||[]
-        if(!data.sources.some(item=>item.source_kind===source.source_kind))data.sources.push({source_kind:source.source_kind,filename:source.filename,upload_date:source.upload_date})
+        if(!data.sources.some(item=>item.source_kind===source.source_kind)){const dataset=safeDataset(source.dataset);data.sources.push({source_kind:source.source_kind,filename:source.filename,upload_date:source.upload_date,...Object.fromEntries(['row_count','date_start','date_end','periods','regional','sheet'].filter(key=>dataset[key]!==undefined).map(key=>[key,dataset[key]]))})}
         data.quality.push(...(dataset.issues||[]).map(issue=>({...issue,source:source.source_kind})))
       }
     }

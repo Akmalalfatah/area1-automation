@@ -8,7 +8,10 @@
   };
   const format=value=>Number(value||0).toLocaleString('id-ID');
   const dateLabel=value=>value?String(value).replace('T',' ').replace(/\.\d+Z?$/,''):'-';
-  const arcArcdText=row=>[row.arc,row.arcd].map(value=>String(value||'').trim()).filter(Boolean).join(' · ')||'Under Investigation';
+  // NA/N-A from the source denotes an uninvestigated RCA. Do not let it hide
+  // a valid ARC or ARCD value from the other column.
+  const rcaValue=value=>{const text=String(value??'').trim();return /^(?:n\/?a|n\.a\.?)$/i.test(text)?'':text;};
+  const arcArcdText=row=>[rcaValue(row.arc),rcaValue(row.arcd)].filter(Boolean).join(' · ')||'Under Investigation';
   const DEFAULT_TEMPLATE='🚨 Alarm Down {nop}\n(Last Update: {last_update})\n\nSite | Tech | Class | Event Time\n\n{duration_groups}';
   const downloadText=(text,filename)=>{const url=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'})),link=document.createElement('a');link.href=url;link.download=filename;link.click();URL.revokeObjectURL(url);};
   const CopyIcon=()=>h('svg',{width:17,height:17,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:'1.8',strokeLinecap:'square',strokeLinejoin:'miter','aria-hidden':'true'},h('rect',{x:8,y:8,width:12,height:12}),h('path',{d:'M16 8V4H4v12h4'}));
