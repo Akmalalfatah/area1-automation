@@ -100,17 +100,26 @@ function dateFromSheetName(name){
   const hit=asText(name).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/)
   return hit?`${hit[3]}-${hit[2].padStart(2,'0')}-${hit[1].padStart(2,'0')} ${hit[4].padStart(2,'0')}:${hit[5]}:00`:null
 }
+const DURATION_BUCKETS=['> 5 Hari','3 - 5 Hari','1 - 3 Hari','< 1 Hari','< 12 jam','< 4 jam']
 function bucket(row){
   const minutes=Number(row.duration_minutes)
-  if(Number.isFinite(minutes)){if(minutes>=1440)return '>1day';if(minutes>=720)return '12-24hrs';if(minutes>=480)return '8-12hrs';if(minutes>=240)return '4-8hrs';return '0-4hrs'}
+  if(Number.isFinite(minutes)){
+    if(minutes>=7200)return '> 5 Hari'
+    if(minutes>=4320)return '3 - 5 Hari'
+    if(minutes>=1440)return '1 - 3 Hari'
+    if(minutes>=720)return '< 1 Hari'
+    if(minutes>=240)return '< 12 jam'
+    return '< 4 jam'
+  }
   const text=asText(row.duration_text).toLowerCase()
-  if(/>\s*1\s*(hari|day)|>\s*24/.test(text))return '>1day'
-  if(/12\s*[-–]\s*24/.test(text))return '12-24hrs'
-  if(/8\s*[-–]\s*12/.test(text))return '8-12hrs'
-  if(/4\s*[-–]\s*8/.test(text))return '4-8hrs'
-  return '0-4hrs'
+  if(/>\s*5\s*(hari|day)|>\s*120/.test(text))return '> 5 Hari'
+  if(/3\s*[-–]\s*5\s*(hari|day)/.test(text))return '3 - 5 Hari'
+  if(/1\s*[-–]\s*3\s*(hari|day)|>\s*1\s*(hari|day)|>\s*24/.test(text))return '1 - 3 Hari'
+  if(/12\s*[-–]\s*24/.test(text))return '< 1 Hari'
+  if(/4\s*[-–]\s*12|8\s*[-–]\s*12/.test(text))return '< 12 jam'
+  return '< 4 jam'
 }
-function durationOrder(label){return ['>1day','12-24hrs','8-12hrs','4-8hrs','0-4hrs'].indexOf(label)}
+function durationOrder(label){return DURATION_BUCKETS.indexOf(label)}
 function arcValue(row){return rcaValue(row.arc)||'Under Investigation'}
 function arcdValue(row){return rcaValue(row.arcd)||'Under Investigation'}
 function arcArcdText(row){return [rcaValue(row.arc),rcaValue(row.arcd)].filter(Boolean).join(' · ')||'Under Investigation'}
@@ -173,14 +182,14 @@ export async function rcaDashboard(query={}){
   const allRows=await addMaster(snapshot.rows||[]),nop=asText(query.nop),duration=asText(query.duration),rootCause=asText(query.root_cause),search=asText(query.search).toLowerCase()
   const rows=allRows.filter(row=>(!nop||row.nop===nop)&&(!duration||bucket(row)===duration)&&(!rootCause||arcArcdText(row)===rootCause)&&(!search||[row.site_id,row.site_name,row.nop,row.arc,row.arcd,row.info_alarm].join(' ').toLowerCase().includes(search))).map(row=>({...row,duration_bucket:bucket(row)})).sort((a,b)=>durationOrder(a.duration_bucket)-durationOrder(b.duration_bucket)||String(a.down_date).localeCompare(String(b.down_date)))
   const countBy=(items,key)=>Object.entries(items.reduce((out,row)=>{const value=key(row)||'Tidak tersedia';out[value]=(out[value]||0)+1;return out},{})).map(([label,value])=>({label,value})).sort((a,b)=>b.value-a.value)
-  return {snapshot:{sheet_name:snapshot.sheet_name,source_updated_at:snapshot.source_updated_at,synced_at:snapshot.synced_at,row_count:Number(snapshot.row_count||allRows.length)},filters:{nop_options:[...new Set(allRows.map(row=>row.nop).filter(Boolean))].sort(),duration_options:['>1day','12-24hrs','8-12hrs','4-8hrs','0-4hrs'],root_cause_options:[...new Set(allRows.map(arcArcdText))].sort()},summary:{total:rows.length,over_day:rows.filter(row=>row.duration_bucket==='>1day').length,nop_affected:new Set(rows.map(row=>row.nop).filter(Boolean)).size},by_arc:countBy(rows,arcValue),by_arcd:countBy(rows,arcdValue),by_nop:countBy(rows,row=>row.nop),by_duration:countBy(rows,row=>row.duration_bucket),rows}
+  return {snapshot:{sheet_name:snapshot.sheet_name,source_updated_at:snapshot.source_updated_at,synced_at:snapshot.synced_at,row_count:Number(snapshot.row_count||allRows.length)},filters:{nop_options:[...new Set(allRows.map(row=>row.nop).filter(Boolean))].sort(),duration_options:DURATION_BUCKETS,root_cause_options:[...new Set(allRows.map(arcArcdText))].sort()},summary:{total:rows.length,over_day:rows.filter(row=>['> 5 Hari','3 - 5 Hari','1 - 3 Hari'].includes(row.duration_bucket)).length,nop_affected:new Set(rows.map(row=>row.nop).filter(Boolean)).size},by_arc:countBy(rows,arcValue),by_arcd:countBy(rows,arcdValue),by_nop:countBy(rows,row=>row.nop),by_duration:countBy(rows,row=>row.duration_bucket),rows}
 }
 
 export async function rcaTemplate(query={}){
   const dashboard=await rcaDashboard(query),snapshot=dashboard.snapshot,rows=dashboard.rows
   if(!rows.length)throw Object.assign(new Error('Tidak ada alarm RCA sesuai filter aktif.'),{status:422})
   const nop=asText(query.nop)||'SEMUA NOP',lastUpdate=templateDate(snapshot.source_updated_at||snapshot.synced_at)
-  const groups=['>1day','12-24hrs','8-12hrs','4-8hrs','0-4hrs'].map(label=>[label,rows.filter(row=>row.duration_bucket===label)]).filter(([,items])=>items.length)
+  const groups=DURATION_BUCKETS.map(label=>[label,rows.filter(row=>row.duration_bucket===label)]).filter(([,items])=>items.length)
   const body=groups.map(([label,items])=>`Duration: ${label}\n${items.map(siteLine).join('\n')}`).join('\n\n')
   return {template:`🚨 Alarm Down ${nop}\n(Last Update: ${lastUpdate})\n\nSite | Tech | Class | Event Time\n\n${body}`,row_count:rows.length,snapshot}
 }

@@ -41,7 +41,7 @@
     buildTemplate(){
       const data=this.state.data,rows=data?.rows||[];
       if(!rows.length)return '';
-      const order=['>1day','12-24hrs','8-12hrs','4-8hrs','0-4hrs'];
+      const order=['> 5 Hari','3 - 5 Hari','1 - 3 Hari','< 1 Hari','< 12 jam','< 4 jam'];
       const groups=order.map(label=>[label,rows.filter(row=>row.duration_bucket===label)]).filter(([,items])=>items.length);
       const lines=groups.map(([label,items])=>`Duration: ${label}\n${items.map((row,index)=>{const site=[row.site_id,String(row.site_name||'').replace(/\s+/g,'')].filter(Boolean).join('_')||'-';return `↳ ${index+1}. ${site} | ${row.tech||'-'} | ${row.class_site||'-'} | ${dateLabel(row.down_date)} *${arcArcdText(row)}*`;}).join('\n')}`).join('\n\n');
       const nop=this.state.filters.nop||'SEMUA NOP',updated=dateLabel(data.snapshot?.source_updated_at||data.snapshot?.synced_at);
