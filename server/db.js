@@ -26,7 +26,7 @@ const json=value=>JSON.stringify(value)
 
 export async function initDb(serverDir){
   if(!databaseEnabled)return
-  const sql=(await Promise.all(['schema.mysql.sql','pm-genset.mysql.sql','rca.mysql.sql'].map(file=>fs.readFile(path.join(serverDir,'sql',file),'utf8')))).join('\n')
+  const sql=(await Promise.all(['schema.mysql.sql','pm-genset.mysql.sql','rca.mysql.sql','improvement-sumbagsel.mysql.sql'].map(file=>fs.readFile(path.join(serverDir,'sql',file),'utf8')))).join('\n')
   for(const statement of sql.split(/;\s*(?:\r?\n|$)/).map(x=>x.trim()).filter(Boolean))await getPool().query(statement)
   const [ordering]=await getPool().query("SHOW COLUMNS FROM application_upload_history LIKE 'history_order'")
   if(!ordering.length)await getPool().query('ALTER TABLE application_upload_history ADD COLUMN history_order BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE')

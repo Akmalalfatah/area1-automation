@@ -17,6 +17,7 @@ import {gensetData,analyzeGenset,saveGensetEvaluation,enrichGensetSource} from '
 import {preventiveUploadHistory,applicationUploadHistory} from './db.js'
 import {buildKpiB13Summaries,parseKpiB13} from './kpi-b13.js'
 import {rcaDashboard,rcaSnapshots,rcaTemplate,syncRcaGoogle} from './rca.js'
+import {improvementDashboard,updateImprovement,approveImprovement} from './improvement-sumbagsel.js'
 
 const app=express(), upload=multer({storage:multer.memoryStorage(),limits:{fileSize:25*1024*1024}})
 app.use(express.json({limit:'1mb'}))
@@ -29,6 +30,10 @@ app.get('/api/rca/snapshots',asyncHandler(async(_req,res)=>res.json({items:await
 app.post('/api/rca/sync',asyncHandler(async(req,res)=>res.json(await syncRcaGoogle({sheetName:req.body?.sheet_name||''}))))
 app.get('/api/rca/dashboard',asyncHandler(async(req,res)=>res.json(await rcaDashboard(req.query))))
 app.post('/api/rca/template',asyncHandler(async(req,res)=>res.json(await rcaTemplate(req.body||{}))))
+
+app.get('/api/improvement-sumbagsel',asyncHandler(async(req,res)=>res.json(await improvementDashboard(req.query))))
+app.put('/api/improvement-sumbagsel/:siteId',asyncHandler(async(req,res)=>res.json(await updateImprovement(req.params.siteId,req.body||{}))))
+app.post('/api/improvement-sumbagsel/:siteId/approval',asyncHandler(async(req,res)=>res.json(await approveImprovement(req.params.siteId,req.body||{}))))
 
 app.post('/api/runs',asyncHandler(async(_req,res)=>res.json(await createRun(RUNS_DIR))))
 app.get('/api/runs/:id',asyncHandler(async(req,res)=>{try{res.json(await loadState(RUNS_DIR,req.params.id))}catch(error){const dataset=await loadDataset(RUNS_DIR,req.params.id).catch(()=>null);if(!dataset)throw error;res.json({id:req.params.id,upload:null,processed:true,report:null,prompt:'',history:true})}}))
