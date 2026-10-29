@@ -310,7 +310,7 @@ export function ticketComponents(row){
   if(/\bP1\b/.test(fault))return ['B_2.3']
   return []
 }
-app.use((error,_req,res,_next)=>{console.error(error);const status=error.status||(error instanceof ValidationError?422:/belum dikonfigurasi|Database|Gemini|connect|fetch/i.test(error.message)?503:500);res.status(status).json({detail:error.message||'Terjadi kesalahan pada server.'})})
+app.use((error,_req,res,_next)=>{const status=error.status||(error instanceof ValidationError?422:/belum dikonfigurasi|Database|Gemini|connect|fetch/i.test(error.message)?503:500);if(status>=500)console.error(error);res.status(status).json({detail:error.message||'Terjadi kesalahan pada server.'})})
 
 const databaseReady=fs.mkdir(RUNS_DIR,{recursive:true})
   .then(()=>initDb(SERVER_DIR))

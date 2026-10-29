@@ -90,7 +90,7 @@ export function buildDataset(extracted,date,filename){
 
 const runDir=(runsDir,id)=>path.join(runsDir,id), statePath=(runsDir,id)=>path.join(runDir(runsDir,id),'state.json')
 export async function createRun(runsDir){const id=crypto.randomBytes(6).toString('hex');await fs.mkdir(runDir(runsDir,id),{recursive:true});const state={id,upload:null,processed:false,report:null,prompt:'',history:true};await saveState(runsDir,state);return state}
-export async function loadState(runsDir,id){try{return JSON.parse(await fs.readFile(statePath(runsDir,id),'utf8'))}catch(error){if(error.code==='ENOENT')throw new ValidationError('Run tidak ditemukan.');throw error}}
+export async function loadState(runsDir,id){try{return JSON.parse(await fs.readFile(statePath(runsDir,id),'utf8'))}catch(error){if(error.code==='ENOENT'){const missing=new Error('Run tidak ditemukan.');missing.status=404;missing.code='RUN_NOT_FOUND';throw missing}throw error}}
 export async function saveState(runsDir,state){await fs.mkdir(runDir(runsDir,state.id),{recursive:true});await fs.writeFile(statePath(runsDir,state.id),JSON.stringify(state,null,2))}
 
 const previousMonthPeriod=date=>{const source=new Date(`${date}T00:00:00Z`),previous=new Date(Date.UTC(source.getUTCFullYear(),source.getUTCMonth()-1,1));return {year:previous.getUTCFullYear(),month:previous.getUTCMonth()+1}}

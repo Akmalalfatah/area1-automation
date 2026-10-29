@@ -72,6 +72,7 @@ async function api(url, options) {
 const getConfig = () => api("/api/config");
 const createRun = () => api("/api/runs", { method: "POST" });
 const getRun = (id) => api(`/api/runs/${id}`);
+const isMissingRunError = (error) => /run tidak ditemukan|request gagal \(404\)/i.test(String((error == null ? void 0 : error.message) || error || ""));
 const getDashboard = (id, region = "", nop = "") => {
   const params = new URLSearchParams();
   if (region) params.set("region", region);
@@ -292,6 +293,7 @@ function Sidebar({ activePage, preventiveOpen, onPage, onTogglePreventive }) {
   return h(
     "aside",
     { className: "sidebar-shell fixed left-0 top-0 z-40 h-screen w-[250px] text-white" },
+    h("div", { className: "sidebar-brand", role: "banner" }, h("img", { src: "/static/logo-triple-e.png", alt: "Triple-E" }), h("div", { className: "sidebar-brand-copy" }, h("strong", null, "AREA 1"), h("span", null, "SYSTEM"), h("span", null, "MANAGEMENT"))),
     h(
       "nav",
       { className: "py-2" },
@@ -533,7 +535,7 @@ function pmHeader(ctx, title, subtitle, margin) {
 function pmFooter(ctx, margin, height, note) {
   const stamp = new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date());
   if (note) pmText(ctx, note, margin, height - 50, { size: 12, weight: 500, color: "#64748B" });
-  pmText(ctx, `Automated Operations System · dibuat ${stamp} WIB`, margin, height - 24, { size: 12, weight: 500, color: "#64748B" });
+  pmText(ctx, `A1 Operations Command Center · dibuat ${stamp} WIB`, margin, height - 24, { size: 12, weight: 500, color: "#64748B" });
 }
 function saveCanvas(canvas, filename) {
   canvas.toBlob((blob) => { if (blob) downloadBlob(blob, filename); }, "image/png");
@@ -2091,7 +2093,17 @@ class App extends React.Component {
           prompt: "",
           history: true
         };
-        const dashboard = await getDashboard(run2.id, this.state.region, this.state.nop);
+        let dashboard;
+        try {
+          dashboard = await getDashboard(run2.id, this.state.region, this.state.nop);
+        } catch (error) {
+          if (!isMissingRunError(error)) throw error;
+          localStorage.removeItem(RUN_KEY);
+          const freshRun = await createRun();
+          localStorage.setItem(RUN_KEY, freshRun.id);
+          this.setState({ run: freshRun });
+          return;
+        }
         localStorage.setItem(RUN_KEY, run2.id);
         this.setState({ run: run2, dashboard }, () => this.requestReport(run2, this.state.region, this.state.nop, prompt));
         return;
