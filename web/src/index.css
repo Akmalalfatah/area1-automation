@@ -20,11 +20,6 @@ button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 
 .sidebar-shell { background: var(--sidebar-gradient); }
-.sidebar-brand { height:66px; display:flex; align-items:center; gap:10px; padding:6px 10px; overflow:hidden; background:#fff; color:#173e68; border-top:0; box-shadow:0 1px 0 #d7dfe8; }
-.sidebar-brand img { width:38%; min-width:0; height:54px; flex-shrink:0; object-fit:contain; object-position:center; }
-.sidebar-brand-copy { display:flex; min-width:0; flex:1; flex-direction:column; padding-left:10px; border-left:2px solid #cbd1d8; line-height:1.15; letter-spacing:.015em; }
-.sidebar-brand-copy strong { margin-bottom:3px; font-size:19px; font-weight:800; white-space:nowrap; }
-.sidebar-brand-copy span { margin:1px 0; font-size:9px; font-weight:700; }
 .sidebar-nav-button { border: 0; outline: 0; background: transparent; color: #fff; text-decoration: none; transition: background .16s ease, filter .16s ease; }
 .sidebar-nav-button:hover, .sidebar-nav-button:focus-visible, .sidebar-nav-button:active, .sidebar-nav-button.is-active { background: var(--orange-gradient); filter: brightness(.98); }
 .sidebar-arrow { flex: none; transition: transform .18s ease; }
@@ -215,9 +210,7 @@ button { cursor: pointer; }
   .sidebar-shell { width:64px!important; }
   .app-shell { padding-left:64px!important; }
   .kpi-nop-detail, .data-upload-page { left:64px; top:66px; padding:10px; }
-  .sidebar-brand { padding:6px; justify-content:center; }
-  .sidebar-brand img { width:100%; height:46px; }
-  .sidebar-brand-copy, .sidebar-external small { display:none; }
+  .sidebar-external small { display:none; }
   .sidebar-main-item { width:calc(100% - 8px); min-height:48px; height:auto!important; margin:3px 4px; padding:5px 3px!important; justify-content:center; text-align:center!important; font-size:7px!important; line-height:1.25!important; white-space:normal; }
   .sidebar-main-item:has(.sidebar-arrow) { flex-direction:column; gap:1px!important; }
   .sidebar-subnav { position:fixed; top:165px; left:64px; width:172px; padding:5px 0; background:#173e68; box-shadow:4px 6px 14px rgba(16,42,70,.22); }

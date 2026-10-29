@@ -19,8 +19,17 @@ import {buildKpiB13Summaries,parseKpiB13} from './kpi-b13.js'
 import {rcaDashboard,rcaSnapshots,rcaTemplate,syncRcaGoogle} from './rca.js'
 import {improvementDashboard,updateImprovement,approveImprovement} from './improvement-sumbagsel.js'
 
-const app=express(), upload=multer({storage:multer.memoryStorage(),limits:{fileSize:25*1024*1024}})
-app.use(express.json({limit:'1mb'}))
+// Keep Multer's callback synchronous. Apart from rejecting invalid uploads later
+// with assertXlsx(), this avoids the async fileFilter crash path in older Multer.
+const synchronousUploadFilter=(_req,_file,callback)=>callback(null,true)
+const app=express(), upload=multer({
+  storage:multer.memoryStorage(),
+  limits:{fileSize:25*1024*1024},
+  fileFilter:synchronousUploadFilter
+})
+// API clients do not send compressed JSON. Reject encoded request bodies before
+// body-parser can create a decompression stream.
+app.use(express.json({limit:'1mb',inflate:false}))
 app.use('/static',express.static(`${WEB_DIR}/static`))
 app.get('/',(_req,res)=>res.sendFile(`${WEB_DIR}/index.html`))
 app.get('/api/health',(_req,res)=>res.json({status:'ok',runtime:'node'}))

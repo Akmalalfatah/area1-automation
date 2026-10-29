@@ -292,7 +292,6 @@ function Sidebar({ activePage, preventiveOpen, onPage, onTogglePreventive }) {
   return h(
     "aside",
     { className: "sidebar-shell fixed left-0 top-0 z-40 h-screen w-[250px] text-white" },
-    h("div", { className: "sidebar-brand", role: "banner" }, h("img", { src: "/static/logo-triple-e.png", alt: "Triple-E" }), h("div", { className: "sidebar-brand-copy" }, h("strong", null, "AREA 1"), h("span", null, "SYSTEM"), h("span", null, "MANAGEMENT"))),
     h(
       "nav",
       { className: "py-2" },

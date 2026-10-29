@@ -241,7 +241,6 @@ function Sidebar({ activePage, preventiveOpen, onPage, onTogglePreventive }) {
   const h=React.createElement;
   const menu=(page,label)=>h('button',{onClick:()=>onPage(page),className:`sidebar-nav-button sidebar-sub-item flex h-[42px] items-center gap-2 text-left text-xs font-semibold ${activePage===page?'is-active':''}`},h(ChevronRight,{size:14,className:`sidebar-arrow ${activePage===page?'is-open':''}`}),h('span',null,label));
   return h('aside',{className:'sidebar-shell fixed left-0 top-0 z-40 h-screen w-[250px] text-white'},
-    h('div',{className:'sidebar-brand',role:'banner'},h('img',{src:'/static/logo-triple-e.png',alt:'Triple-E'}),h('div',{className:'sidebar-brand-copy'},h('strong',null,'AREA 1'),h('span',null,'SYSTEM'),h('span',null,'MANAGEMENT'))),
     h('nav',{className:'py-2'},
       h('button',{onClick:()=>onPage('ekpi'),className:`sidebar-nav-button sidebar-main-item flex h-[42px] items-center text-left text-xs font-semibold ${activePage==='ekpi'?'is-active':''}`},h('span',null,'eKPI Automation')),
       h('button',{onClick:()=>onPage('data-upload'),className:`sidebar-nav-button sidebar-main-item flex h-[42px] items-center text-left text-xs font-semibold ${activePage==='data-upload'?'is-active':''}`},h('span',null,'Data Upload')),
