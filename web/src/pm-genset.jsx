@@ -170,7 +170,7 @@
     put(context,model.definition,rightX+28,noteY+182,{size:12,weight:500,color:'#64748b'});
     // --- Footer ---
     const stamp=new Intl.DateTimeFormat('id-ID',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'}).format(new Date());
-    put(context,`A1 Operations Command Center · dibuat ${stamp} WIB`,margin,height-26,{size:12,weight:500,color:'#64748b'});
+    put(context,`Automated Operations System · dibuat ${stamp} WIB`,margin,height-26,{size:12,weight:500,color:'#64748b'});
     return canvas;
   };
   function saveBlob(canvas,filename){canvas.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);},'image/png');}
@@ -224,7 +224,7 @@
     if(model.top.length){const avg=x(model.average);context.setLineDash([6,5]);context.strokeStyle='#6f7f93';context.beginPath();context.moveTo(avg,top-16);context.lineTo(avg,top+model.top.length*row);context.stroke();context.setLineDash([]);text(`Rata-rata ${model.average.toFixed(1).replace('.',',')}`,avg,top-24,11,'#52657c',600,'center');}
     model.top.forEach((item,index)=>{const y=top+index*row+10,width=Math.max(x(item.value)-left,2),high=item.value>=model.average;context.fillStyle=high?'#3979a5':'#aec8da';context.fillRect(left,y,width,26);splitLabel(item.name,18).slice(0,2).forEach((line,lineIndex)=>text(line.toUpperCase(),left-14,y+17+(lineIndex?12:0),11,'#596b80',600,'right'));text(item.value,left+width+10,y+18,16,'#173e68',600);});
     context.fillStyle='#3979a5';context.fillRect(844,664,12,12);text('Di atas rata-rata',864,675,12,'#607086',500);context.fillStyle='#aec8da';context.fillRect(1014,664,12,12);text('Di bawah rata-rata',1034,675,12,'#607086',500);context.setLineDash([6,5]);context.strokeStyle='#6f7f93';context.beginPath();context.moveTo(1195,670);context.lineTo(1220,670);context.stroke();context.setLineDash([]);text(`Rata-rata ${model.average.toFixed(1).replace('.',',')}`,1230,675,12,'#607086',500);
-    context.fillStyle='#f1f5f9';context.fillRect(844,716,326,76);context.fillRect(1184,716,326,76);text('TOTAL KENDALA',862,741,10,'#728298',600);text(model.totalIssues,862,776,31,'#173e68',600);text('NOP TERDAMPAK',1202,741,10,'#728298',600);text(model.top.length,1202,776,31,'#173e68',600);text('Kendala = status Rejected, atau jadwal terlewat tanpa Submitted Date.',844,808,12,'#64748b',500);text('A1 Operations Command Center',40,866,12,'#64748b',500);return canvas;
+    context.fillStyle='#f1f5f9';context.fillRect(844,716,326,76);context.fillRect(1184,716,326,76);text('TOTAL KENDALA',862,741,10,'#728298',600);text(model.totalIssues,862,776,31,'#173e68',600);text('NOP TERDAMPAK',1202,741,10,'#728298',600);text(model.top.length,1202,776,31,'#173e68',600);text('Kendala = status Rejected, atau jadwal terlewat tanpa Submitted Date.',844,808,12,'#64748b',500);text('Automated Operations System',40,866,12,'#64748b',500);return canvas;
   };
   window.PMAttentionCharts=function({rows=[],loading,kind}){
     if(kind!=='genset')return <PMAttentionChartsClassic rows={rows} loading={loading} kind={kind}/>;

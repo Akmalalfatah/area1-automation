@@ -533,7 +533,7 @@ function pmHeader(ctx, title, subtitle, margin) {
 function pmFooter(ctx, margin, height, note) {
   const stamp = new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date());
   if (note) pmText(ctx, note, margin, height - 50, { size: 12, weight: 500, color: "#64748B" });
-  pmText(ctx, `A1 Operations Command Center · dibuat ${stamp} WIB`, margin, height - 24, { size: 12, weight: 500, color: "#64748B" });
+  pmText(ctx, `Automated Operations System · dibuat ${stamp} WIB`, margin, height - 24, { size: 12, weight: 500, color: "#64748B" });
 }
 function saveCanvas(canvas, filename) {
   canvas.toBlob((blob) => { if (blob) downloadBlob(blob, filename); }, "image/png");

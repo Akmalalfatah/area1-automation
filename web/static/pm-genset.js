@@ -282,7 +282,7 @@
     drawChips(context, model.nopChips, rightX + 28, noteY + 56, panelWidth - 56, 96);
     put(context, model.definition, rightX + 28, noteY + 182, { size: 12, weight: 500, color: "#64748b" });
     const stamp = new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(/* @__PURE__ */ new Date());
-    put(context, `A1 Operations Command Center \xB7 dibuat ${stamp} WIB`, margin, height - 26, { size: 12, weight: 500, color: "#64748b" });
+    put(context, `Automated Operations System \xB7 dibuat ${stamp} WIB`, margin, height - 26, { size: 12, weight: 500, color: "#64748b" });
     return canvas;
   };
   function saveBlob(canvas, filename) {
@@ -470,7 +470,7 @@
     text("NOP TERDAMPAK", 1202, 741, 10, "#728298", 600);
     text(model.top.length, 1202, 776, 31, "#173e68", 600);
     text("Kendala = status Rejected, atau jadwal terlewat tanpa Submitted Date.", 844, 808, 12, "#64748b", 500);
-    text("A1 Operations Command Center", 40, 866, 12, "#64748b", 500);
+    text("Automated Operations System", 40, 866, 12, "#64748b", 500);
     return canvas;
   };
   window.PMAttentionCharts = function({ rows = [], loading, kind }) {
