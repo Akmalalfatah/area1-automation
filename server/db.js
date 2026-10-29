@@ -81,6 +81,21 @@ export async function loadPreviousHistoryDataset(runId,currentDate){if(!database
 export async function deleteHistory(runIds){if(!databaseEnabled)throw new Error('Database history belum dikonfigurasi.');const [result]=await getPool().query('DELETE FROM kpi_history WHERE run_id IN (?)',[runIds]);return result.affectedRows}
 
 let localUploadQueue=Promise.resolve()
+// Local JSON is used only when MySQL is not configured. A half-resolved Git
+// conflict must never take the dashboard down; preserve the malformed file on
+// the next write and continue with an empty history until then.
+async function readLocalJson(file,fallback,{backupOnMalformed=false}={}){
+  try{return JSON.parse(await fs.readFile(file,'utf8'))}
+  catch(error){
+    if(error.code==='ENOENT')return fallback
+    console.error(`File data lokal tidak valid (${file}): ${error.message}`)
+    if(backupOnMalformed&&error instanceof SyntaxError){
+      const backup=`${file}.corrupt-${new Date().toISOString().replace(/[:.]/g,'-')}`
+      await fs.rename(file,backup).catch(renameError=>console.error(`Backup file data gagal (${file}): ${renameError.message}`))
+    }
+    return fallback
+  }
+}
 export function assertPreventivePacketSize(bytes,limit){
   if(bytes>=limit)throw Object.assign(new Error(`Data upload membutuhkan paket MySQL ${(bytes/1048576).toFixed(2)} MB, sedangkan max_allowed_packet hanya ${(limit/1048576).toFixed(2)} MB. Atur max_allowed_packet=64M pada bagian [mysqld] di my.ini MySQL (XAMPP: mysql/bin/my.ini), lalu restart MySQL dan server aplikasi. Data sebelumnya tetap dipertahankan.`),{status:503,code:'PM_PACKET_TOO_LARGE'})
 }
@@ -112,7 +127,8 @@ async function savePreventiveUploadImpl(uploadId,uploadDate,filename,dataset){
 }
 
 async function localPreventiveUploads(includeInactive=false){
-  try{const records=JSON.parse(await fs.readFile(path.join(DATA_DIR,'local-preventive-uploads.json'),'utf8'));return includeInactive?records:records.filter(record=>record.active!==false)}catch(error){if(error.code==='ENOENT')return [];throw error}
+  const records=await readLocalJson(path.join(DATA_DIR,'local-preventive-uploads.json'),[])
+  return Array.isArray(records)?(includeInactive?records:records.filter(record=>record.active!==false)):[]
 }
 const uploadKind=record=>record.dataset?.maintenance_kind||(String(record.filename).toLowerCase().includes('genset')?'genset':'site')
 export async function preventiveUploadHistory(page='dashboard',activeOnly=false){
@@ -122,8 +138,8 @@ export async function preventiveUploadHistory(page='dashboard',activeOnly=false)
 }
 export async function recordApplicationUpload(page,id,filename,date,count,connection){
   if(databaseEnabled){await (connection||getPool()).query('INSERT INTO application_upload_history(upload_id,page,filename,upload_date,row_count) VALUES(?,?,?,?,?) ON DUPLICATE KEY UPDATE filename=VALUES(filename),upload_date=VALUES(upload_date),row_count=VALUES(row_count)',[id,page,filename,date,count]);return}
-  const file=path.join(DATA_DIR,'upload-history.json');await fs.mkdir(DATA_DIR,{recursive:true});let records=[];
-  try{records=JSON.parse(await fs.readFile(file,'utf8'))}catch(error){if(error.code!=='ENOENT')throw error}
+  const file=path.join(DATA_DIR,'upload-history.json');await fs.mkdir(DATA_DIR,{recursive:true});let records=await readLocalJson(file,[],{backupOnMalformed:true});
+  if(!Array.isArray(records))records=[]
   records=records.filter(row=>row.upload_id!==id);records.push({upload_id:id,page,filename,upload_date:date,row_count:count,updated_at:new Date().toISOString()});await fs.writeFile(file+'.tmp',JSON.stringify(records),'utf8');await fs.rename(file+'.tmp',file)
 }
 export async function applicationUploadHistory(page){
@@ -132,7 +148,7 @@ export async function applicationUploadHistory(page){
   const legacy=isSource?databaseEnabled?(await getPool().query("SELECT CONCAT(source_kind,'-legacy') AS upload_id,filename,upload_date FROM pm_site_sources WHERE source_kind=?",[page]))[0].map(row=>({...row,page})):[]:page==='ekpi'?(await listHistory()).map(row=>({upload_id:row.run_id,filename:row.history?.upload?.filename||row.history?.file,upload_date:row.history?.upload?.date||row.date_end,updated_at:row.updated_at,page})):await preventiveUploadHistory(page)
   let logged=[];
   if(databaseEnabled)logged=(await getPool().query('SELECT upload_id,page,filename,upload_date,row_count,updated_at,history_order FROM application_upload_history WHERE page=? ORDER BY updated_at DESC,history_order DESC',[page]))[0];
-  else if(page==='ekpi'){try{logged=JSON.parse(await fs.readFile(path.join(DATA_DIR,'upload-history.json'),'utf8')).filter(row=>row.page===page)}catch(error){if(error.code!=='ENOENT')throw error}}
+  else if(page==='ekpi'){const records=await readLocalJson(path.join(DATA_DIR,'upload-history.json'),[]);logged=(Array.isArray(records)?records:[]).filter(row=>row?.page===page)}
   const historical=isSource?legacy.filter(row=>!logged.some(item=>item.filename===row.filename&&iso(item.upload_date)===iso(row.upload_date))):legacy
   return [...new Map([...historical,...logged].map(row=>[row.upload_id,{...row,upload_date:iso(row.upload_date)}])).values()].sort((a,b)=>String(b.updated_at).localeCompare(String(a.updated_at))||Number(b.history_order||0)-Number(a.history_order||0))
 }

@@ -51,8 +51,15 @@ app.post('/api/runs/:id/ticket-summary',upload.single('file'),asyncHandler(async
 app.post('/api/runs/:id/process',asyncHandler(async(req,res)=>{const dataset=await processRun(RUNS_DIR,req.params.id);res.json({ok:true,date:dataset.date})}))
 app.get('/api/runs/:id/dashboard',asyncHandler(async(req,res)=>{
   const payload=await dashboardPayload(RUNS_DIR,req.params.id,req.query.region||null,req.query.nop||null,req.query.category||null)
-  const derived=deriveTicketMttrByNop(await siteData(),payload.dataset.nops.map(item=>item.name),payload.dataset.reporting_period?.source_period||String(payload.dataset.date||'').slice(0,7))
-  payload.dataset.ticket_summaries={...(payload.dataset.ticket_summaries||{}),...derived}
+  // Ticket summary PM is supplementary for eKPI. A temporarily unavailable PM
+  // source must not make the main eKPI dashboard unavailable.
+  try{
+    const derived=deriveTicketMttrByNop(await siteData(),payload.dataset.nops.map(item=>item.name),payload.dataset.reporting_period?.source_period||String(payload.dataset.date||'').slice(0,7))
+    payload.dataset.ticket_summaries={...(payload.dataset.ticket_summaries||{}),...derived}
+  }catch(error){
+    console.warn(`Ticket summary tidak tersedia untuk run ${req.params.id}: ${error.message}`)
+    payload.ticket_summary_warning='Ticket summary PM sementara tidak tersedia. Dashboard KPI utama tetap dapat digunakan.'
+  }
   res.json(payload)
 }))
 app.get('/api/runs/:id/mttr-boosting',asyncHandler(async(req,res)=>{
@@ -79,7 +86,16 @@ app.post('/api/runs/:id/report',asyncHandler(async(req,res)=>{
 app.get('/api/history',asyncHandler(async(req,res)=>res.json({items:await listHistory(req.query)})))
 app.get('/api/uploads',asyncHandler(async(req,res)=>res.json({items:await applicationUploadHistory(req.query.page)})))
 app.get('/api/master-site/upload',asyncHandler(async(_req,res)=>{const data=await siteData();res.json({latest_upload:(data.sources||[]).find(source=>source.source_kind==='master')||null})}))
-app.get('/api/data-freshness',asyncHandler(async(_req,res)=>{const pairs=await Promise.all(freshnessTypes.map(async([key])=>[key,(await applicationUploadHistory(key))[0]||null]));const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jakarta',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());res.json({today,items:buildFreshness(Object.fromEntries(pairs),today)})}))
+app.get('/api/data-freshness',asyncHandler(async(_req,res)=>{
+  // Freshness is informational. Return remaining sources when one history table
+  // or a legacy upload is unavailable, rather than failing the entire page.
+  const settled=await Promise.allSettled(freshnessTypes.map(async([key])=>[key,(await applicationUploadHistory(key))[0]||null]))
+  const pairs=settled.flatMap(result=>result.status==='fulfilled'?[result.value]:[])
+  const failed=settled.flatMap((result,index)=>result.status==='rejected'?[freshnessTypes[index][0]]:[])
+  if(failed.length)console.warn(`Freshness source tidak tersedia: ${failed.join(', ')}`)
+  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jakarta',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
+  res.json({today,items:buildFreshness(Object.fromEntries(pairs),today),unavailable_sources:failed})
+}))
 app.delete('/api/history',asyncHandler(async(req,res)=>{const ids=[...new Set((req.body?.run_ids||[]).filter(Boolean))];if(!ids.length)throw new HttpError(400,'Pilih minimal satu KPI history.');const deleted=await deleteHistory(ids);await Promise.all(ids.map(id=>fs.rm(`${RUNS_DIR}/${id}`,{recursive:true,force:true})));res.json({deleted})}))
 
 app.post('/api/preventive/upload',upload.single('file'),asyncHandler(async(req,res)=>{assertXlsx(req.file);assertDate(req.body.upload_date);const dataset=await parsePreventiveWorkbook(req.file.buffer,req.file.originalname);const page=req.body.upload_page||dataset.maintenance_kind;if(!['dashboard','genset','site'].includes(page))throw new HttpError(422,'Halaman upload tidak valid.');if(page!=='dashboard'&&page!==dataset.maintenance_kind)throw new HttpError(422,'Jenis file tidak sesuai halaman PM.');dataset.upload_page=page;const uploadId=crypto.randomUUID(),replaced=await savePreventiveUpload(uploadId,req.body.upload_date,req.file.originalname,dataset);const dataMonth=String(dataset.data_month||req.body.upload_date||'').slice(0,7);if(page==='site')queuePunchlistAutoClassification({month:dataMonth},['punchlist_l0']);res.json({upload_id:uploadId,upload_date:req.body.upload_date,filename:req.file.originalname,row_count:dataset.row_count,data_month:dataset.data_month,date_start:dataset.date_start,date_end:dataset.date_end,replaced_upload_count:replaced,auto_classification:page==='site'})}))
