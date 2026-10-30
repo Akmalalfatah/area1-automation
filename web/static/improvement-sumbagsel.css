@@ -12,3 +12,74 @@
 .approval-modal .imp-approval-summary>p{color:#426e9d}.approval-modal .imp-approval-summary .imp-readonly{background:#fff;border:0}
 .approval-modal .imp-optional-section{border:0;background:#f7f9fc;padding:16px 18px}.approval-modal .imp-optional-section>p{color:#64758b}
 .imp-priority.priority-p1{background:#fde3e4;color:#ae3f49}.imp-priority.priority-p2{background:#fff0ce;color:#98661b}.imp-priority.priority-p3{background:#dfeafb;color:#35699c}.imp-priority.priority-p4{background:#def1e5;color:#357251}.imp-priority:not(.priority-p1):not(.priority-p2):not(.priority-p3):not(.priority-p4){background:#e9edf3;color:#64748b}
+
+/* Align the Improvement page's type scale with the RCA Alarm Down workspace.
+   The former coloured top rules made each panel read like a separate banner. */
+.imp-hero,
+.imp-metrics > div {
+  border-top-width: 1px;
+  border-top-color: #d8e1eb;
+}
+
+.imp-hero {
+  padding: 24px;
+}
+
+.imp-hero p,
+.imp-section-title p,
+.imp-tablehead p {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .08em;
+}
+
+.imp-hero h2,
+.imp-section-title h3,
+.imp-tablehead h3 {
+  color: #29496c;
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 600;
+  letter-spacing: .03em;
+}
+
+.imp-hero span {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.imp-metrics > div {
+  padding: 18px 20px;
+}
+
+.imp-metrics span {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .08em;
+}
+
+.imp-metrics strong {
+  color: #29496c;
+  font-size: 31px;
+  line-height: 1.1;
+  font-weight: 600;
+}
+
+.imp-metrics-status { grid-template-columns:repeat(4,1fr); }
+.imp-status.submitted-update-\(waiting-approval\) { background:#e5eef8; color:#3f6b99; }
+.imp-status.escalated-\(visit-ada-isu\) { background:#fde5e5; color:#a84646; }
+.imp-edit-help { margin:6px 0 0; color:#6d7888; font-size:10px; line-height:1.5; }
+.imp-grid-spacer { display:block; }
+.imp-schedule-section { margin:16px 0; padding:15px; border:1px solid #d8e1eb; background:#f8fafc; }
+.imp-schedule-section > p { margin:0 0 12px; color:#718198; font-size:10px; font-weight:600; letter-spacing:.08em; }
+.imp-schedule-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.imp-status.close-activity-\(enom\) { background:#def1e5; color:#347453; }
+.imp-status.close-validasi-\(nop\) { background:#e5eef8; color:#3f6b99; }
+.imp-table-tools{display:flex;align-items:center;justify-content:flex-end;gap:8px}.imp-table-tools input{width:220px;border:1px solid #ced9e5;padding:8px 10px;color:#263a59;font:500 11px Poppins,sans-serif}.imp-download-excel{border:1px solid #3f7f51;background:#4b8966;color:#fff;padding:8px 10px;font:600 10px Poppins,sans-serif;cursor:pointer;white-space:nowrap}@media(max-width:900px){.imp-tablehead,.imp-table-tools{align-items:stretch;flex-direction:column}.imp-table-tools input{width:auto}}
+.imp-search-field input{width:100%;border:1px solid #ced9e5;background:#fff;padding:10px 11px;color:#263a59;font:500 12px Poppins,sans-serif;box-sizing:border-box}
+.imp-filter-group{margin-top:18px}.imp-filter-group>p{margin:0 0 10px;color:#718198;font-size:10px;font-weight:600;letter-spacing:.08em}.imp-filter-primary{padding:14px;border:1px solid #d8e1eb;background:#f8fafc}.imp-filter-primary-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(180px,1fr);gap:14px}.imp-metrics-kpi{gap:12px;align-items:stretch}.imp-metrics-kpi>div{box-sizing:border-box;min-height:134px;display:flex;flex-direction:column}.imp-metrics-kpi .imp-total-site i{margin-top:auto;color:#8290a2;font-size:9px;font-style:normal;line-height:1.35}@media(max-width:700px){.imp-filter-primary-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.imp-schedule-grid{grid-template-columns:1fr}}
+.imp-metrics-kpi small,.imp-metrics-kpi em{display:block;margin-top:5px;color:#748398;font-size:10px;font-style:normal;font-weight:500;letter-spacing:0}.imp-metrics-kpi small b{color:#29496c;font-weight:600}.imp-metrics-kpi .imp-total-site small:first-of-type{margin-top:9px}.imp-metrics-kpi .imp-kpi-close-activity strong,.imp-metrics-kpi .imp-kpi-close-activity em{color:#347453}.imp-metrics-kpi .imp-kpi-close-validasi strong,.imp-metrics-kpi .imp-kpi-close-validasi em{color:#3f6b99}.imp-metrics-kpi .imp-kpi-open strong,.imp-metrics-kpi .imp-kpi-open em{color:#9a6a1f}.imp-metrics-kpi .imp-kpi-escalated strong,.imp-metrics-kpi .imp-kpi-escalated em{color:#a84646}
+.imp-modal footer .imp-action-return { border-color:#d69a9a; color:#a84646; }
+.imp-modal footer .imp-action-escalate { border-color:#d7ab63; background:#fff6e4; color:#95641a; }

@@ -8,8 +8,14 @@ const LOCAL_FILE=path.join(DATA_DIR,'sumbagsel-improvement-updates.json')
 const text=value=>String(value??'').trim()
 const upper=value=>text(value).toUpperCase()
 const canonicalNop=value=>upper(value).replace(/^NOP\s*/,'').trim()
-const fields=['responsibility','pic_team_lapangan','status','remark_progress','plan_date','done_date','problem_dependency','evidence_link','program']
-const allowedStatuses=['Open','In Progress','Submitted Update','Approved','Closed','Need Follow Up']
+const fields=['responsibility','pic_team_lapangan','status','remark_progress','plan_date','done_date','problem_dependency','evidence_link','program','rca']
+// Close Activity/Close Validasi are produced only by Approval Activity. The
+// Edit form manages the three operational statuses below.
+const allowedStatuses=['Open','Submitted Update','Escalated']
+const fixedFilterOptions={
+ responsibility:['ENOM','ENOM + TSEL','PLN','SPMS','TELKOM','TP','TSEL'],
+ problem_dependency:['No Dependency','Need Budget - TSEL NOS','Need Budget - TSEL MBA','Responsible PLN','Responsible Telkom','Responsible TP','Waiting Material','Commcase / Access Issue']
+}
 let seedCache
 async function seed(){if(!seedCache)seedCache=JSON.parse(await fs.readFile(SEED_FILE,'utf8'));return seedCache}
 async function localUpdates(){try{return JSON.parse(await fs.readFile(LOCAL_FILE,'utf8'))}catch(error){if(error.code==='ENOENT')return {};throw error}}
@@ -18,14 +24,16 @@ async function updates(){
  const [rows]=await getPool().query('SELECT site_id,data FROM sumbagsel_improvement_updates')
  return Object.fromEntries(rows.map(row=>[row.site_id,typeof row.data==='string'?JSON.parse(row.data):row.data]))
 }
-function mergeSite(site,update){return {...site,...(update||{}),site_id:site.site_id,nop:canonicalNop(site.nop),priority_enhancement:site.priority_enhancement,rca:site.rca,site_flicker:site.site_flicker,action_cat:site.action_cat,po_htde_2026:site.po_htde_2026,po_upgrade_daya_2026:site.po_upgrade_daya_2026}}
+function mergeSite(site,update){return {...site,...(update||{}),site_id:site.site_id,nop:canonicalNop(site.nop),priority_enhancement:site.priority_enhancement,rca:update?.rca??site.rca,site_flicker:site.site_flicker,action_cat:site.action_cat,po_htde_2026:site.po_htde_2026,po_upgrade_daya_2026:site.po_upgrade_daya_2026}}
 const week=value=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(text(value)))return '';const d=new Date(`${value}T00:00:00Z`),jan4=new Date(Date.UTC(d.getUTCFullYear(),0,4)),week=1+Math.round(((d-jan4)/86400000-3+(jan4.getUTCDay()+6)%7)/7);return `Week ${week}`}
 export async function improvementDashboard(query={}){
- const source=await seed(), saved=await updates(), filters=Object.fromEntries(['nop','priority_enhancement','responsibility','site_flicker','rca','action_cat','program','status'].map(key=>[key,text(query[key])]))
+ const source=await seed(), saved=await updates(), filters=Object.fromEntries(['nop','priority_enhancement','responsibility','rca','action_cat','program','status','problem_dependency','po_htde_2026','po_upgrade_daya_2026'].map(key=>[key,text(query[key])])), search=text(query.search).toLowerCase()
  let sites=source.sites.map(site=>mergeSite(site,saved[site.site_id]))
  for(const [key,value] of Object.entries(filters))if(value)sites=sites.filter(site=>upper(site[key])===upper(value))
- const options={};for(const key of Object.keys(filters))options[key]=[...new Set(source.sites.map(site=>key==='responsibility'?(saved[site.site_id]?.responsibility||site.responsibility):site[key]).map(text).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'id'))
- const summary={total:sites.length,open:sites.filter(x=>x.status==='Open').length,in_progress:sites.filter(x=>x.status==='In Progress').length,submitted:sites.filter(x=>x.status==='Submitted Update').length,closed:sites.filter(x=>x.status==='Closed').length}
+ if(search)sites=sites.filter(site=>[site.site_id,site.site_name,site.nop,site.rca,site.program,site.pic_team_lapangan,site.responsibility,site.status,site.problem_dependency].some(value=>text(value).toLowerCase().includes(search)))
+ const options={};for(const key of Object.keys(filters))options[key]=fixedFilterOptions[key]||[...new Set(source.sites.map(site=>{const update=saved[site.site_id]||{};return ['responsibility','problem_dependency'].includes(key)?(update[key]??site[key]):site[key]}).map(text).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'id'))
+ const open=sites.filter(x=>x.status==='Open').length,closeActivity=sites.filter(x=>x.status==='Close Activity (ENOM)').length,closeValidasi=sites.filter(x=>x.status==='Close Validasi (NOP)').length
+ const summary={total:sites.length,open,submitted:sites.filter(x=>x.status==='Submitted Update').length,escalated:sites.filter(x=>x.status==='Escalated').length,close_activity:closeActivity,close_validasi:closeValidasi,visited:sites.length-open,not_visited:open}
  return {title:'Dashboard Improvement Sumbagsel',source:source.source,summary,filters,options,teams_by_nop:source.teams_by_nop,sites:sites.map(site=>({...site,pic_options:source.teams_by_nop[canonicalNop(site.nop)]||[],plan_week:week(site.plan_date),done_week:week(site.done_date)}))}
 }
 export async function updateImprovement(siteId,body={}){
@@ -42,8 +50,10 @@ export async function approveImprovement(siteId,body={}){
  const code=text(body.authorization_code);if(!code)throw Object.assign(new Error('Kode otorisasi wajib diisi.'),{status:422})
  const configured=text(process.env.IMPROVEMENT_APPROVAL_PASSWORD);if(configured&&code!==configured)throw Object.assign(new Error('Kode otorisasi tidak sesuai.'),{status:403})
  const source=await seed(), site=source.sites.find(row=>row.site_id===siteId);if(!site)throw Object.assign(new Error('Site Improvement tidak ditemukan.'),{status:404})
- const existing=(await updates())[siteId]||{}, role=text(body.verifier_role)||'NOP Lead (Approval -> Close Activity (ENOM))', action=role.startsWith('NOP Lead')?'Close Activity (ENOM)':'Close Validasi (NOP)', status=role.startsWith('NOP Lead')?'Closed':'Approved'
- const next={...existing,status,responsibility:text(body.responsibility)||existing.responsibility||'',problem_dependency:text(body.problem_dependency)||existing.problem_dependency||'No Dependency',activity_history:[...(existing.activity_history||[]),{type:'approval',at:new Date().toISOString(),role:text(body.verifier_role)||'NOP Lead',action,status,note:text(body.approval_note)}]}
+ const existing=(await updates())[siteId]||{}, role=text(body.verifier_role)||'NOP Lead (Approval -> Close Activity (ENOM))', decision=text(body.decision)||'approve'
+ const decisionMap={approve:{action:role.startsWith('NOP Lead')?'Close Activity (ENOM)':'Close Validasi (NOP)',status:role.startsWith('NOP Lead')?'Close Activity (ENOM)':'Close Validasi (NOP)'},return_open:{action:'Reject (Return to Open)',status:'Open'},set_escalated:{action:'Set Escalated',status:'Escalated'}}
+ if(!decisionMap[decision])throw Object.assign(new Error('Aksi approval tidak valid.'),{status:422})
+ const result=decisionMap[decision], next={...existing,status:result.status,responsibility:text(body.responsibility)||existing.responsibility||'',problem_dependency:text(body.problem_dependency)||existing.problem_dependency||'No Dependency',activity_history:[...(existing.activity_history||[]),{type:'approval',at:new Date().toISOString(),role:text(body.verifier_role)||'NOP Lead',action:result.action,status:result.status,note:text(body.approval_note)}]}
  await persist(siteId,next);return {site:mergeSite(site,next),plan_week:week(next.plan_date),done_week:week(next.done_date)}
 }
 async function persist(siteId,data){

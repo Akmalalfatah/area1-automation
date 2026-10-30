@@ -41,6 +41,15 @@ app.get('/api/rca/dashboard',asyncHandler(async(req,res)=>res.json(await rcaDash
 app.post('/api/rca/template',asyncHandler(async(req,res)=>res.json(await rcaTemplate(req.body||{}))))
 
 app.get('/api/improvement-sumbagsel',asyncHandler(async(req,res)=>res.json(await improvementDashboard(req.query))))
+app.get('/api/improvement-sumbagsel/export.xlsx',asyncHandler(async(req,res)=>{
+  const payload=await improvementDashboard(req.query), workbook=new ExcelJS.Workbook(), sheet=workbook.addWorksheet('Site Priority Enhancement')
+  const columns=[['Site ID','site_id'],['Site Name','site_name'],['NOP','nop'],['Priority Enhancement','priority_enhancement'],['Responsibility','responsibility'],['PIC Team Lapangan','pic_team_lapangan'],['RC Category','rca'],['Site Flicker','site_flicker'],['Action Cat','action_cat'],['Program','program'],['PO HTDE 2026','po_htde_2026'],['PO Upgrade Daya 2026','po_upgrade_daya_2026'],['Status','status'],['Week Plan','plan_week'],['Date Plan','plan_date'],['Problem Dependency','problem_dependency'],['Remark / Progress','remark_progress']]
+  sheet.columns=columns.map(([header,key])=>({header,key,width:Math.max(14,Math.min(36,header.length+8))}))
+  payload.sites.forEach(site=>sheet.addRow(Object.fromEntries(columns.map(([,key])=>[key,site[key]??'']))))
+  sheet.getRow(1).font={bold:true,color:{argb:'FFFFFFFF'}};sheet.getRow(1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF29496C'}}
+  sheet.views=[{state:'frozen',ySplit:1}];sheet.autoFilter={from:'A1',to:{row:Math.max(1,sheet.rowCount),column:columns.length}}
+  const buffer=await workbook.xlsx.writeBuffer();res.set({'content-type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','content-disposition':'attachment; filename="Site-Priority-Enhancement-Sumbagsel.xlsx"'});res.send(Buffer.from(buffer))
+}))
 app.put('/api/improvement-sumbagsel/:siteId',asyncHandler(async(req,res)=>res.json(await updateImprovement(req.params.siteId,req.body||{}))))
 app.post('/api/improvement-sumbagsel/:siteId/approval',asyncHandler(async(req,res)=>res.json(await approveImprovement(req.params.siteId,req.body||{}))))
 
