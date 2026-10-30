@@ -17,7 +17,7 @@ import {gensetData,analyzeGenset,saveGensetEvaluation,enrichGensetSource} from '
 import {preventiveUploadHistory,applicationUploadHistory} from './db.js'
 import {buildKpiB13Summaries,parseKpiB13} from './kpi-b13.js'
 import {rcaDashboard,rcaSnapshots,rcaTemplate,syncRcaGoogle} from './rca.js'
-import {improvementDashboard,updateImprovement,approveImprovement} from './improvement-sumbagsel.js'
+import {improvementDashboard,updateImprovement,revertImprovementEdit,approveImprovement,importActivityProgressCsv} from './improvement-sumbagsel.js'
 
 // Keep Multer's callback synchronous. Apart from rejecting invalid uploads later
 // with assertXlsx(), this avoids the async fileFilter crash path in older Multer.
@@ -41,9 +41,10 @@ app.get('/api/rca/dashboard',asyncHandler(async(req,res)=>res.json(await rcaDash
 app.post('/api/rca/template',asyncHandler(async(req,res)=>res.json(await rcaTemplate(req.body||{}))))
 
 app.get('/api/improvement-sumbagsel',asyncHandler(async(req,res)=>res.json(await improvementDashboard(req.query))))
+app.post('/api/improvement-sumbagsel/activity-import',upload.single('file'),asyncHandler(async(req,res)=>{assertCsv(req.file);res.json(await importActivityProgressCsv(req.file.buffer,req.file.originalname))}))
 app.get('/api/improvement-sumbagsel/export.xlsx',asyncHandler(async(req,res)=>{
   const payload=await improvementDashboard(req.query), workbook=new ExcelJS.Workbook(), sheet=workbook.addWorksheet('Site Priority Enhancement')
-  const columns=[['Site ID','site_id'],['Site Name','site_name'],['NOP','nop'],['Priority Enhancement','priority_enhancement'],['Responsibility','responsibility'],['PIC Team Lapangan','pic_team_lapangan'],['RC Category','rca'],['Site Flicker','site_flicker'],['Action Cat','action_cat'],['Program','program'],['PO HTDE 2026','po_htde_2026'],['PO Upgrade Daya 2026','po_upgrade_daya_2026'],['Status','status'],['Week Plan','plan_week'],['Date Plan','plan_date'],['Problem Dependency','problem_dependency'],['Remark / Progress','remark_progress']]
+  const columns=[['Site ID','site_id'],['Site Name','site_name'],['NOP','nop'],['Priority Enhancement','priority_enhancement'],['Responsibility','responsibility'],['PIC Team Lapangan','pic_team_lapangan'],['RC Category','rca'],['Action Cat','action_cat'],['Program','program'],['Detail Program Activity','detail_program_activity'],['PO HTDE 2026','po_htde_2026'],['PO Upgrade Daya 2026','po_upgrade_daya_2026'],['Status','status'],['Week Plan','plan_week'],['Date Plan','plan_date'],['Problem Dependency','problem_dependency'],['Remark / Progress','remark_progress']]
   sheet.columns=columns.map(([header,key])=>({header,key,width:Math.max(14,Math.min(36,header.length+8))}))
   payload.sites.forEach(site=>sheet.addRow(Object.fromEntries(columns.map(([,key])=>[key,site[key]??'']))))
   sheet.getRow(1).font={bold:true,color:{argb:'FFFFFFFF'}};sheet.getRow(1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF29496C'}}
@@ -51,6 +52,7 @@ app.get('/api/improvement-sumbagsel/export.xlsx',asyncHandler(async(req,res)=>{
   const buffer=await workbook.xlsx.writeBuffer();res.set({'content-type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','content-disposition':'attachment; filename="Site-Priority-Enhancement-Sumbagsel.xlsx"'});res.send(Buffer.from(buffer))
 }))
 app.put('/api/improvement-sumbagsel/:siteId',asyncHandler(async(req,res)=>res.json(await updateImprovement(req.params.siteId,req.body||{}))))
+app.post('/api/improvement-sumbagsel/:siteId/revert-edit',asyncHandler(async(req,res)=>res.json(await revertImprovementEdit(req.params.siteId))))
 app.post('/api/improvement-sumbagsel/:siteId/approval',asyncHandler(async(req,res)=>res.json(await approveImprovement(req.params.siteId,req.body||{}))))
 
 app.post('/api/runs',asyncHandler(async(_req,res)=>res.json(await createRun(RUNS_DIR))))
@@ -190,6 +192,7 @@ app.get('/api/runs/:id/mttr-boosting/export.xlsx',asyncHandler(async(req,res)=>{
 
 class HttpError extends Error{constructor(status,message){super(message);this.status=status}}
 function assertXlsx(file){if(!file||!file.originalname?.toLowerCase().endsWith('.xlsx'))throw new HttpError(400,'File harus berformat .xlsx')}
+function assertCsv(file){if(!file||!file.originalname?.toLowerCase().endsWith('.csv'))throw new HttpError(400,'File harus berformat .csv')}
 function assertDate(value){if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value||''))||Number.isNaN(Date.parse(`${value}T00:00:00Z`)))throw new HttpError(400,'Tanggal upload tidak valid.')}
 function boostingPeriod(query,fallbackDate){
   const year=String(query.year||String(fallbackDate||'').slice(0,4)).trim(),month=String(query.month||String(fallbackDate||'').slice(5,7)).trim().padStart(2,'0'),period=`${year}-${month}`
