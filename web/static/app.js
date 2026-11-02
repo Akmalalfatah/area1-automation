@@ -1244,7 +1244,8 @@ KpiWorkspace = class KpiWorkspace extends React.Component {
         previous.setUTCMonth(previous.getUTCMonth() - 1);
         const isClosing = upload.reporting_type ? upload.reporting_type === "closing_previous_month" : Boolean(source && Number(source[1]) === previous.getUTCFullYear() && Number(source[2]) === previous.getUTCMonth() + 1);
         const belongsToSelectedPeriod = periodType === "closing_previous_month" ? isClosing : Boolean(source && !isClosing);
-        const dateMatches = periodType === "closing_previous_month" ? sourcePeriod >= rangeStart.slice(0, 7) && sourcePeriod <= rangeEnd.slice(0, 7) : uploadDate >= rangeStart && uploadDate <= rangeEnd;
+        const previousPeriod = (value) => { const date = new Date(`${String(value).slice(0, 7)}-01T00:00:00Z`); date.setUTCMonth(date.getUTCMonth() - 1); return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`; };
+        const dateMatches = periodType === "closing_previous_month" ? sourcePeriod >= previousPeriod(rangeStart) && sourcePeriod <= previousPeriod(rangeEnd) : uploadDate >= rangeStart && uploadDate <= rangeEnd;
         return dateMatches && belongsToSelectedPeriod;
       });
       const byDate = new Map();
