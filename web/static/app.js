@@ -1538,15 +1538,27 @@ window.captureElementToBlob = captureElementToBlob;
 window.downloadBlob = downloadBlob;
 async function copyText(text) {
   var _a;
-  if ((_a = navigator.clipboard) == null ? void 0 : _a.writeText) {
-    await navigator.clipboard.writeText(text);
-    return;
+  // Clipboard API hanya boleh dipanggil ketika dokumen masih fokus. Copy AI
+  // Report dapat terjadi setelah request selesai, sehingga fokus/aktivasi
+  // browser kadang sudah tidak tersedia. Coba API modern bila aman, lalu
+  // selalu gunakan fallback DOM apabila browser menolaknya.
+  if (((_a = navigator.clipboard) == null ? void 0 : _a.writeText) && document.hasFocus()) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch (error) {
+      // Lanjut ke fallback execCommand di bawah.
+    }
   }
   const textarea = document.createElement("textarea");
   textarea.value = text;
   textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  textarea.style.top = "0";
   textarea.style.opacity = "0";
+  textarea.setAttribute("readonly", "");
   document.body.appendChild(textarea);
+  textarea.focus();
   textarea.select();
   const copied = document.execCommand("copy");
   textarea.remove();
