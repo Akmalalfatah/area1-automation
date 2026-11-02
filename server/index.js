@@ -88,8 +88,13 @@ app.get('/api/runs/:id/mttr-boosting',asyncHandler(async(req,res)=>{
 }))
 
 app.post('/api/runs/:id/report',asyncHandler(async(req,res)=>{
-  const {prompt,region=null,nop=null,category=null}=req.body||{};if(!String(prompt||'').trim())throw new HttpError(422,'Prompt wajib diisi.')
-  const dataset=await loadDataset(RUNS_DIR,req.params.id),baseline=await loadPreviousHistoryDataset(req.params.id,dataset.date),analysis=buildAnalysis(dataset,region,nop,category,baseline),text=await generateReport(prompt,analysis)
+  const {prompt,region=null,nop=null,category=null,analysis:filteredAnalysis=null}=req.body||{};if(!String(prompt||'').trim())throw new HttpError(422,'Prompt wajib diisi.')
+  // Dashboard hasil filter dirangkai di browser dari beberapa snapshot. Gunakan
+  // analisis itu saat tersedia agar AI Report konsisten dengan tabel/visual yang
+  // sedang tampil (termasuk Closing bulan sebelumnya), bukan selalu run terakhir.
+  const hasFilteredAnalysis=filteredAnalysis&&typeof filteredAnalysis==='object'&&!Array.isArray(filteredAnalysis)&&Array.isArray(filteredAnalysis.current_nops)
+  const dataset=await loadDataset(RUNS_DIR,req.params.id),baseline=await loadPreviousHistoryDataset(req.params.id,dataset.date)
+  const analysis=hasFilteredAnalysis?{...filteredAnalysis,filter:{...(filteredAnalysis.filter||{}),region,nop,category:category||filteredAnalysis.filter?.category||null}}:buildAnalysis(dataset,region,nop,category,baseline),text=await generateReport(prompt,analysis)
   try{const state=await loadState(RUNS_DIR,req.params.id);state.prompt=prompt;state.report={text,region,nop,category};await saveState(RUNS_DIR,state)}catch{}
   res.json({text})
 }))

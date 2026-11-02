@@ -104,10 +104,10 @@ async function getKpiExport(id, region = "", nop = "") {
   const filename = ((_a = disposition.match(/filename="?([^";]+)"?/i)) == null ? void 0 : _a[1]) || `kpi-${id}.xlsx`;
   return { blob: await response.blob(), filename };
 }
-const generateReport = (id, prompt, region = "", nop = "") => api(`/api/runs/${id}/report`, {
+const generateReport = (id, prompt, region = "", nop = "", analysis = null) => api(`/api/runs/${id}/report`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ prompt, region: region || null, nop: nop || null })
+  body: JSON.stringify({ prompt, region: region || null, nop: nop || null, analysis })
 });
 async function uploadKpi(id, file, date, reportingType = "current") {
   const form = new FormData();
@@ -1252,16 +1252,21 @@ KpiWorkspace = class KpiWorkspace extends React.Component {
       selected.forEach((item) => { const previous = byDate.get(item.date_end); if (!previous || String(item.updated_at || "") >= String(previous.updated_at || "")) byDate.set(item.date_end, item); });
       const matches = [...byDate.values()].sort((a, b) => String(a.date_end).localeCompare(String(b.date_end)));
       if (!matches.length) { this.setState({ filteredDashboard: null, filterError: `Tidak ada data ${periodType === "closing_previous_month" ? "Closing bulan sebelumnya" : "Bulan berjalan"} pada rentang tanggal ini.` }, () => window.dispatchEvent(new CustomEvent("kpi:filtered-dashboard", { detail: { dashboard: null } }))); return; }
-      const labels = matches.map((item) => {
+      const sourcePeriods = matches.map((item) => {
+        const upload = item.history && item.history.upload || {};
+        const filename = String(upload.filename || item.history && item.history.file || item.filename || "");
+        const source = filename.match(/(20\d{2})(0?[1-9]|1[0-2])(?:\D|$)/);
+        return upload.reporting_period && upload.reporting_period.source_period || (source ? `${source[1]}-${String(source[2]).padStart(2, "0")}` : String(item.date_end || "").slice(0, 7));
+      });
+      const labels = matches.map((item, index) => {
         if (periodType === "current") return excelDateLabel(item.date_end);
-        const closingDate = new Date(`${item.date_end}T00:00:00Z`);
-        closingDate.setUTCMonth(closingDate.getUTCMonth() - 1);
+        const closingDate = new Date(`${sourcePeriods[index]}-01T00:00:00Z`);
         const month = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" }).format(closingDate);
-        return `${month}+${Number(String(item.date_end).slice(8, 10))}`;
+        return `${month} ${closingDate.getUTCFullYear()}`;
       });
       const dashboards = await Promise.all(matches.map((item) => getDashboard(item.run_id, region, nop)));
-      const filteredDashboard = mergeRangeDashboards(dashboards, matches.map((item) => item.date_end), labels);
-      this.setState({ filteredDashboard }, () => window.dispatchEvent(new CustomEvent("kpi:filtered-dashboard", { detail: { dashboard: filteredDashboard } })));
+      const filteredDashboard = mergeRangeDashboards(dashboards, periodType === "closing_previous_month" ? sourcePeriods : matches.map((item) => item.date_end), labels);
+      this.setState({ filteredDashboard }, () => window.dispatchEvent(new CustomEvent("kpi:filtered-dashboard", { detail: { dashboard: filteredDashboard, periodType, sourcePeriods } })));
     } catch (error) { this.setState({ filteredDashboard: null, filterError: `Filter KPI gagal: ${error.message}` }, () => window.dispatchEvent(new CustomEvent("kpi:filtered-dashboard", { detail: { dashboard: null } }))); } finally { this.setState({ filterLoading: false }); }
   }
   render() {
@@ -1292,14 +1297,16 @@ class KpiCategoryTrend extends React.Component {
     this.setState({ loading: true });
     try {
       const history = await getHistory();
+      // Gunakan periode sumber data, bukan tanggal upload. File Closing Oktober
+      // yang diunggah pada November tetap tampil sebagai Oktober di visualisasi.
       const latestByMonth = /* @__PURE__ */ new Map();
       for (const item of (history.items || []).sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)))) {
-        const month = String(item.date_end || "").slice(0, 7);
+        const month = this.sourcePeriod(item);
         if (month && !latestByMonth.has(month)) latestByMonth.set(month, item);
       }
-      const selected = [...latestByMonth.values()].sort((a, b) => String(a.date_end).localeCompare(String(b.date_end))).slice(-12);
+      const selected = [...latestByMonth.values()].sort((a, b) => this.sourcePeriod(a).localeCompare(this.sourcePeriod(b))).slice(-12);
       const dashboards = await Promise.all(selected.map((item) => getDashboard(item.run_id)));
-      this.setState({ items: selected.map((item, index) => ({ date: item.date_end, dashboard: dashboards[index] })), historyItems: history.items || [], loading: false });
+      this.setState({ items: selected.map((item, index) => ({ date: this.sourcePeriod(item), dashboard: dashboards[index] })), historyItems: history.items || [], loading: false });
     } catch (error) {
       this.setState({ items: [], historyItems: [], loading: false });
     }
@@ -1912,12 +1919,19 @@ class App extends React.Component {
         return [];
       }
     });
-    __publicField(this, "requestReport", async (run = this.state.run, region = this.state.region, nop = this.state.nop, prompt = this.state.prompt) => {
+    __publicField(this, "requestReport", async (run = this.state.run, region = this.state.region, nop = this.state.nop, prompt = this.state.prompt, filteredDashboard = this.state.rangeDashboard, filterContext = this.state.kpiFilterContext) => {
       if (!run || !run.processed || !prompt) return;
       const id = ++this.requestId;
       this.setState({ reportLoading: true, reportError: "" });
       try {
-        const result = await generateReport(run.id, prompt, region, nop);
+        const sourcePeriods = (filterContext == null ? void 0 : filterContext.sourcePeriods) || [];
+        const activeAnalysis = filteredDashboard && filteredDashboard.analysis ? {
+          ...filteredDashboard.analysis,
+          date: filterContext != null && filterContext.periodType === "closing_previous_month" && sourcePeriods.length ? sourcePeriods.at(-1) : filteredDashboard.analysis.date,
+          reporting_period: filterContext ? { type: filterContext.periodType, source_periods: sourcePeriods } : null,
+          filter: { ...(filteredDashboard.analysis.filter || {}), region: region || null, nop: nop || null }
+        } : null;
+        const result = await generateReport(run.id, prompt, region, nop, activeAnalysis);
         if (id === this.requestId) this.setState({ reportText: result.text });
       } catch (e) {
         if (id === this.requestId) this.setState({ reportText: "", reportError: e.message });
@@ -2047,7 +2061,7 @@ class App extends React.Component {
         this.setState({ shareLoading: false });
       }
     });
-    this.state = { config: null, run: null, dashboard: null, activePage: ["data-upload", "rca", "improvement-sumbagsel"].includes(new URLSearchParams(window.location.search).get("page")) ? new URLSearchParams(window.location.search).get("page") : "ekpi", preventiveOpen: false, preventiveData: null, preventiveScope: "", preventiveFile: null, preventiveDate: "", preventiveBusy: false, preventiveLoading: false, preventiveFilters: defaultPreventiveFilters(), region: "", nop: "", rowGroup: "", historyFilters: { day: "", month: "", year: "" }, historyItems: [], rangeStart: "", rangeEnd: "", rangeDashboard: null, rangeLoading: false, draftFile: null, draftDate: "", busyUpload: false, pageError: "", prompt: "", promptDraft: "", reportText: "", reportError: "", reportLoading: false, tableImageLoading: false, shareLoading: false, showPrompt: false, notice: "" };
+    this.state = { config: null, run: null, dashboard: null, activePage: ["data-upload", "rca", "improvement-sumbagsel"].includes(new URLSearchParams(window.location.search).get("page")) ? new URLSearchParams(window.location.search).get("page") : "ekpi", preventiveOpen: false, preventiveData: null, preventiveScope: "", preventiveFile: null, preventiveDate: "", preventiveBusy: false, preventiveLoading: false, preventiveFilters: defaultPreventiveFilters(), region: "", nop: "", rowGroup: "", historyFilters: { day: "", month: "", year: "" }, historyItems: [], rangeStart: "", rangeEnd: "", rangeDashboard: null, kpiFilterContext: null, rangeLoading: false, draftFile: null, draftDate: "", busyUpload: false, pageError: "", prompt: "", promptDraft: "", reportText: "", reportError: "", reportLoading: false, tableImageLoading: false, shareLoading: false, showPrompt: false, notice: "" };
     this.requestId = 0;
     this.preventiveRequestId = 0;
     this.preventiveSearchTimer = null;
@@ -2061,7 +2075,12 @@ class App extends React.Component {
     window.removeEventListener("kpi:filtered-dashboard", this.onFilteredKpiDashboard);
   }
   async componentDidMount() {
-    this.onFilteredKpiDashboard = (event) => this.setState({ rangeDashboard: (event.detail == null ? void 0 : event.detail.dashboard) || null });
+    this.onFilteredKpiDashboard = (event) => {
+      const detail = event.detail || {}, dashboard = detail.dashboard || null;
+      this.setState({ rangeDashboard: dashboard, kpiFilterContext: dashboard ? detail : null }, () => {
+        if (dashboard && this.state.run && this.state.run.processed) this.requestReport(this.state.run, this.state.region, this.state.nop, this.state.prompt, dashboard, detail);
+      });
+    };
     window.addEventListener("kpi:filtered-dashboard", this.onFilteredKpiDashboard);
     try {
       const config = await getConfig();
