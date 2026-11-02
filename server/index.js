@@ -93,7 +93,7 @@ app.post('/api/runs/:id/report',asyncHandler(async(req,res)=>{
   // analisis itu saat tersedia agar AI Report konsisten dengan tabel/visual yang
   // sedang tampil (termasuk Closing bulan sebelumnya), bukan selalu run terakhir.
   const hasFilteredAnalysis=filteredAnalysis&&typeof filteredAnalysis==='object'&&!Array.isArray(filteredAnalysis)&&Array.isArray(filteredAnalysis.current_nops)
-  const dataset=await loadDataset(RUNS_DIR,req.params.id),baseline=await loadPreviousHistoryDataset(req.params.id,dataset.date)
+  const dataset=await loadDataset(RUNS_DIR,req.params.id),baseline=await loadPreviousHistoryDataset(req.params.id,dataset.date,dataset.reporting_period?.type||'current')
   const analysis=hasFilteredAnalysis?{...filteredAnalysis,filter:{...(filteredAnalysis.filter||{}),region,nop,category:category||filteredAnalysis.filter?.category||null}}:buildAnalysis(dataset,region,nop,category,baseline),text=await generateReport(prompt,analysis)
   try{const state=await loadState(RUNS_DIR,req.params.id);state.prompt=prompt;state.report={text,region,nop,category};await saveState(RUNS_DIR,state)}catch{}
   res.json({text})

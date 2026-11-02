@@ -77,7 +77,19 @@ export async function listHistory({day,month,year}={}){
 }
 
 export async function loadHistoryDataset(runId){if(!databaseEnabled)return null;const [rows]=await getPool().query('SELECT dataset FROM kpi_history WHERE run_id=?',[runId]);const value=rows[0]?.dataset;return typeof value==='string'?JSON.parse(value):value||null}
-export async function loadPreviousHistoryDataset(runId,currentDate){if(!databaseEnabled||!currentDate)return null;const [rows]=await getPool().query('SELECT dataset FROM kpi_history WHERE run_id<>? AND date_end<? ORDER BY date_end DESC,created_at DESC LIMIT 1',[runId,currentDate]);const value=rows[0]?.dataset;return typeof value==='string'?JSON.parse(value):value||null}
+export async function loadPreviousHistoryDataset(runId,currentDate,reportingType=null){
+  if(!databaseEnabled||!currentDate)return null
+  // Jangan pernah membandingkan Bulan Berjalan dengan Closing (atau sebaliknya)
+  // hanya karena tanggal upload-nya berurutan. Jenis periode tersimpan di
+  // dataset, sehingga lakukan seleksi setelah JSON dibaca.
+  const [rows]=await getPool().query('SELECT dataset FROM kpi_history WHERE run_id<>? AND date_end<? ORDER BY date_end DESC,created_at DESC LIMIT 100',[runId,currentDate])
+  for(const row of rows){
+    const value=typeof row.dataset==='string'?JSON.parse(row.dataset):row.dataset
+    const type=value?.reporting_period?.type||'current'
+    if(!reportingType||type===reportingType)return value||null
+  }
+  return null
+}
 export async function deleteHistory(runIds){if(!databaseEnabled)throw new Error('Database history belum dikonfigurasi.');const [result]=await getPool().query('DELETE FROM kpi_history WHERE run_id IN (?)',[runIds]);return result.affectedRows}
 
 let localUploadQueue=Promise.resolve()

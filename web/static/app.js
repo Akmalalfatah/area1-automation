@@ -1225,13 +1225,14 @@ mergeRangeDashboards = function(dashboards, dates, labels) {
   return { ...latest, dataset: { ...latest.dataset, nops } };
 };
 KpiWorkspace = class KpiWorkspace extends React.Component {
-  constructor(props) { super(props); this.state = { showImprovement: new URLSearchParams(window.location.search).get("view") === "improvement", periodType: "current", filteredDashboard: null, filterLoading: false, filterError: "" }; }
+  constructor(props) { super(props); this.requestRevision = 0; this.state = { showImprovement: new URLSearchParams(window.location.search).get("view") === "improvement", periodType: "current", filteredDashboard: null, filterLoading: false, filterError: "" }; }
   componentDidMount() { this.resetFromSidebar = () => this.setState({ showImprovement: false }); window.addEventListener("app:navigate", this.resetFromSidebar); this.loadPeriod(); }
   componentDidUpdate(previousProps, previousState) { if (previousProps.rangeStart !== this.props.rangeStart || previousProps.rangeEnd !== this.props.rangeEnd || previousProps.region !== this.props.region || previousProps.nop !== this.props.nop || previousState.periodType !== this.state.periodType) this.loadPeriod(); }
   componentWillUnmount() { window.removeEventListener("app:navigate", this.resetFromSidebar); window.dispatchEvent(new CustomEvent("kpi:filtered-dashboard", { detail: { dashboard: null } })); }
   async loadPeriod() {
     const { rangeStart, rangeEnd, region, nop } = this.props, periodType = this.state.periodType;
     if (!rangeStart || !rangeEnd || rangeStart > rangeEnd) { this.setState({ filteredDashboard: null, filterLoading: false, filterError: "" }, () => window.dispatchEvent(new CustomEvent("kpi:filtered-dashboard", { detail: { dashboard: null } }))); return; }
+    const revision = ++this.requestRevision;
     this.setState({ filterLoading: true, filteredDashboard: null, filterError: "" });
     try {
       const history = await getHistory();
@@ -1245,8 +1246,11 @@ KpiWorkspace = class KpiWorkspace extends React.Component {
         previous.setUTCMonth(previous.getUTCMonth() - 1);
         const isClosing = upload.reporting_type ? upload.reporting_type === "closing_previous_month" : Boolean(source && Number(source[1]) === previous.getUTCFullYear() && Number(source[2]) === previous.getUTCMonth() + 1);
         const belongsToSelectedPeriod = periodType === "closing_previous_month" ? isClosing : Boolean(source && !isClosing);
-        const previousPeriod = (value) => { const date = new Date(`${String(value).slice(0, 7)}-01T00:00:00Z`); date.setUTCMonth(date.getUTCMonth() - 1); return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`; };
-        const dateMatches = periodType === "closing_previous_month" ? sourcePeriod >= previousPeriod(rangeStart) && sourcePeriod <= previousPeriod(rangeEnd) : uploadDate >= rangeStart && uploadDate <= rangeEnd;
+        // DATE FROM/TO selalu berarti tanggal upload. Misalnya saat Closing
+        // Oktober di-upload pada 1 dan 2 November, range Nov+01–Nov+02 hanya
+        // boleh memilih dua upload tersebut. sourcePeriod hanya metadata isi
+        // file, tidak pernah dipakai sebagai rentang pembanding.
+        const dateMatches = uploadDate >= rangeStart && uploadDate <= rangeEnd;
         return dateMatches && belongsToSelectedPeriod;
       });
       const byDate = new Map();
@@ -1255,7 +1259,7 @@ KpiWorkspace = class KpiWorkspace extends React.Component {
       // Closing Oktober yang diunggah pada Nov+01 dan Nov+02 dibandingkan satu
       // sama lain; source period hanya menjelaskan bahwa isi keduanya Oktober.
       const matches = [...byDate.values()].sort((a, b) => String(a.date_end).localeCompare(String(b.date_end)) || String(a.updated_at || "").localeCompare(String(b.updated_at || "")));
-      if (!matches.length) { this.setState({ filteredDashboard: null, filterError: `Tidak ada data ${periodType === "closing_previous_month" ? "Closing bulan sebelumnya" : "Bulan berjalan"} pada rentang tanggal ini.` }, () => window.dispatchEvent(new CustomEvent("kpi:filtered-dashboard", { detail: { dashboard: null } }))); return; }
+      if (!matches.length) { if (revision !== this.requestRevision) return; this.setState({ filteredDashboard: null, filterError: `Tidak ada data ${periodType === "closing_previous_month" ? "Closing bulan sebelumnya" : "Bulan berjalan"} pada rentang tanggal upload ini.` }, () => window.dispatchEvent(new CustomEvent("kpi:filtered-dashboard", { detail: { dashboard: null } }))); return; }
       const sourcePeriods = matches.map((item) => {
         const upload = item.history && item.history.upload || {};
         const filename = String(upload.filename || item.history && item.history.file || item.filename || "");
@@ -1278,8 +1282,9 @@ KpiWorkspace = class KpiWorkspace extends React.Component {
       if (filteredDashboard && filteredDashboard.analysis) {
         filteredDashboard.analysis = { ...filteredDashboard.analysis, date: labels[labels.length - 1], previous_date: baselineItem ? labels[labels.length - 2] : null, reporting_period: { type: periodType, source_period: latestSourcePeriod } };
       }
+      if (revision !== this.requestRevision) return;
       this.setState({ filteredDashboard }, () => window.dispatchEvent(new CustomEvent("kpi:filtered-dashboard", { detail: { dashboard: filteredDashboard, periodType, sourcePeriods } })));
-    } catch (error) { this.setState({ filteredDashboard: null, filterError: `Filter KPI gagal: ${error.message}` }, () => window.dispatchEvent(new CustomEvent("kpi:filtered-dashboard", { detail: { dashboard: null } }))); } finally { this.setState({ filterLoading: false }); }
+    } catch (error) { if (revision === this.requestRevision) this.setState({ filteredDashboard: null, filterError: `Filter KPI gagal: ${error.message}` }, () => window.dispatchEvent(new CustomEvent("kpi:filtered-dashboard", { detail: { dashboard: null } }))); } finally { if (revision === this.requestRevision) this.setState({ filterLoading: false }); }
   }
   render() {
     const { config, region, nop, rowGroup, onRegion, onNop, onRowGroup, rangeStart, rangeEnd, rangeLoading, onRangeDate, onClearRange, tableRef, runId, onTicketUploaded } = this.props;
