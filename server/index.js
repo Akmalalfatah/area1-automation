@@ -61,7 +61,7 @@ app.post('/api/runs/:id/upload',upload.single('file'),asyncHandler(async(req,res
 app.post('/api/runs/:id/ticket-summary',upload.single('file'),asyncHandler(async(req,res)=>{assertXlsx(req.file);if(!String(req.body.nop||'').trim())throw new HttpError(422,'Pilih NOP untuk Ticket Summary.');res.json(await uploadTicketMttrSummary(RUNS_DIR,req.params.id,req.file,req.body.nop))}))
 app.post('/api/runs/:id/process',asyncHandler(async(req,res)=>{const dataset=await processRun(RUNS_DIR,req.params.id);res.json({ok:true,date:dataset.date})}))
 app.get('/api/runs/:id/dashboard',asyncHandler(async(req,res)=>{
-  const payload=await dashboardPayload(RUNS_DIR,req.params.id,req.query.region||null,req.query.nop||null,req.query.category||null)
+  const payload=await dashboardPayload(RUNS_DIR,req.params.id,req.query.region||null,req.query.nop||null,req.query.category||null,req.query.baseline_run_id||null)
   // Ticket summary PM is supplementary for eKPI. A temporarily unavailable PM
   // source must not make the main eKPI dashboard unavailable.
   try{

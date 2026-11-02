@@ -73,10 +73,11 @@ const getConfig = () => api("/api/config");
 const createRun = () => api("/api/runs", { method: "POST" });
 const getRun = (id) => api(`/api/runs/${id}`);
 const isMissingRunError = (error) => /run tidak ditemukan|request gagal \(404\)/i.test(String((error == null ? void 0 : error.message) || error || ""));
-const getDashboard = (id, region = "", nop = "") => {
+const getDashboard = (id, region = "", nop = "", baselineRunId = "") => {
   const params = new URLSearchParams();
   if (region) params.set("region", region);
   if (nop) params.set("nop", nop);
+  if (baselineRunId) params.set("baseline_run_id", baselineRunId);
   return api(`/api/runs/${id}/dashboard${params.size ? `?${params}` : ""}`);
 };
 const getHistory = (filters = {}) => {
@@ -1250,7 +1251,7 @@ KpiWorkspace = class KpiWorkspace extends React.Component {
       });
       const byDate = new Map();
       selected.forEach((item) => { const previous = byDate.get(item.date_end); if (!previous || String(item.updated_at || "") >= String(previous.updated_at || "")) byDate.set(item.date_end, item); });
-      const matches = [...byDate.values()].sort((a, b) => String(a.date_end).localeCompare(String(b.date_end)));
+      const matches = [...byDate.values()].sort((a, b) => sourcePeriodForSnapshot(a).localeCompare(sourcePeriodForSnapshot(b)) || String(a.updated_at || a.date_end).localeCompare(String(b.updated_at || b.date_end)));
       if (!matches.length) { this.setState({ filteredDashboard: null, filterError: `Tidak ada data ${periodType === "closing_previous_month" ? "Closing bulan sebelumnya" : "Bulan berjalan"} pada rentang tanggal ini.` }, () => window.dispatchEvent(new CustomEvent("kpi:filtered-dashboard", { detail: { dashboard: null } }))); return; }
       const sourcePeriods = matches.map((item) => {
         const upload = item.history && item.history.upload || {};
@@ -1258,14 +1259,26 @@ KpiWorkspace = class KpiWorkspace extends React.Component {
         const source = filename.match(/(20\d{2})(0?[1-9]|1[0-2])(?:\D|$)/);
         return upload.reporting_period && upload.reporting_period.source_period || (source ? `${source[1]}-${String(source[2]).padStart(2, "0")}` : String(item.date_end || "").slice(0, 7));
       });
-      const labels = matches.map((item, index) => {
-        if (periodType === "current") return excelDateLabel(item.date_end);
-        const closingDate = new Date(`${sourcePeriods[index]}-01T00:00:00Z`);
-        const month = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" }).format(closingDate);
-        return `${month} ${closingDate.getUTCFullYear()}`;
+      // Closing memakai bulan upload dengan pemisah "+" (mis. Nov+01),
+      // sedangkan Bulan berjalan tetap memakai format tanggal biasa (Nov-01).
+      // Isi Closing dan pembandingannya tetap berdasarkan source period.
+      const labels = matches.map((item) => {
+        if (periodType !== "closing_previous_month") return excelDateLabel(item.date_end);
+        const date = new Date(`${item.date_end}T00:00:00Z`);
+        const month = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" }).format(date);
+        return `${month}+${String(date.getUTCDate()).padStart(2, "0")}`;
       });
-      const dashboards = await Promise.all(matches.map((item) => getDashboard(item.run_id, region, nop)));
-      const filteredDashboard = mergeRangeDashboards(dashboards, periodType === "closing_previous_month" ? sourcePeriods : matches.map((item) => item.date_end), labels);
+      const latestSourcePeriod = sourcePeriods[sourcePeriods.length - 1];
+      const isRequestedType = (item) => {
+        const upload = item.history && item.history.upload || {};
+        return (upload.reporting_type || "current") === periodType;
+      };
+      const baselineItem = (history.items || []).filter((item) => isRequestedType(item) && sourcePeriodForSnapshot(item) < latestSourcePeriod).sort((a, b) => sourcePeriodForSnapshot(b).localeCompare(sourcePeriodForSnapshot(a)) || String(b.updated_at || b.date_end).localeCompare(String(a.updated_at || a.date_end)))[0] || null;
+      const dashboards = await Promise.all(matches.map((item, index) => getDashboard(item.run_id, region, nop, index === matches.length - 1 && baselineItem ? baselineItem.run_id : "")));
+      const filteredDashboard = mergeRangeDashboards(dashboards, matches.map((item) => item.date_end), labels);
+      if (filteredDashboard && filteredDashboard.analysis) {
+        filteredDashboard.analysis = { ...filteredDashboard.analysis, date: latestSourcePeriod, previous_date: baselineItem ? sourcePeriodForSnapshot(baselineItem) : null };
+      }
       this.setState({ filteredDashboard }, () => window.dispatchEvent(new CustomEvent("kpi:filtered-dashboard", { detail: { dashboard: filteredDashboard, periodType, sourcePeriods } })));
     } catch (error) { this.setState({ filteredDashboard: null, filterError: `Filter KPI gagal: ${error.message}` }, () => window.dispatchEvent(new CustomEvent("kpi:filtered-dashboard", { detail: { dashboard: null } }))); } finally { this.setState({ filterLoading: false }); }
   }
@@ -1919,19 +1932,12 @@ class App extends React.Component {
         return [];
       }
     });
-    __publicField(this, "requestReport", async (run = this.state.run, region = this.state.region, nop = this.state.nop, prompt = this.state.prompt, filteredDashboard = this.state.rangeDashboard, filterContext = this.state.kpiFilterContext) => {
+    __publicField(this, "requestReport", async (run = this.state.run, region = this.state.region, nop = this.state.nop, prompt = this.state.prompt) => {
       if (!run || !run.processed || !prompt) return;
       const id = ++this.requestId;
       this.setState({ reportLoading: true, reportError: "" });
       try {
-        const sourcePeriods = (filterContext == null ? void 0 : filterContext.sourcePeriods) || [];
-        const activeAnalysis = filteredDashboard && filteredDashboard.analysis ? {
-          ...filteredDashboard.analysis,
-          date: filterContext != null && filterContext.periodType === "closing_previous_month" && sourcePeriods.length ? sourcePeriods.at(-1) : filteredDashboard.analysis.date,
-          reporting_period: filterContext ? { type: filterContext.periodType, source_periods: sourcePeriods } : null,
-          filter: { ...(filteredDashboard.analysis.filter || {}), region: region || null, nop: nop || null }
-        } : null;
-        const result = await generateReport(run.id, prompt, region, nop, activeAnalysis);
+        const result = await generateReport(run.id, prompt, region, nop);
         if (id === this.requestId) this.setState({ reportText: result.text });
       } catch (e) {
         if (id === this.requestId) this.setState({ reportText: "", reportError: e.message });
@@ -2027,10 +2033,31 @@ class App extends React.Component {
     });
     __publicField(this, "copyReport", async () => {
       try {
-        if (this.state.reportText) {
-          await copyText(this.state.reportText);
-          this.setState({ notice: "AI report berhasil disalin sesuai filter aktif." });
+        const { run, prompt, region, nop, rangeDashboard, kpiFilterContext } = this.state;
+        let text = this.state.reportText;
+        // Hanya saat tombol Copy ditekan, bangun ulang report dari dashboard
+        // yang sedang difilter. Ini tidak mengubah tabel/grafik maupun report
+        // bawaan ketika pengguna belum memilih periode.
+        if (run && rangeDashboard && rangeDashboard.analysis && kpiFilterContext) {
+          const sourcePeriods = kpiFilterContext.sourcePeriods || [];
+          const activeAnalysis = {
+            ...rangeDashboard.analysis,
+            date: kpiFilterContext.periodType === "closing_previous_month" && sourcePeriods.length ? sourcePeriods[sourcePeriods.length - 1] : rangeDashboard.analysis.date,
+            reporting_period: { type: kpiFilterContext.periodType || "current", source_periods: sourcePeriods },
+            filter: { ...(rangeDashboard.analysis.filter || {}), region: region || null, nop: nop || null }
+          };
+          this.setState({ reportLoading: true, reportError: "" });
+          try {
+            const result = await generateReport(run.id, prompt, region, nop, activeAnalysis);
+            text = result.text;
+            this.setState({ reportText: text });
+          } finally {
+            this.setState({ reportLoading: false });
+          }
         }
+        if (!text) throw new Error("AI Report belum tersedia.");
+        await copyText(text);
+        this.setState({ notice: "AI report berhasil disalin sesuai filter aktif." });
       } catch (e) {
         this.setState({ pageError: e.message });
       }
@@ -2077,9 +2104,7 @@ class App extends React.Component {
   async componentDidMount() {
     this.onFilteredKpiDashboard = (event) => {
       const detail = event.detail || {}, dashboard = detail.dashboard || null;
-      this.setState({ rangeDashboard: dashboard, kpiFilterContext: dashboard ? detail : null }, () => {
-        if (dashboard && this.state.run && this.state.run.processed) this.requestReport(this.state.run, this.state.region, this.state.nop, this.state.prompt, dashboard, detail);
-      });
+      this.setState({ rangeDashboard: dashboard, kpiFilterContext: dashboard ? detail : null });
     };
     window.addEventListener("kpi:filtered-dashboard", this.onFilteredKpiDashboard);
     try {
