@@ -1110,7 +1110,7 @@ function kpiDataDate(value) {
 function sourcePeriodForSnapshot(item) {
   const upload = item.history && item.history.upload || {}, explicit = String(upload.reporting_period && upload.reporting_period.source_period || "");
   if (/^\d{4}-\d{2}$/.test(explicit)) return explicit;
-  const filename = String(upload.filename || item.filename || ""), match = filename.match(/(20\d{2})(0?[1-9]|1[0-2])(?:\D|$)/);
+  const filename = String(upload.filename || item.history && item.history.file || item.filename || ""), match = filename.match(/(20\d{2})(0?[1-9]|1[0-2])(?:\D|$)/);
   return match ? `${match[1]}-${String(match[2]).padStart(2, "0")}` : String(item.date_end || "").slice(0, 7);
 }
 async function snapshotDashboardForPeriod(period, region, nop, fallback) {
@@ -1251,7 +1251,10 @@ KpiWorkspace = class KpiWorkspace extends React.Component {
       });
       const byDate = new Map();
       selected.forEach((item) => { const previous = byDate.get(item.date_end); if (!previous || String(item.updated_at || "") >= String(previous.updated_at || "")) byDate.set(item.date_end, item); });
-      const matches = [...byDate.values()].sort((a, b) => sourcePeriodForSnapshot(a).localeCompare(sourcePeriodForSnapshot(b)) || String(a.updated_at || a.date_end).localeCompare(String(b.updated_at || b.date_end)));
+      // Perbandingan mengikuti tanggal upload dalam filter aktif. Jadi dua file
+      // Closing Oktober yang diunggah pada Nov+01 dan Nov+02 dibandingkan satu
+      // sama lain; source period hanya menjelaskan bahwa isi keduanya Oktober.
+      const matches = [...byDate.values()].sort((a, b) => String(a.date_end).localeCompare(String(b.date_end)) || String(a.updated_at || "").localeCompare(String(b.updated_at || "")));
       if (!matches.length) { this.setState({ filteredDashboard: null, filterError: `Tidak ada data ${periodType === "closing_previous_month" ? "Closing bulan sebelumnya" : "Bulan berjalan"} pada rentang tanggal ini.` }, () => window.dispatchEvent(new CustomEvent("kpi:filtered-dashboard", { detail: { dashboard: null } }))); return; }
       const sourcePeriods = matches.map((item) => {
         const upload = item.history && item.history.upload || {};
@@ -1269,15 +1272,11 @@ KpiWorkspace = class KpiWorkspace extends React.Component {
         return `${month}+${String(date.getUTCDate()).padStart(2, "0")}`;
       });
       const latestSourcePeriod = sourcePeriods[sourcePeriods.length - 1];
-      const isRequestedType = (item) => {
-        const upload = item.history && item.history.upload || {};
-        return (upload.reporting_type || "current") === periodType;
-      };
-      const baselineItem = (history.items || []).filter((item) => isRequestedType(item) && sourcePeriodForSnapshot(item) < latestSourcePeriod).sort((a, b) => sourcePeriodForSnapshot(b).localeCompare(sourcePeriodForSnapshot(a)) || String(b.updated_at || b.date_end).localeCompare(String(a.updated_at || a.date_end)))[0] || null;
-      const dashboards = await Promise.all(matches.map((item, index) => getDashboard(item.run_id, region, nop, index === matches.length - 1 && baselineItem ? baselineItem.run_id : "")));
+      const baselineItem = matches.length > 1 ? matches[matches.length - 2] : null;
+      const dashboards = await Promise.all(matches.map((item, index) => getDashboard(item.run_id, region, nop, index === matches.length - 1 ? baselineItem ? baselineItem.run_id : "__none__" : "")));
       const filteredDashboard = mergeRangeDashboards(dashboards, matches.map((item) => item.date_end), labels);
       if (filteredDashboard && filteredDashboard.analysis) {
-        filteredDashboard.analysis = { ...filteredDashboard.analysis, date: latestSourcePeriod, previous_date: baselineItem ? sourcePeriodForSnapshot(baselineItem) : null };
+        filteredDashboard.analysis = { ...filteredDashboard.analysis, date: labels[labels.length - 1], previous_date: baselineItem ? labels[labels.length - 2] : null, reporting_period: { type: periodType, source_period: latestSourcePeriod } };
       }
       this.setState({ filteredDashboard }, () => window.dispatchEvent(new CustomEvent("kpi:filtered-dashboard", { detail: { dashboard: filteredDashboard, periodType, sourcePeriods } })));
     } catch (error) { this.setState({ filteredDashboard: null, filterError: `Filter KPI gagal: ${error.message}` }, () => window.dispatchEvent(new CustomEvent("kpi:filtered-dashboard", { detail: { dashboard: null } }))); } finally { this.setState({ filterLoading: false }); }
@@ -2042,8 +2041,10 @@ class App extends React.Component {
           const sourcePeriods = kpiFilterContext.sourcePeriods || [];
           const activeAnalysis = {
             ...rangeDashboard.analysis,
-            date: kpiFilterContext.periodType === "closing_previous_month" && sourcePeriods.length ? sourcePeriods[sourcePeriods.length - 1] : rangeDashboard.analysis.date,
-            reporting_period: { type: kpiFilterContext.periodType || "current", source_periods: sourcePeriods },
+            // Tanggal laporan mengikuti dua snapshot upload aktif (Nov+01 →
+            // Nov+02). source_periods hanya konteks bahwa file Closing berisi
+            // periode Oktober, bukan baseline perbandingan.
+            reporting_period: { ...(rangeDashboard.analysis.reporting_period || {}), type: kpiFilterContext.periodType || "current", source_periods: sourcePeriods },
             filter: { ...(rangeDashboard.analysis.filter || {}), region: region || null, nop: nop || null }
           };
           this.setState({ reportLoading: true, reportError: "" });
