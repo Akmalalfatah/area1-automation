@@ -1948,12 +1948,12 @@ class App extends React.Component {
         return [];
       }
     });
-    __publicField(this, "requestReport", async (run = this.state.run, region = this.state.region, nop = this.state.nop, prompt = this.state.prompt) => {
+    __publicField(this, "requestReport", async (run = this.state.run, region = this.state.region, nop = this.state.nop, prompt = this.state.prompt, analysis = null) => {
       if (!run || !run.processed || !prompt) return;
       const id = ++this.requestId;
-      this.setState({ reportLoading: true, reportError: "" });
+      this.setState({ reportLoading: true, reportError: "", reportText: "" });
       try {
-        const result = await generateReport(run.id, prompt, region, nop);
+        const result = await generateReport(run.id, prompt, region, nop, analysis);
         if (id === this.requestId) this.setState({ reportText: result.text });
       } catch (e) {
         if (id === this.requestId) this.setState({ reportText: "", reportError: e.message });
@@ -2049,32 +2049,13 @@ class App extends React.Component {
     });
     __publicField(this, "copyReport", async () => {
       try {
-        const { run, prompt, region, nop, rangeDashboard, kpiFilterContext } = this.state;
-        let text = this.state.reportText;
-        // Hanya saat tombol Copy ditekan, bangun ulang report dari dashboard
-        // yang sedang difilter. Ini tidak mengubah tabel/grafik maupun report
-        // bawaan ketika pengguna belum memilih periode.
-        if (run && rangeDashboard && rangeDashboard.analysis && kpiFilterContext) {
-          const sourcePeriods = kpiFilterContext.sourcePeriods || [];
-          const activeAnalysis = {
-            ...rangeDashboard.analysis,
-            // Tanggal laporan mengikuti dua snapshot upload aktif (Nov+01 →
-            // Nov+02). source_periods hanya konteks bahwa file Closing berisi
-            // periode Oktober, bukan baseline perbandingan.
-            reporting_period: { ...(rangeDashboard.analysis.reporting_period || {}), type: kpiFilterContext.periodType || "current", source_periods: sourcePeriods },
-            filter: { ...(rangeDashboard.analysis.filter || {}), region: region || null, nop: nop || null }
-          };
-          this.setState({ reportLoading: true, reportError: "" });
-          try {
-            const result = await generateReport(run.id, prompt, region, nop, activeAnalysis);
-            text = result.text;
-            this.setState({ reportText: text });
-          } finally {
-            this.setState({ reportLoading: false });
-          }
-        }
-        if (!text) throw new Error("AI Report belum tersedia.");
-        await copyText(text);
+        // Jangan melakukan request sebelum copy: Browser menganggap user
+        // activation selesai setelah await, lalu Clipboard API menolak dengan
+        // "Document is not focused". Report aktif sudah disiapkan saat filter
+        // selesai diterapkan; klik ini hanya menyalin teks yang siap.
+        if (this.state.reportLoading) throw new Error("AI Report masih disiapkan. Tunggu sampai status Ready muncul.");
+        if (!this.state.reportText) throw new Error("AI Report belum tersedia. Terapkan filter atau tunggu report selesai disiapkan.");
+        await copyText(this.state.reportText);
         this.setState({ notice: "AI report berhasil disalin sesuai filter aktif." });
       } catch (e) {
         this.setState({ pageError: e.message });
@@ -2122,7 +2103,18 @@ class App extends React.Component {
   async componentDidMount() {
     this.onFilteredKpiDashboard = (event) => {
       const detail = event.detail || {}, dashboard = detail.dashboard || null;
-      this.setState({ rangeDashboard: dashboard, kpiFilterContext: dashboard ? detail : null });
+      this.setState({ rangeDashboard: dashboard, kpiFilterContext: dashboard ? detail : null }, () => {
+        if (!dashboard?.analysis) return;
+        const sourcePeriods = detail.sourcePeriods || [];
+        const activeAnalysis = {
+          ...dashboard.analysis,
+          // Source period memberi konteks isi file (mis. Oktober); tanggal
+          // laporan tetap Nov+01 → Nov+02 yang sudah dihitung dashboard.
+          reporting_period: { ...(dashboard.analysis.reporting_period || {}), type: detail.periodType || "current", source_periods: sourcePeriods },
+          filter: { ...(dashboard.analysis.filter || {}), region: this.state.region || null, nop: this.state.nop || null }
+        };
+        this.requestReport(this.state.run, this.state.region, this.state.nop, this.state.prompt, activeAnalysis);
+      });
     };
     window.addEventListener("kpi:filtered-dashboard", this.onFilteredKpiDashboard);
     try {
