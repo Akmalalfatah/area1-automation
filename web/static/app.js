@@ -1444,7 +1444,7 @@ class LegacyKpiCategoryTrend extends React.Component {
 class KpiCategoryTrend extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { dataset: null, loading: true, filteredPeriods: null };
+    this.state = { dataset: null, loading: true, filteredPeriods: null, metric: "both" };
   }
   componentDidMount() {
     this.onFiltered = (event) => {
@@ -1466,6 +1466,39 @@ class KpiCategoryTrend extends React.Component {
       const response = await getKpiCategoryExport();
       this.setState({ dataset: response.dataset || null, loading: false });
     } catch (_error) { this.setState({ dataset: null, loading: false }); }
+  }
+  exportImage(charts, data, meta) {
+    const width = charts.length === 1 ? 1800 : 2200, height = 940, margin = 74, gap = 24;
+    const canvas = document.createElement("canvas"), context = canvas.getContext("2d");
+    canvas.width = width; canvas.height = height;
+    context.fillStyle = "#FFFFFF"; context.fillRect(0, 0, width, height);
+    context.fillStyle = "#29496C"; context.font = "600 34px Arial"; context.fillText("REKAP DISTRIBUSI KATEGORI KPI", margin, 62);
+    context.fillStyle = "#718198"; context.font = "18px Arial"; context.fillText("Kategori SON L1 dan SOMSA L0 sesuai filter aktif", margin, 91);
+    const cardWidth = (width - margin * 2 - gap * (charts.length - 1)) / charts.length;
+    charts.forEach((chart, chartIndex) => {
+      const x = margin + chartIndex * (cardWidth + gap), y = 130, cardHeight = 660;
+      context.strokeStyle = "#D6DFE9"; context.lineWidth = 2; context.strokeRect(x, y, cardWidth, cardHeight);
+      context.fillStyle = "#29496C"; context.font = "600 26px Arial"; context.fillText(chart.title, x + 24, y + 46);
+      const regionWidth = cardWidth / data.regions.length;
+      data.regions.forEach((region, regionIndex) => {
+        const groupX = x + regionIndex * regionWidth, monthly = data.periods.map((period) => {
+          const source = data.rows.filter((row) => row.region === region && row.period === period), counts = Object.fromEntries(meta.map((item) => [item.key, 0]));
+          source.forEach((row) => { const label = String(row[chart.field] || "").trim().toLowerCase().replace(/\s+/g, " "); const match = meta.find((item) => item.key.toLowerCase() === label); if (match) counts[match.key] += 1; });
+          return { period, counts, total: source.length };
+        }).filter((item) => item.total);
+        if (regionIndex) { context.strokeStyle = "#E1E7EE"; context.beginPath(); context.moveTo(groupX, y + 78); context.lineTo(groupX, y + cardHeight - 24); context.stroke(); }
+        context.fillStyle = "#40516A"; context.font = "600 17px Arial"; context.textAlign = "center"; context.fillText(region, groupX + regionWidth / 2, y + 88);
+        const barsX = groupX + 16, barsWidth = regionWidth - 32, barGap = 5, barWidth = (barsWidth - barGap * Math.max(0, monthly.length - 1)) / Math.max(monthly.length, 1), base = y + 586, barHeight = 420;
+        monthly.forEach((month, index) => {
+          let segmentY = base, barX = barsX + index * (barWidth + barGap);
+          meta.forEach((item) => { const count = month.counts[item.key], segmentHeight = month.total ? barHeight * count / month.total : 0; if (!count) return; segmentY -= segmentHeight; context.fillStyle = item.color; context.fillRect(barX, segmentY, barWidth, segmentHeight); if (segmentHeight > 16) { context.fillStyle = "#FFFFFF"; context.font = "600 15px Arial"; context.fillText(String(count), barX + barWidth / 2, segmentY + segmentHeight / 2 + 5); } });
+          context.fillStyle = "#697A90"; context.font = "600 12px Arial"; context.fillText(new Intl.DateTimeFormat("id-ID", { month: "short", timeZone: "UTC" }).format(new Date(`${month.period}-01T00:00:00Z`)).replace(".", ""), barX + barWidth / 2, base + 25);
+        });
+      });
+    });
+    context.textAlign = "left"; let legendX = margin;
+    meta.forEach((item) => { context.fillStyle = item.color; context.fillRect(legendX, 850, 18, 18); context.fillStyle = "#596A80"; context.font = "18px Arial"; context.fillText(item.key, legendX + 28, 865); legendX += context.measureText(item.key).width + 72; });
+    canvas.toBlob((blob) => { if (blob) downloadBlob(blob, `Rekap-Distribusi-Kategori-KPI-${todayIso()}.png`); }, "image/png");
   }
   renderChart(title, field, data, meta) {
     const { periods, regions, rows } = data;
@@ -1507,9 +1540,10 @@ class KpiCategoryTrend extends React.Component {
     const regions = allowedRegions.filter((region) => (!this.props.region || region === this.props.region) && rows.some((row) => row.region === region));
     const data = { rows, periods, regions };
     const description = periods.length ? `${periods.length} bulan data kategori · ${regions.join(", ") || "sesuai filter aktif"}` : "Gunakan upload KPI Category SON L1 & SOMSA L0 pada Data Upload.";
+    const charts = [{ key: "son", title: "SON L1", field: "son_l1_category" }, { key: "somsa", title: "SOMSA L0", field: "somsa_l0_category" }].filter((chart) => this.state.metric === "both" || this.state.metric === chart.key);
     return React.createElement("section", { className: "corporate-panel kpi-category-v2", "aria-label": "Rekap distribusi kategori KPI" },
-      React.createElement("div", { className: "kpi-category-v2-title" }, React.createElement("div", null, React.createElement("h3", { className: "section-title" }, "REKAP DISTRIBUSI KATEGORI KPI"), React.createElement("p", null, description)), this.state.loading && React.createElement(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" })),
-      rows.length ? React.createElement("div", { className: "kpi-category-two-up" }, this.renderChart("SON L1", "son_l1_category", data, meta), this.renderChart("SOMSA L0", "somsa_l0_category", data, meta)) : React.createElement("p", { className: "kpi-category-empty" }, this.state.loading ? "Memuat data distribusi kategori..." : "Belum ada data kategori. Upload file KPI List Export Data melalui Data Upload untuk menampilkan SON L1 dan SOMSA L0."),
+      React.createElement("div", { className: "kpi-category-v2-title" }, React.createElement("div", null, React.createElement("h3", { className: "section-title" }, "REKAP DISTRIBUSI KATEGORI KPI"), React.createElement("p", null, description)), React.createElement("div", { className: "kpi-category-actions" }, React.createElement("div", { className: "kpi-category-metric-filter" }, React.createElement("select", { value: this.state.metric, onChange: (event) => this.setState({ metric: event.target.value }), className: "control kpi-category-metric-select h-9 min-w-[175px] px-3 pr-9 text-[10px] font-semibold", "aria-label": "Tampilan kategori KPI" }, React.createElement("option", { value: "both" }, "SON L1 & SOMSA L0"), React.createElement("option", { value: "son" }, "SON L1"), React.createElement("option", { value: "somsa" }, "SOMSA L0")), React.createElement(ChevronDown, { size: 15, className: "kpi-category-metric-chevron" })), rows.length && React.createElement("button", { type: "button", onClick: () => this.exportImage(charts, data, meta), className: "btn-secondary kpi-category-download flex h-9 items-center gap-2 px-3 text-[10px] font-semibold" }, React.createElement(Download, { size: 14, strokeWidth: 2.25 }), "Download Image"), this.state.loading && React.createElement(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" }))),
+      rows.length ? React.createElement("div", { className: `kpi-category-two-up ${charts.length === 1 ? "is-single" : ""}` }, charts.map((chart) => React.createElement(React.Fragment, { key: chart.key }, this.renderChart(chart.title, chart.field, data, meta)))) : React.createElement("p", { className: "kpi-category-empty" }, this.state.loading ? "Memuat data distribusi kategori..." : "Belum ada data kategori. Upload file KPI List Export Data melalui Data Upload untuk menampilkan SON L1 dan SOMSA L0."),
       rows.length && React.createElement("footer", { className: "kpi-category-legend" }, meta.map((item) => React.createElement("span", { key: item.key }, React.createElement("i", { style: { background: item.color } }), item.key))));
   }
 }
