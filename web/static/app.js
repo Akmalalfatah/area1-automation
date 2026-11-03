@@ -11,6 +11,7 @@ const ICON_PATHS = {
   BarChart3: ['<path d="M3 3v18h18"/>', '<path d="M7 16v-4M12 16V8M17 16V5"/>'],
   CalendarDays: ['<rect x="3" y="5" width="18" height="16"/>', '<path d="M16 3v4M8 3v4M3 10h18"/>'],
   Check: ['<path d="m5 12 4 4L19 6"/>'],
+  ChevronDown: ['<path d="m6 9 6 6 6-6"/>'],
   ChevronRight: ['<path d="m9 18 6-6-6-6"/>'],
   Clipboard: ['<rect x="8" y="8" width="12" height="12"/>', '<path d="M16 8V4H4v12h4"/>'],
   Download: ['<path d="M12 3v12"/>', '<path d="m7 10 5 5 5-5"/>', '<path d="M5 21h14"/>'],
@@ -32,6 +33,7 @@ const Activity = (p) => /* @__PURE__ */ React.createElement(SvgIcon, { name: "Ac
 const BarChart3 = (p) => /* @__PURE__ */ React.createElement(SvgIcon, { name: "BarChart3", ...p });
 const CalendarDays = (p) => /* @__PURE__ */ React.createElement(SvgIcon, { name: "CalendarDays", ...p });
 const Check = (p) => /* @__PURE__ */ React.createElement(SvgIcon, { name: "Check", ...p });
+const ChevronDown = (p) => /* @__PURE__ */ React.createElement(SvgIcon, { name: "ChevronDown", ...p });
 const ChevronRight = (p) => /* @__PURE__ */ React.createElement(SvgIcon, { name: "ChevronRight", ...p });
 const Clipboard = (p) => /* @__PURE__ */ React.createElement(SvgIcon, { name: "Clipboard", ...p });
 const Download = (p) => /* @__PURE__ */ React.createElement(SvgIcon, { name: "Download", ...p });
