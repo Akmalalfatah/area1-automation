@@ -7,8 +7,8 @@ import ExcelJS from 'exceljs'
 import fs from 'node:fs/promises'
 import {BOOK1_START_COLUMNS, DEFAULT_REPORT_PROMPT, NOP_ORDER, REGION_NOPS, ROW_DEFINITIONS} from './constants.js'
 import {RUNS_DIR, SERVER_DIR, TEMPLATE_PATH, WEB_DIR} from './config.js'
-import {databaseEnabled, deleteHistory, initDb, latestPreventiveUpload, listHistory, loadPreviousHistoryDataset, loadPreventiveRows, savePreventiveUpload} from './db.js'
-import {buildAnalysis, buildMttrMetrics, createRun, dashboardPayload, generateReport, loadDataset, loadState, MTTR_TARGETS_BY_COMPONENT, processRun, saveState, uploadAndProcess, uploadTicketMttrSummary, ValidationError} from './services.js'
+import {databaseEnabled, deleteHistory, initDb, latestPreventiveUpload, listHistory, loadKpiCategoryExport, loadPreviousHistoryDataset, loadPreventiveRows, saveKpiCategoryExport, savePreventiveUpload} from './db.js'
+import {buildAnalysis, buildMttrMetrics, createRun, dashboardPayload, generateReport, loadDataset, loadState, MTTR_TARGETS_BY_COMPONENT, parseKpiCategoryExport, processRun, saveState, uploadAndProcess, uploadTicketMttrSummary, ValidationError} from './services.js'
 import {buildPreventiveDashboard, parsePreventiveWorkbook} from './preventive.js'
 import {patchTemplate} from './export-xlsx.js'
 import {siteData,siteDataForUploadMonth,listSites,listPunchlistSites,classifyOtherPunchlistNotes,savePunchlistManualClassification,savePunchlistNote,analyzeSite,parseSiteSource,saveSiteSource,saveEvaluation} from './pm-site.js'
@@ -101,6 +101,12 @@ app.post('/api/runs/:id/report',asyncHandler(async(req,res)=>{
 
 app.get('/api/history',asyncHandler(async(req,res)=>res.json({items:await listHistory(req.query)})))
 app.get('/api/uploads',asyncHandler(async(req,res)=>res.json({items:await applicationUploadHistory(req.query.page)})))
+app.get('/api/kpi-category-export',asyncHandler(async(_req,res)=>res.json(await loadKpiCategoryExport()||{dataset:null})))
+app.post('/api/kpi-category-export',upload.single('file'),asyncHandler(async(req,res)=>{
+  assertXlsx(req.file);assertDate(req.body.upload_date)
+  const dataset=await parseKpiCategoryExport(req.file.buffer)
+  res.json(await saveKpiCategoryExport(req.file.originalname,req.body.upload_date,dataset))
+}))
 app.get('/api/master-site/upload',asyncHandler(async(_req,res)=>{const data=await siteData();res.json({latest_upload:(data.sources||[]).find(source=>source.source_kind==='master')||null})}))
 app.get('/api/data-freshness',asyncHandler(async(_req,res)=>{
   // Freshness is informational. Return remaining sources when one history table

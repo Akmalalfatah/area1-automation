@@ -75,6 +75,49 @@ function extractSheet3(sheet){
   return {nops:result,regions:REGION_NOPS,source:'Sheet3',period:null}
 }
 
+// Ekspor KPI List adalah sumber rekap kategori bulanan. Formatnya berbeda
+// dengan KPIData harian: satu file memuat banyak bulan dan dua kategori yang
+// berdiri sendiri (SON L1 dan SOMSA L0). Karena itu ia diparsing terpisah dan
+// tidak boleh menggantikan dataset KPI Table.
+const exportMonthNumber={
+  january:1,januari:1,jan:1,february:2,februari:2,feb:2,march:3,maret:3,mar:3,
+  april:4,apr:4,may:5,mei:5,june:6,juni:6,jun:6,july:7,juli:7,jul:7,
+  august:8,agustus:8,aug:8,september:9,sep:9,october:10,oktober:10,oct:10,okt:10,
+  november:11,nov:11,december:12,desember:12,dec:12,des:12
+}
+const categoryExportPeriod=value=>{
+  const text=String(value??'').trim()
+  if(/^\d{4}-\d{2}$/.test(text))return text
+  const match=text.match(/^([a-zA-Z]+)\s*\/\s*(\d{4})$/)
+  const month=match&&exportMonthNumber[match[1].toLowerCase()]
+  return month?`${match[2]}-${String(month).padStart(2,'0')}`:null
+}
+
+export async function parseKpiCategoryExport(buffer){
+  const workbook=await workbookFrom(buffer),sheet=workbook.worksheets[0]
+  if(!sheet)throw new ValidationError('File KPI Category tidak memiliki sheet data.')
+  const matrix=sheetMatrix(sheet)
+  if(matrix.length<2)throw new ValidationError('File KPI Category tidak memiliki baris data.')
+  const headers=Object.fromEntries((matrix[0]||[]).map((value,index)=>[String(value??'').trim().toLowerCase(),index]))
+  const required=['nop','period','sonl 1 score category','somsal 0 score category']
+  const missing=required.filter(key=>headers[key]===undefined)
+  if(missing.length)throw new ValidationError(`Kolom KPI Category tidak lengkap: ${missing.join(', ')}.`)
+  const records=new Map()
+  for(const row of matrix.slice(1)){
+    const name=NOP_ORDER.find(item=>normalizeNop(item)===normalizeNop(row[headers.nop]))
+    const period=categoryExportPeriod(row[headers.period])
+    if(!name||!period)continue
+    const son_l1_category=String(row[headers['sonl 1 score category']]??'').trim()
+    const somsa_l0_category=String(row[headers['somsal 0 score category']]??'').trim()
+    if(!son_l1_category&&!somsa_l0_category)continue
+    records.set(`${period}|${name}`,{name,region:NOP_TO_REGION[name],period,son_l1_category,somsa_l0_category})
+  }
+  const rows=[...records.values()].sort((a,b)=>a.period.localeCompare(b.period)||a.name.localeCompare(b.name))
+  if(!rows.length)throw new ValidationError('Tidak ada kategori SON L1 atau SOMSA L0 untuk R01, R02, dan R10 pada file ini.')
+  const periods=[...new Set(rows.map(row=>row.period))]
+  return {kind:'kpi_category_export',row_count:rows.length,periods,rows}
+}
+
 export async function extractDailyFile(buffer){
   const workbook=await workbookFrom(buffer)
   if(workbook.getWorksheet('Sheet1')){try{return extractRaw(workbook.getWorksheet('Sheet1'))}catch(error){if(!(error instanceof ValidationError))throw error}}

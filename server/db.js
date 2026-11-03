@@ -90,6 +90,45 @@ export async function loadPreviousHistoryDataset(runId,currentDate,reportingType
   }
   return null
 }
+
+// Satu snapshot ekspor KPI Category memuat seluruh histori bulan. Simpan
+// terpisah dari kpi_history agar impor SON L1/SOMSA L0 tidak mengganti KPI
+// Table maupun baseline perbandingan eKPI.
+export async function saveKpiCategoryExport(filename,uploadDate,dataset){
+  const rowCount=Number(dataset?.row_count||dataset?.rows?.length||0)
+  if(!databaseEnabled){
+    const file=path.join(DATA_DIR,'kpi-category-export.json')
+    await fs.mkdir(DATA_DIR,{recursive:true})
+    const record={filename,upload_date:uploadDate,dataset,updated_at:new Date().toISOString()}
+    await fs.writeFile(file+'.tmp',JSON.stringify(record,null,2),'utf8')
+    await fs.rename(file+'.tmp',file)
+    await recordApplicationUpload('kpi_category','kpi-category-export',filename,uploadDate,rowCount)
+    return {filename,upload_date:uploadDate,row_count:rowCount,period_count:(dataset?.periods||[]).length}
+  }
+  const connection=await getPool().getConnection()
+  try{
+    await connection.beginTransaction()
+    await connection.query('DELETE FROM kpi_category_exports')
+    await connection.query('INSERT INTO kpi_category_exports(filename,upload_date,dataset) VALUES(?,?,?)',[filename,uploadDate,json(dataset)])
+    await recordApplicationUpload('kpi_category','kpi-category-export',filename,uploadDate,rowCount,connection)
+    await connection.commit()
+    return {filename,upload_date:uploadDate,row_count:rowCount,period_count:(dataset?.periods||[]).length}
+  }catch(error){
+    await connection.rollback().catch(()=>{})
+    throw error
+  }finally{connection.release()}
+}
+
+export async function loadKpiCategoryExport(){
+  if(!databaseEnabled){
+    const value=await readLocalJson(path.join(DATA_DIR,'kpi-category-export.json'),null,{backupOnMalformed:true})
+    return value&&value.dataset?{...value,dataset:value.dataset}:null
+  }
+  const [rows]=await getPool().query('SELECT filename,upload_date,dataset,updated_at FROM kpi_category_exports ORDER BY updated_at DESC LIMIT 1')
+  const row=rows[0]
+  if(!row)return null
+  return {...row,upload_date:iso(row.upload_date),dataset:typeof row.dataset==='string'?JSON.parse(row.dataset):row.dataset,updated_at:row.updated_at?.toISOString?.()||row.updated_at}
+}
 export async function deleteHistory(runIds){if(!databaseEnabled)throw new Error('Database history belum dikonfigurasi.');const [result]=await getPool().query('DELETE FROM kpi_history WHERE run_id IN (?)',[runIds]);return result.affectedRows}
 
 let localUploadQueue=Promise.resolve()
@@ -155,9 +194,9 @@ export async function recordApplicationUpload(page,id,filename,date,count,connec
   records=records.filter(row=>row.upload_id!==id);records.push({upload_id:id,page,filename,upload_date:date,row_count:count,updated_at:new Date().toISOString()});await fs.writeFile(file+'.tmp',JSON.stringify(records),'utf8');await fs.rename(file+'.tmp',file)
 }
 export async function applicationUploadHistory(page){
-  if(!['ekpi','dashboard','genset','site','master','ggr','inap','swfm','kpi_b13','kpi_b13_r01','kpi_b13_r02','kpi_b13_r10'].includes(page))throw Object.assign(new Error('Halaman upload tidak valid.'),{status:422})
+  if(!['ekpi','kpi_category','dashboard','genset','site','master','ggr','inap','swfm','kpi_b13','kpi_b13_r01','kpi_b13_r02','kpi_b13_r10'].includes(page))throw Object.assign(new Error('Halaman upload tidak valid.'),{status:422})
   const isSource=['master','ggr','inap','swfm','kpi_b13','kpi_b13_r01','kpi_b13_r02','kpi_b13_r10'].includes(page);
-  const legacy=isSource?databaseEnabled?(await getPool().query("SELECT CONCAT(source_kind,'-legacy') AS upload_id,filename,upload_date FROM pm_site_sources WHERE source_kind=?",[page]))[0].map(row=>({...row,page})):[]:page==='ekpi'?(await listHistory()).map(row=>({upload_id:row.run_id,filename:row.history?.upload?.filename||row.history?.file,upload_date:row.history?.upload?.date||row.date_end,updated_at:row.updated_at,page})):await preventiveUploadHistory(page)
+  const legacy=isSource?databaseEnabled?(await getPool().query("SELECT CONCAT(source_kind,'-legacy') AS upload_id,filename,upload_date FROM pm_site_sources WHERE source_kind=?",[page]))[0].map(row=>({...row,page})):[]:page==='ekpi'?(await listHistory()).map(row=>({upload_id:row.run_id,filename:row.history?.upload?.filename||row.history?.file,upload_date:row.history?.upload?.date||row.date_end,updated_at:row.updated_at,page})):page==='kpi_category'?await (async()=>{const category=await loadKpiCategoryExport();return category?[{upload_id:'kpi-category-export',filename:category.filename,upload_date:category.upload_date,updated_at:category.updated_at,page}]:[]})():await preventiveUploadHistory(page)
   let logged=[];
   if(databaseEnabled)logged=(await getPool().query('SELECT upload_id,page,filename,upload_date,row_count,updated_at,history_order FROM application_upload_history WHERE page=? ORDER BY updated_at DESC,history_order DESC',[page]))[0];
   else if(page==='ekpi'){const records=await readLocalJson(path.join(DATA_DIR,'upload-history.json'),[]);logged=(Array.isArray(records)?records:[]).filter(row=>row?.page===page)}

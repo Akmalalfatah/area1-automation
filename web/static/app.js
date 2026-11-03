@@ -117,6 +117,15 @@ async function uploadKpi(id, file, date, reportingType = "current") {
   form.append("reporting_type", reportingType);
   return api(`/api/runs/${id}/upload`, { method: "POST", body: form });
 }
+async function uploadKpiCategoryExport(file, date) {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("upload_date", date);
+  const result = await api("/api/kpi-category-export", { method: "POST", body: form });
+  window.dispatchEvent(new Event("kpi-category-uploaded"));
+  return result;
+}
+const getKpiCategoryExport = () => api("/api/kpi-category-export");
 const preventiveQueryParams = (filters = {}, maintenanceType = "") => {
   const params = new URLSearchParams();
   if (filters.dateFrom) params.set("date_from", filters.dateFrom);
@@ -399,6 +408,7 @@ class MasterSiteUploadSection extends React.Component {
       try {
         let result;
         if (kind === "ekpi") result = await this.props.onUploadKpi(draft.file, draft.date, draft.reportingType || "current");
+        else if (kind === "kpi_category") result = await uploadKpiCategoryExport(draft.file, draft.date);
         else if (["dashboard", "genset", "site"].includes(kind)) result = await this.props.onUploadPreventive(kind, draft.file, draft.date);
         else {
           const form = new FormData();
@@ -433,7 +443,7 @@ class MasterSiteUploadSection extends React.Component {
   }
   render() {
     var _a, _b, _c;
-    const h = React.createElement, s = this.state, draft = s.drafts[s.kind] || {}, types = [["ekpi", "eKPI Automation"], ["dashboard", "PM Punchlist"], ["genset", "PM Genset"], ["site", "PM Site"], ["master", "Master Site"], ["ggr", "GGR"], ["inap", "Ticket INAP"], ["swfm", "Ticket SWFM"], ["kpi_b13_r01", "KPIData B.1-B.3 R01"], ["kpi_b13_r02", "KPIData B.1-B.3 R02"], ["kpi_b13_r10", "KPIData B.1-B.3 R10"]], label = types.find(([key]) => key === s.kind)[1], latest = (_a = s.items.find((item) => item.key === s.kind)) == null ? void 0 : _a.latest;
+    const h = React.createElement, s = this.state, draft = s.drafts[s.kind] || {}, types = [["ekpi", "eKPI Automation"], ["kpi_category", "KPI Category SON L1 & SOMSA L0"], ["dashboard", "PM Punchlist"], ["genset", "PM Genset"], ["site", "PM Site"], ["master", "Master Site"], ["ggr", "GGR"], ["inap", "Ticket INAP"], ["swfm", "Ticket SWFM"], ["kpi_b13_r01", "KPIData B.1-B.3 R01"], ["kpi_b13_r02", "KPIData B.1-B.3 R02"], ["kpi_b13_r10", "KPIData B.1-B.3 R10"]], label = types.find(([key]) => key === s.kind)[1], latest = (_a = s.items.find((item) => item.key === s.kind)) == null ? void 0 : _a.latest;
     const formatDate = (value) => value && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(8, 10) + "/" + value.slice(5, 7) + "/" + value.slice(0, 4) : "-";
     const formatDateTime = (value) => { const date = value ? new Date(value) : null; return date && !Number.isNaN(date.getTime()) ? new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Jakarta", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }).format(date).replace(",", ", ") + " WIB" : formatDate(value); };
     return h(
@@ -459,6 +469,7 @@ class MasterSiteUploadSection extends React.Component {
           { id: "source-upload-panel", role: "tabpanel", "aria-labelledby": "source-tab-" + s.kind },
           h("div", { className: "source-current" }, h("strong", null, (latest == null ? void 0 : latest.filename) || "Belum ada file " + label + " tersimpan"), h("span", null, "Terakhir upload: " + formatDate(latest == null ? void 0 : latest.upload_date))),
           s.kind === "ekpi" && h("div", { className: "source-upload-period" }, h("label", null, "JENIS PERIODE KPI"), h("select", { className: "control", "aria-label": "Jenis periode KPI", value: draft.reportingType || "current", disabled: s.busy, onChange: (event) => { const reportingType = event.target.value; this.setDraft({ reportingType, date: reportingType === "closing_previous_month" ? todayIso() : draft.file ? inferDateFromFilename(draft.file.name) : draft.date }); } }, h("option", { value: "current" }, "Bulan berjalan"), h("option", { value: "closing_previous_month" }, "Closing bulan sebelumnya (H+1 tanpa batas)")), h("p", { className: "source-upload-note" }, "Untuk Closing, tanggal upload otomatis memakai hari ini sehingga periode file selalu divalidasi sebagai bulan sebelumnya. Berlaku setiap bulan dan dapat diubah bila mengunggah data historis.")),
+          s.kind === "kpi_category" && h("p", { className: "source-upload-note" }, "Gunakan KPI List Export Data. Sistem membaca kategori SON L1 dan SOMSA L0 lintas bulan untuk R01, R02, dan R10 tanpa mengubah KPI Table."),
           h("div", { className: "source-upload-form" }, h("label", { className: "source-file-picker" }, h("span", null, "Choose File"), h("span", { title: ((_b = draft.file) == null ? void 0 : _b.name) || "" }, ((_c = draft.file) == null ? void 0 : _c.name) || "Pilih file " + label + " (.xlsx)"), h("input", { key: s.kind + "-" + Boolean(draft.file), type: "file", accept: ".xlsx", "aria-label": "File upload " + label, onChange: (event) => {
             var _a2;
             const file = ((_a2 = event.target.files) == null ? void 0 : _a2[0]) || null;
@@ -1294,7 +1305,7 @@ KpiWorkspace = class KpiWorkspace extends React.Component {
     return React.createElement("section", { className: "corporate-panel min-w-0 p-5" }, React.createElement(FilterBar, { config, region, nop, rowGroup, onRegion, onNop, onRowGroup }), React.createElement("div", { className: "mt-4 border-b border-slate-200 pb-4" }, React.createElement("div", { className: "flex items-end gap-3" }, React.createElement("div", null, React.createElement("label", { className: "filter-label mb-1 block" }, "DATE FROM"), React.createElement("input", { type: "date", value: rangeStart, onChange: (e) => onRangeDate("rangeStart", e.target.value), className: "control h-9 w-[135px] px-3 text-[10px] font-semibold" })), React.createElement("div", null, React.createElement("label", { className: "filter-label mb-1 block" }, "DATE TO"), React.createElement("input", { type: "date", value: rangeEnd, onChange: (e) => onRangeDate("rangeEnd", e.target.value), className: "control h-9 w-[135px] px-3 text-[10px] font-semibold" })), React.createElement("div", null, React.createElement("label", { className: "filter-label mb-1 block" }, "PERIODE DATA"), React.createElement("select", { value: this.state.periodType, onChange: (e) => this.setState({ periodType: e.target.value }), className: "control h-9 w-[210px] px-3 text-[10px] font-semibold" }, React.createElement("option", { value: "closing_previous_month" }, "Closing bulan sebelumnya"), React.createElement("option", { value: "current" }, "Bulan berjalan"))), React.createElement("button", { onClick: onClearRange, disabled: !rangeStart && !rangeEnd, className: "btn-secondary h-9 whitespace-nowrap px-3 text-[10px] font-semibold disabled:opacity-40" }, "Reset date"), React.createElement("div", null, React.createElement("label", { className: "filter-label mb-1 block" }, "ANALISIS"), React.createElement("button", { type: "button", disabled: !hasNop, onClick: () => hasNop && this.setState({ showImprovement: true }), className: "btn-primary h-9 whitespace-nowrap px-4 text-[10px] font-semibold disabled:cursor-not-allowed disabled:opacity-40" }, "PENINGKATAN KPI"))), React.createElement("p", { className: "mt-2 text-[10px] text-red-600" }, this.state.filterError || (this.state.filterLoading || rangeLoading ? "Memuat data KPI Table..." : ""))), React.createElement("div", { className: "mt-5" }, React.createElement(KpiTable, { tableRef, dashboard, region, nop, rowGroup })));
   }
 };
-class KpiCategoryTrend extends React.Component {
+class LegacyKpiCategoryTrend extends React.Component {
   constructor(props) {
     super(props);
     this.state = { items: [], historyItems: [], loading: true, filteredDashboard: null, recapScope: "filtered", recapMonth: "", recapDashboard: null, recapLoading: false };
@@ -1428,6 +1439,78 @@ class KpiCategoryTrend extends React.Component {
       const single = group.bars.length === 1, barStyle = single ? { display: "flex", flexDirection: "column-reverse", width: "82%", flex: "0 0 82%", height: 210 } : { display: "flex", flexDirection: "column-reverse", minWidth: 24, maxWidth: 48, flex: "1 1 0", height: 210 }, labelStyle = single ? { width: "82%", flex: "0 0 82%" } : { minWidth: 24, maxWidth: 48, flex: "1 1 0" };
       return /* @__PURE__ */ React.createElement("div", { key: group.name, className: "flex min-w-0 flex-col px-5", style: groupIndex ? { borderLeft: "1px solid #B8C4D2" } : {} }, /* @__PURE__ */ React.createElement("div", { className: "flex h-[210px] items-end justify-center gap-2" }, group.bars.map((bar) => /* @__PURE__ */ React.createElement("div", { key: `${group.name}-${bar.date}`, className: "flex flex-col-reverse overflow-hidden bg-slate-100", style: barStyle, title: `${group.name} ${bar.label}: ${bar.total} NOP` }, ["K", "C", "B", "BS"].map((key) => bar.counts[key] ? /* @__PURE__ */ React.createElement("div", { key, className: "flex items-center justify-center text-[10px] font-semibold text-white", style: { display: "flex", width: "100%", height: `${bar.counts[key] / bar.total * 100}%`, flex: `0 0 ${bar.counts[key] / bar.total * 100}%`, background: palette[key] } }, bar.counts[key]) : null)))), /* @__PURE__ */ React.createElement("div", { className: "mt-2 flex justify-center gap-2" }, group.bars.map((bar) => /* @__PURE__ */ React.createElement("span", { key: bar.date, className: "text-center text-[9px] text-slate-500", style: labelStyle }, bar.label))), /* @__PURE__ */ React.createElement("strong", { className: "mt-3 border-t border-[#D7DFE8] py-3 text-center text-[10px] font-medium text-[#5B6472]" }, group.name));
     })) : !this.state.loading && /* @__PURE__ */ React.createElement("p", { className: "border border-dashed border-slate-300 p-8 text-center text-[10px] text-slate-400" }, "Belum ada riwayat KPI untuk grafik distribusi."), /* @__PURE__ */ React.createElement("div", { className: "mt-4 flex justify-center gap-6" }, Object.keys(labels).map((key) => /* @__PURE__ */ React.createElement("span", { key, className: "flex items-center gap-2 text-[10px] text-[#596579]" }, /* @__PURE__ */ React.createElement("i", { className: "h-3 w-3", style: { background: palette[key] } }), labels[key]))));
+  }
+}
+class KpiCategoryTrend extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { dataset: null, loading: true, filteredPeriods: null };
+  }
+  componentDidMount() {
+    this.onFiltered = (event) => {
+      const periods = (event.detail && event.detail.sourcePeriods || []).filter((value) => /^\d{4}-\d{2}$/.test(String(value)));
+      this.setState({ filteredPeriods: periods.length ? periods : null });
+    };
+    this.onUploaded = () => this.load();
+    window.addEventListener("kpi:filtered-dashboard", this.onFiltered);
+    window.addEventListener("kpi-category-uploaded", this.onUploaded);
+    this.load();
+  }
+  componentWillUnmount() {
+    window.removeEventListener("kpi:filtered-dashboard", this.onFiltered);
+    window.removeEventListener("kpi-category-uploaded", this.onUploaded);
+  }
+  async load() {
+    this.setState({ loading: true });
+    try {
+      const response = await getKpiCategoryExport();
+      this.setState({ dataset: response.dataset || null, loading: false });
+    } catch (_error) { this.setState({ dataset: null, loading: false }); }
+  }
+  renderChart(title, field, data, meta) {
+    const { periods, regions, rows } = data;
+    return React.createElement("article", { className: "kpi-category-chart" },
+      React.createElement("header", null,
+        React.createElement("div", null, React.createElement("p", { className: "kpi-category-chart-eyebrow" }, "DISTRIBUSI KATEGORI"), React.createElement("h4", null, title)),
+        React.createElement("span", null, `${periods.length} bulan`)),
+      React.createElement("div", { className: "kpi-category-chart-groups" }, regions.map((region) => {
+        const monthly = periods.map((period) => {
+          const source = rows.filter((row) => row.region === region && row.period === period);
+          const counts = Object.fromEntries(meta.map((item) => [item.key, 0]));
+          source.forEach((row) => {
+            const label = String(row[field] || "").trim().toLowerCase().replace(/\s+/g, " ");
+            const match = meta.find((item) => item.key.toLowerCase() === label);
+            if (match) counts[match.key] += 1;
+          });
+          return { period, counts, total: source.length };
+        }).filter((item) => item.total);
+        return React.createElement("section", { className: "kpi-category-region", key: region },
+          React.createElement("strong", null, region),
+          monthly.length ? React.createElement("div", { className: "kpi-category-bars" }, monthly.map((month) => React.createElement("div", { className: "kpi-category-month", key: month.period },
+            React.createElement("div", { className: "kpi-category-stack", title: `${region} · ${month.period} · ${month.total} NOP` }, meta.map((item) => {
+              const count = month.counts[item.key], percent = month.total ? count / month.total * 100 : 0;
+              return count ? React.createElement("i", { key: item.key, style: { flexBasis: `${percent}%`, background: item.color }, "aria-label": `${item.key}: ${count}` }, String(count)) : null;
+            })),
+            React.createElement("span", null, new Intl.DateTimeFormat("id-ID", { month: "short", timeZone: "UTC" }).format(new Date(`${month.period}-01T00:00:00Z`)).replace(".", ""))))) : React.createElement("p", { className: "kpi-category-no-region" }, "Tidak ada data"));
+      })));
+  }
+  render() {
+    const meta = [
+      { key: "Kurang", color: "#B42720" }, { key: "Cukup", color: "#E9C644" }, { key: "Baik", color: "#497FB8" },
+      { key: "Baik Sekali", color: "#5EAD64" }, { key: "Istimewa", color: "#1C8A73" }
+    ];
+    const allRows = this.state.dataset && this.state.dataset.rows || [];
+    const allowedRegions = ["R01_Sumbagut", "R02_Sumbagsel", "R10_Sumbagteng"];
+    const selectedPeriods = this.state.filteredPeriods;
+    const rows = allRows.filter((row) => allowedRegions.includes(row.region) && (!selectedPeriods || selectedPeriods.includes(row.period)) && (!this.props.region || row.region === this.props.region) && (!this.props.nop || row.name === this.props.nop));
+    const periods = [...new Set(rows.map((row) => row.period))].sort();
+    const regions = allowedRegions.filter((region) => (!this.props.region || region === this.props.region) && rows.some((row) => row.region === region));
+    const data = { rows, periods, regions };
+    const description = periods.length ? `${periods.length} bulan data kategori · ${regions.join(", ") || "sesuai filter aktif"}` : "Gunakan upload KPI Category SON L1 & SOMSA L0 pada Data Upload.";
+    return React.createElement("section", { className: "corporate-panel kpi-category-v2", "aria-label": "Rekap distribusi kategori KPI" },
+      React.createElement("div", { className: "kpi-category-v2-title" }, React.createElement("div", null, React.createElement("h3", { className: "section-title" }, "REKAP DISTRIBUSI KATEGORI KPI"), React.createElement("p", null, description)), this.state.loading && React.createElement(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" })),
+      rows.length ? React.createElement("div", { className: "kpi-category-two-up" }, this.renderChart("SON L1", "son_l1_category", data, meta), this.renderChart("SOMSA L0", "somsa_l0_category", data, meta)) : React.createElement("p", { className: "kpi-category-empty" }, this.state.loading ? "Memuat data distribusi kategori..." : "Belum ada data kategori. Upload file KPI List Export Data melalui Data Upload untuk menampilkan SON L1 dan SOMSA L0."),
+      rows.length && React.createElement("footer", { className: "kpi-category-legend" }, meta.map((item) => React.createElement("span", { key: item.key }, React.createElement("i", { style: { background: item.color } }), item.key))));
   }
 }
 function SummaryCard({ label, value, detail, footer, tone = "green", delta }) {

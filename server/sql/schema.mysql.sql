@@ -18,6 +18,19 @@ CREATE TABLE IF NOT EXISTS kpi_history (
   KEY idx_kpi_history_year_month_day (year, month, day)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Satu ekspor berisi histori kategori SON L1 dan SOMSA L0 lintas bulan.
+-- Tabel ini sengaja terpisah dari kpi_history agar tidak mengubah KPI Table.
+CREATE TABLE IF NOT EXISTS kpi_category_exports (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  filename VARCHAR(512) NOT NULL,
+  upload_date DATE NOT NULL,
+  dataset JSON NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_kpi_category_exports_updated (updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS pm_site_sources (
   source_kind VARCHAR(16) NOT NULL PRIMARY KEY,
   filename VARCHAR(512) NOT NULL,
