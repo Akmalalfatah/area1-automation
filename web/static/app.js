@@ -1479,6 +1479,10 @@ class KpiCategoryTrend extends React.Component {
     const cardWidth = (width - margin * 2 - gap * (charts.length - 1)) / charts.length;
     charts.forEach((chart, chartIndex) => {
       const x = margin + chartIndex * (cardWidth + gap), y = 130, cardHeight = 660;
+      // Every card starts from a predictable text alignment. The regional labels
+      // below use center alignment, so without this reset the second card title
+      // (SOMSA L0) can inherit the first card's alignment and appear misplaced.
+      context.textAlign = "left";
       context.strokeStyle = "#D6DFE9"; context.lineWidth = 2; context.strokeRect(x, y, cardWidth, cardHeight);
       context.fillStyle = "#29496C"; context.font = "600 26px Arial"; context.fillText(chart.title, x + 24, y + 46);
       const regionWidth = cardWidth / data.regions.length;
@@ -1508,7 +1512,7 @@ class KpiCategoryTrend extends React.Component {
       React.createElement("header", null,
         React.createElement("div", null, React.createElement("p", { className: "kpi-category-chart-eyebrow" }, "DISTRIBUSI KATEGORI"), React.createElement("h4", null, title)),
         React.createElement("span", null, `${periods.length} bulan`)),
-      React.createElement("div", { className: "kpi-category-chart-groups" }, regions.map((region) => {
+      React.createElement("div", { className: "kpi-category-chart-groups", style: { gridTemplateColumns: `repeat(${Math.max(regions.length, 1)}, minmax(0, 1fr))` } }, regions.map((region) => {
         const monthly = periods.map((period) => {
           const source = rows.filter((row) => row.region === region && row.period === period);
           const counts = Object.fromEntries(meta.map((item) => [item.key, 0]));
