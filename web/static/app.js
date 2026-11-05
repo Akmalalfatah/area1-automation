@@ -10,6 +10,22 @@ const ReactDOM = window.ReactDOM;
 // React error #130 is otherwise raised when a global component is undefined.
 const EmptyRuntimeModule = () => null;
 const runtimeComponent = (name, fallback = EmptyRuntimeModule) => typeof window[name] === "function" ? window[name] : fallback;
+// Final protection for every local and lazy module. A missing component used
+// to reach React directly and caused the opaque production invariant #130.
+// Keep the application alive and emit an actionable console message instead.
+const createElementSafely = React.createElement.bind(React);
+const missingElementWarnings = new Set();
+React.createElement = (type, ...args) => {
+  if (type == null) {
+    const key = String(type);
+    if (!missingElementWarnings.has(key)) {
+      missingElementWarnings.add(key);
+      console.error("[A1] Komponen halaman belum dimuat. Periksa seluruh file web/static pada deployment, lalu reload halaman.");
+    }
+    return createElementSafely(EmptyRuntimeModule, ...args);
+  }
+  return createElementSafely(type, ...args);
+};
 const ICON_PATHS = {
   Activity: ['<path d="M3 12h4l2-7 4 14 2-7h6"/>'],
   BarChart3: ['<path d="M3 3v18h18"/>', '<path d="M7 16v-4M12 16V8M17 16V5"/>'],
