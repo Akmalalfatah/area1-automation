@@ -1617,9 +1617,9 @@ class KpiCategoryTrend extends React.Component {
     meta.forEach((item) => { context.fillStyle = item.color; context.fillRect(legendX, 850, 18, 18); context.fillStyle = "#596A80"; context.font = "18px Arial"; context.fillText(item.key, legendX + 28, 865); legendX += context.measureText(item.key).width + 72; });
     canvas.toBlob((blob) => { if (blob) downloadBlob(blob, `Rekap-Distribusi-Kategori-KPI-${todayIso()}.png`); }, "image/png");
   }
-  renderChart(title, field, data, meta) {
+  renderChart(title, field, data, meta, chartKey) {
     const { periods, regions, rows } = data;
-    return React.createElement("article", { className: "kpi-category-chart" },
+    return React.createElement("article", { key: chartKey, className: "kpi-category-chart" },
       React.createElement("header", null,
         React.createElement("div", null, React.createElement("p", { className: "kpi-category-chart-eyebrow" }, "DISTRIBUSI KATEGORI"), React.createElement("h4", null, title)),
         React.createElement("span", null, `${periods.length} bulan`)),
@@ -1656,11 +1656,11 @@ class KpiCategoryTrend extends React.Component {
     const periods = [...new Set(rows.map((row) => row.period))].sort();
     const regions = allowedRegions.filter((region) => (!this.props.region || region === this.props.region) && rows.some((row) => row.region === region));
     const data = { rows, periods, regions };
-    const description = periods.length ? `${periods.length} bulan data kategori · SON L1 bulan aktif dari eKPI · ${regions.join(", ") || "sesuai filter aktif"}` : "Upload SOMSA L0 melalui Data Upload; SON L1 bulan aktif mengikuti KPI Table eKPI terbaru.";
+    const description = periods.length ? `${periods.length} bulan data kategori · SON L1 bulan aktif dari eKPI · ${regions.join(", ") || "sesuai filter aktif"}` : "Histori kategori SON L1 dan SOMSA L0 belum tersedia pada filter aktif.";
     const charts = [{ key: "son", title: "SON L1", field: "son_l1_category" }, { key: "somsa", title: "SOMSA L0", field: "somsa_l0_category" }].filter((chart) => this.state.metric === "both" || this.state.metric === chart.key);
     return React.createElement("section", { ref: (node) => { this.root = node; }, className: "corporate-panel kpi-category-v2", "aria-label": "Rekap distribusi kategori KPI" },
       React.createElement("div", { className: "kpi-category-v2-title" }, React.createElement("div", null, React.createElement("h3", { className: "section-title" }, "REKAP DISTRIBUSI KATEGORI KPI"), React.createElement("p", null, description)), React.createElement("div", { className: "kpi-category-actions" }, React.createElement("div", { className: "kpi-category-metric-filter" }, React.createElement("select", { value: this.state.metric, onChange: (event) => this.setState({ metric: event.target.value }), className: "control kpi-category-metric-select h-9 min-w-[175px] px-3 pr-9 text-[10px] font-semibold", "aria-label": "Tampilan kategori KPI" }, React.createElement("option", { value: "both" }, "SON L1 & SOMSA L0"), React.createElement("option", { value: "son" }, "SON L1"), React.createElement("option", { value: "somsa" }, "SOMSA L0")), React.createElement(ChevronDown, { size: 15, className: "kpi-category-metric-chevron" })), rows.length && React.createElement("button", { type: "button", onClick: () => this.exportImage(charts, data, meta), className: "btn-secondary kpi-category-download flex h-9 items-center gap-2 px-3 text-[10px] font-semibold" }, React.createElement(Download, { size: 14, strokeWidth: 2.25 }), "Download Image"), this.state.loading && React.createElement(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" }))),
-      rows.length ? React.createElement("div", { className: `kpi-category-two-up ${charts.length === 1 ? "is-single" : ""}` }, charts.map((chart) => React.createElement(React.Fragment, { key: chart.key }, this.renderChart(chart.title, chart.field, data, meta)))) : React.createElement("p", { className: "kpi-category-empty" }, !this.state.activated ? "Data kategori akan dimuat saat bagian ini terlihat." : this.state.loading ? "Memuat data distribusi kategori..." : "Belum ada data kategori SOMSA L0 atau KPI Table eKPI pada filter aktif."),
+      rows.length ? React.createElement("div", { className: `kpi-category-two-up ${charts.length === 1 ? "is-single" : ""}` }, charts.map((chart) => this.renderChart(chart.title, chart.field, data, meta, chart.key))) : React.createElement("p", { className: "kpi-category-empty" }, !this.state.activated ? "Data kategori akan dimuat saat bagian ini terlihat." : this.state.loading ? "Memuat data distribusi kategori..." : "Belum ada data kategori SOMSA L0 atau KPI Table eKPI pada filter aktif."),
       rows.length && React.createElement("footer", { className: "kpi-category-legend" }, meta.map((item) => React.createElement("span", { key: item.key }, React.createElement("i", { style: { background: item.color } }), item.key))));
   }
 }
@@ -1932,7 +1932,7 @@ class PunchlistWorkspace extends React.Component {
     const select = (key, allLabel, options, format, allowAll = true) => h("select", { value: s[key], onChange: (event) => this.setFilter(key, event.target.value), className: "control" }, allowAll && h("option", { value: "" }, allLabel), ...(options || []).map((value) => h("option", { key: value, value }, format ? format(value) : value)));
     const monthName = (value) => new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}-01T00:00:00Z`));
     const filters = h("div", { className: "pl-filters" },
-      !s.category && field("", "BULAN", select("month", "Pilih Bulan", s.options.month, monthName, false)),
+      field("", "BULAN / TAHUN", h("input", { type: "month", value: s.month || currentMonthIso(), onChange: (event) => this.setFilter("month", event.target.value), className: "control", "aria-label": "Bulan dan tahun PM Punchlist" })),
       field("", "REGIONAL", select("regional", "All Regional", s.options.regional)),
       field("", "NOP", select("nop", "All NOP", s.options.nop, compactNop)),
       field("", "SEARCH", h("input", { value: s.search, onChange: (event) => this.setFilter("search", event.target.value), className: "control", placeholder: "Cari Site ID, Site Name, NOP, atau review" })));
@@ -2103,7 +2103,7 @@ class PunchlistWorkspace extends React.Component {
     /* ---------- Halaman ---------- */
     const findingText = findingFilter ? `${findingFilter.category}${findingFilter.subcategory ? ` — ${findingFilter.subcategory}` : ""}` : "";
     const listTitle = findingFilter ? `SITE DENGAN TEMUAN: ${findingText}` : s.category === "LAINNYA" ? "TEMUAN LAINNYA - PERLU PEMETAAN" : `${levelTitle} - GENERAL INFORMATION`;
-    const countText = s.loading ? "Memuat daftar site..." : h(React.Fragment, null, "Menampilkan ", h("b", null, number(visibleRows.length)), ` dari ${number(total)} site PM Site`);
+    const countText = s.loading ? "Memuat daftar site..." : h("span", null, "Menampilkan ", h("b", null, number(visibleRows.length)), ` dari ${number(total)} site PM Site`);
     return h("div", { className: "pl-page" },
       h("div", { className: "pl-kpis" },
         h(PreventiveSummaryCard, { label: "SITE PM", value: number(Math.max(l0KpiTotal, l1KpiTotal)), detail: "Site yang tersedia dari data PM Site", tone: "navy" }),

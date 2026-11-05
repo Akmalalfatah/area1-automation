@@ -1,0 +1,1257 @@
+{
+  "filename": "KPI List Export Data_November_2026_AllRegion (1).xlsx",
+  "upload_date": "2026-11-01",
+  "updated_at": "2026-11-05T00:00:00.000Z",
+  "source": "bundled-kpi-category-history",
+  "dataset": {
+    "kind": "kpi_category_export",
+    "row_count": 176,
+    "periods": [
+      "2026-01",
+      "2026-02",
+      "2026-03",
+      "2026-04",
+      "2026-05",
+      "2026-06",
+      "2026-07",
+      "2026-08",
+      "2026-09",
+      "2026-10",
+      "2026-11"
+    ],
+    "rows": [
+      {
+        "name": "NOP BANDA ACEH",
+        "region": "R01_Sumbagut",
+        "period": "2026-01",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BATAM",
+        "region": "R10_Sumbagteng",
+        "period": "2026-01",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BENGKULU",
+        "region": "R02_Sumbagsel",
+        "period": "2026-01",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BINJAI",
+        "region": "R01_Sumbagut",
+        "period": "2026-01",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Istimewa"
+      },
+      {
+        "name": "NOP BUKITTINGGI",
+        "region": "R10_Sumbagteng",
+        "period": "2026-01",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Istimewa"
+      },
+      {
+        "name": "NOP DUMAI",
+        "region": "R10_Sumbagteng",
+        "period": "2026-01",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP JAMBI",
+        "region": "R02_Sumbagsel",
+        "period": "2026-01",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP LAMPUNG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-01",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Istimewa"
+      },
+      {
+        "name": "NOP MEDAN",
+        "region": "R01_Sumbagut",
+        "period": "2026-01",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Istimewa"
+      },
+      {
+        "name": "NOP PADANG",
+        "region": "R10_Sumbagteng",
+        "period": "2026-01",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Istimewa"
+      },
+      {
+        "name": "NOP PADANG SIDEMPUAN",
+        "region": "R01_Sumbagut",
+        "period": "2026-01",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Istimewa"
+      },
+      {
+        "name": "NOP PALEMBANG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-01",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PANGKAL PINANG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-01",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Istimewa"
+      },
+      {
+        "name": "NOP PEKANBARU",
+        "region": "R10_Sumbagteng",
+        "period": "2026-01",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PEMATANG SIANTAR",
+        "region": "R01_Sumbagut",
+        "period": "2026-01",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Istimewa"
+      },
+      {
+        "name": "NOP RANTAU PRAPAT",
+        "region": "R01_Sumbagut",
+        "period": "2026-01",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BANDA ACEH",
+        "region": "R01_Sumbagut",
+        "period": "2026-02",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BATAM",
+        "region": "R10_Sumbagteng",
+        "period": "2026-02",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BENGKULU",
+        "region": "R02_Sumbagsel",
+        "period": "2026-02",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BINJAI",
+        "region": "R01_Sumbagut",
+        "period": "2026-02",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Istimewa"
+      },
+      {
+        "name": "NOP BUKITTINGGI",
+        "region": "R10_Sumbagteng",
+        "period": "2026-02",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP DUMAI",
+        "region": "R10_Sumbagteng",
+        "period": "2026-02",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP JAMBI",
+        "region": "R02_Sumbagsel",
+        "period": "2026-02",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP LAMPUNG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-02",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP MEDAN",
+        "region": "R01_Sumbagut",
+        "period": "2026-02",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PADANG",
+        "region": "R10_Sumbagteng",
+        "period": "2026-02",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PADANG SIDEMPUAN",
+        "region": "R01_Sumbagut",
+        "period": "2026-02",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PALEMBANG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-02",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PANGKAL PINANG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-02",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Istimewa"
+      },
+      {
+        "name": "NOP PEKANBARU",
+        "region": "R10_Sumbagteng",
+        "period": "2026-02",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PEMATANG SIANTAR",
+        "region": "R01_Sumbagut",
+        "period": "2026-02",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP RANTAU PRAPAT",
+        "region": "R01_Sumbagut",
+        "period": "2026-02",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BANDA ACEH",
+        "region": "R01_Sumbagut",
+        "period": "2026-03",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BATAM",
+        "region": "R10_Sumbagteng",
+        "period": "2026-03",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BENGKULU",
+        "region": "R02_Sumbagsel",
+        "period": "2026-03",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BINJAI",
+        "region": "R01_Sumbagut",
+        "period": "2026-03",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Istimewa"
+      },
+      {
+        "name": "NOP BUKITTINGGI",
+        "region": "R10_Sumbagteng",
+        "period": "2026-03",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik Sekali"
+      },
+      {
+        "name": "NOP DUMAI",
+        "region": "R10_Sumbagteng",
+        "period": "2026-03",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP JAMBI",
+        "region": "R02_Sumbagsel",
+        "period": "2026-03",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP LAMPUNG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-03",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP MEDAN",
+        "region": "R01_Sumbagut",
+        "period": "2026-03",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PADANG",
+        "region": "R10_Sumbagteng",
+        "period": "2026-03",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PADANG SIDEMPUAN",
+        "region": "R01_Sumbagut",
+        "period": "2026-03",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PALEMBANG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-03",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PANGKAL PINANG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-03",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PEKANBARU",
+        "region": "R10_Sumbagteng",
+        "period": "2026-03",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PEMATANG SIANTAR",
+        "region": "R01_Sumbagut",
+        "period": "2026-03",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP RANTAU PRAPAT",
+        "region": "R01_Sumbagut",
+        "period": "2026-03",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BANDA ACEH",
+        "region": "R01_Sumbagut",
+        "period": "2026-04",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BATAM",
+        "region": "R10_Sumbagteng",
+        "period": "2026-04",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BENGKULU",
+        "region": "R02_Sumbagsel",
+        "period": "2026-04",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Cukup"
+      },
+      {
+        "name": "NOP BINJAI",
+        "region": "R01_Sumbagut",
+        "period": "2026-04",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Istimewa"
+      },
+      {
+        "name": "NOP BUKITTINGGI",
+        "region": "R10_Sumbagteng",
+        "period": "2026-04",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP DUMAI",
+        "region": "R10_Sumbagteng",
+        "period": "2026-04",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP JAMBI",
+        "region": "R02_Sumbagsel",
+        "period": "2026-04",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP LAMPUNG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-04",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP MEDAN",
+        "region": "R01_Sumbagut",
+        "period": "2026-04",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PADANG",
+        "region": "R10_Sumbagteng",
+        "period": "2026-04",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PADANG SIDEMPUAN",
+        "region": "R01_Sumbagut",
+        "period": "2026-04",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PALEMBANG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-04",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PANGKAL PINANG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-04",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PEKANBARU",
+        "region": "R10_Sumbagteng",
+        "period": "2026-04",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PEMATANG SIANTAR",
+        "region": "R01_Sumbagut",
+        "period": "2026-04",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik Sekali"
+      },
+      {
+        "name": "NOP RANTAU PRAPAT",
+        "region": "R01_Sumbagut",
+        "period": "2026-04",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BANDA ACEH",
+        "region": "R01_Sumbagut",
+        "period": "2026-05",
+        "son_l1_category": "Kurang",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BATAM",
+        "region": "R10_Sumbagteng",
+        "period": "2026-05",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BENGKULU",
+        "region": "R02_Sumbagsel",
+        "period": "2026-05",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BINJAI",
+        "region": "R01_Sumbagut",
+        "period": "2026-05",
+        "son_l1_category": "Kurang",
+        "somsa_l0_category": "Baik Sekali"
+      },
+      {
+        "name": "NOP BUKITTINGGI",
+        "region": "R10_Sumbagteng",
+        "period": "2026-05",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik Sekali"
+      },
+      {
+        "name": "NOP DUMAI",
+        "region": "R10_Sumbagteng",
+        "period": "2026-05",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP JAMBI",
+        "region": "R02_Sumbagsel",
+        "period": "2026-05",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP LAMPUNG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-05",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP MEDAN",
+        "region": "R01_Sumbagut",
+        "period": "2026-05",
+        "son_l1_category": "Kurang",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PADANG",
+        "region": "R10_Sumbagteng",
+        "period": "2026-05",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PADANG SIDEMPUAN",
+        "region": "R01_Sumbagut",
+        "period": "2026-05",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PALEMBANG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-05",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PANGKAL PINANG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-05",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PEKANBARU",
+        "region": "R10_Sumbagteng",
+        "period": "2026-05",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PEMATANG SIANTAR",
+        "region": "R01_Sumbagut",
+        "period": "2026-05",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik Sekali"
+      },
+      {
+        "name": "NOP RANTAU PRAPAT",
+        "region": "R01_Sumbagut",
+        "period": "2026-05",
+        "son_l1_category": "Kurang",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BANDA ACEH",
+        "region": "R01_Sumbagut",
+        "period": "2026-06",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BATAM",
+        "region": "R10_Sumbagteng",
+        "period": "2026-06",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BENGKULU",
+        "region": "R02_Sumbagsel",
+        "period": "2026-06",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BINJAI",
+        "region": "R01_Sumbagut",
+        "period": "2026-06",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BUKITTINGGI",
+        "region": "R10_Sumbagteng",
+        "period": "2026-06",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Istimewa"
+      },
+      {
+        "name": "NOP DUMAI",
+        "region": "R10_Sumbagteng",
+        "period": "2026-06",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP JAMBI",
+        "region": "R02_Sumbagsel",
+        "period": "2026-06",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP LAMPUNG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-06",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP MEDAN",
+        "region": "R01_Sumbagut",
+        "period": "2026-06",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PADANG",
+        "region": "R10_Sumbagteng",
+        "period": "2026-06",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Istimewa"
+      },
+      {
+        "name": "NOP PADANG SIDEMPUAN",
+        "region": "R01_Sumbagut",
+        "period": "2026-06",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PALEMBANG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-06",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PANGKAL PINANG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-06",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PEKANBARU",
+        "region": "R10_Sumbagteng",
+        "period": "2026-06",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PEMATANG SIANTAR",
+        "region": "R01_Sumbagut",
+        "period": "2026-06",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP RANTAU PRAPAT",
+        "region": "R01_Sumbagut",
+        "period": "2026-06",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BANDA ACEH",
+        "region": "R01_Sumbagut",
+        "period": "2026-07",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BATAM",
+        "region": "R10_Sumbagteng",
+        "period": "2026-07",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BENGKULU",
+        "region": "R02_Sumbagsel",
+        "period": "2026-07",
+        "son_l1_category": "Baik Sekali",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BINJAI",
+        "region": "R01_Sumbagut",
+        "period": "2026-07",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik Sekali"
+      },
+      {
+        "name": "NOP BUKITTINGGI",
+        "region": "R10_Sumbagteng",
+        "period": "2026-07",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik Sekali"
+      },
+      {
+        "name": "NOP DUMAI",
+        "region": "R10_Sumbagteng",
+        "period": "2026-07",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP JAMBI",
+        "region": "R02_Sumbagsel",
+        "period": "2026-07",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP LAMPUNG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-07",
+        "son_l1_category": "Baik Sekali",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP MEDAN",
+        "region": "R01_Sumbagut",
+        "period": "2026-07",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PADANG",
+        "region": "R10_Sumbagteng",
+        "period": "2026-07",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PADANG SIDEMPUAN",
+        "region": "R01_Sumbagut",
+        "period": "2026-07",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PALEMBANG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-07",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PANGKAL PINANG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-07",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PEKANBARU",
+        "region": "R10_Sumbagteng",
+        "period": "2026-07",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PEMATANG SIANTAR",
+        "region": "R01_Sumbagut",
+        "period": "2026-07",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP RANTAU PRAPAT",
+        "region": "R01_Sumbagut",
+        "period": "2026-07",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BANDA ACEH",
+        "region": "R01_Sumbagut",
+        "period": "2026-08",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik Sekali"
+      },
+      {
+        "name": "NOP BATAM",
+        "region": "R10_Sumbagteng",
+        "period": "2026-08",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BENGKULU",
+        "region": "R02_Sumbagsel",
+        "period": "2026-08",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BINJAI",
+        "region": "R01_Sumbagut",
+        "period": "2026-08",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BUKITTINGGI",
+        "region": "R10_Sumbagteng",
+        "period": "2026-08",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik Sekali"
+      },
+      {
+        "name": "NOP DUMAI",
+        "region": "R10_Sumbagteng",
+        "period": "2026-08",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP JAMBI",
+        "region": "R02_Sumbagsel",
+        "period": "2026-08",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP LAMPUNG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-08",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP MEDAN",
+        "region": "R01_Sumbagut",
+        "period": "2026-08",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PADANG",
+        "region": "R10_Sumbagteng",
+        "period": "2026-08",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PADANG SIDEMPUAN",
+        "region": "R01_Sumbagut",
+        "period": "2026-08",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PALEMBANG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-08",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PANGKAL PINANG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-08",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PEKANBARU",
+        "region": "R10_Sumbagteng",
+        "period": "2026-08",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PEMATANG SIANTAR",
+        "region": "R01_Sumbagut",
+        "period": "2026-08",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Istimewa"
+      },
+      {
+        "name": "NOP RANTAU PRAPAT",
+        "region": "R01_Sumbagut",
+        "period": "2026-08",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BANDA ACEH",
+        "region": "R01_Sumbagut",
+        "period": "2026-09",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BATAM",
+        "region": "R10_Sumbagteng",
+        "period": "2026-09",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BENGKULU",
+        "region": "R02_Sumbagsel",
+        "period": "2026-09",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BINJAI",
+        "region": "R01_Sumbagut",
+        "period": "2026-09",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Istimewa"
+      },
+      {
+        "name": "NOP BUKITTINGGI",
+        "region": "R10_Sumbagteng",
+        "period": "2026-09",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP DUMAI",
+        "region": "R10_Sumbagteng",
+        "period": "2026-09",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP JAMBI",
+        "region": "R02_Sumbagsel",
+        "period": "2026-09",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP LAMPUNG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-09",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP MEDAN",
+        "region": "R01_Sumbagut",
+        "period": "2026-09",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PADANG",
+        "region": "R10_Sumbagteng",
+        "period": "2026-09",
+        "son_l1_category": "Baik Sekali",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PADANG SIDEMPUAN",
+        "region": "R01_Sumbagut",
+        "period": "2026-09",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PALEMBANG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-09",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PANGKAL PINANG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-09",
+        "son_l1_category": "Baik Sekali",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PEKANBARU",
+        "region": "R10_Sumbagteng",
+        "period": "2026-09",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PEMATANG SIANTAR",
+        "region": "R01_Sumbagut",
+        "period": "2026-09",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Istimewa"
+      },
+      {
+        "name": "NOP RANTAU PRAPAT",
+        "region": "R01_Sumbagut",
+        "period": "2026-09",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP BANDA ACEH",
+        "region": "R01_Sumbagut",
+        "period": "2026-10",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP BATAM",
+        "region": "R10_Sumbagteng",
+        "period": "2026-10",
+        "son_l1_category": "Kurang",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP BENGKULU",
+        "region": "R02_Sumbagsel",
+        "period": "2026-10",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Cukup"
+      },
+      {
+        "name": "NOP BINJAI",
+        "region": "R01_Sumbagut",
+        "period": "2026-10",
+        "son_l1_category": "Kurang",
+        "somsa_l0_category": "Istimewa"
+      },
+      {
+        "name": "NOP BUKITTINGGI",
+        "region": "R10_Sumbagteng",
+        "period": "2026-10",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP DUMAI",
+        "region": "R10_Sumbagteng",
+        "period": "2026-10",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP JAMBI",
+        "region": "R02_Sumbagsel",
+        "period": "2026-10",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP LAMPUNG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-10",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP MEDAN",
+        "region": "R01_Sumbagut",
+        "period": "2026-10",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP PADANG",
+        "region": "R10_Sumbagteng",
+        "period": "2026-10",
+        "son_l1_category": "Baik Sekali",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP PADANG SIDEMPUAN",
+        "region": "R01_Sumbagut",
+        "period": "2026-10",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP PALEMBANG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-10",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PANGKAL PINANG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-10",
+        "son_l1_category": "Baik",
+        "somsa_l0_category": "Baik"
+      },
+      {
+        "name": "NOP PEKANBARU",
+        "region": "R10_Sumbagteng",
+        "period": "2026-10",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP PEMATANG SIANTAR",
+        "region": "R01_Sumbagut",
+        "period": "2026-10",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP RANTAU PRAPAT",
+        "region": "R01_Sumbagut",
+        "period": "2026-10",
+        "son_l1_category": "Kurang",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP BANDA ACEH",
+        "region": "R01_Sumbagut",
+        "period": "2026-11",
+        "son_l1_category": "Kurang",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP BATAM",
+        "region": "R10_Sumbagteng",
+        "period": "2026-11",
+        "son_l1_category": "Kurang",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP BENGKULU",
+        "region": "R02_Sumbagsel",
+        "period": "2026-11",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP BINJAI",
+        "region": "R01_Sumbagut",
+        "period": "2026-11",
+        "son_l1_category": "Kurang",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP BUKITTINGGI",
+        "region": "R10_Sumbagteng",
+        "period": "2026-11",
+        "son_l1_category": "Baik Sekali",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP DUMAI",
+        "region": "R10_Sumbagteng",
+        "period": "2026-11",
+        "son_l1_category": "Kurang",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP JAMBI",
+        "region": "R02_Sumbagsel",
+        "period": "2026-11",
+        "son_l1_category": "Kurang",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP LAMPUNG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-11",
+        "son_l1_category": "Kurang",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP MEDAN",
+        "region": "R01_Sumbagut",
+        "period": "2026-11",
+        "son_l1_category": "Kurang",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP PADANG",
+        "region": "R10_Sumbagteng",
+        "period": "2026-11",
+        "son_l1_category": "Kurang",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP PADANG SIDEMPUAN",
+        "region": "R01_Sumbagut",
+        "period": "2026-11",
+        "son_l1_category": "Cukup",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP PALEMBANG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-11",
+        "son_l1_category": "Kurang",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP PANGKAL PINANG",
+        "region": "R02_Sumbagsel",
+        "period": "2026-11",
+        "son_l1_category": "Kurang",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP PEKANBARU",
+        "region": "R10_Sumbagteng",
+        "period": "2026-11",
+        "son_l1_category": "Kurang",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP PEMATANG SIANTAR",
+        "region": "R01_Sumbagut",
+        "period": "2026-11",
+        "son_l1_category": "Kurang",
+        "somsa_l0_category": "Kurang"
+      },
+      {
+        "name": "NOP RANTAU PRAPAT",
+        "region": "R01_Sumbagut",
+        "period": "2026-11",
+        "son_l1_category": "Kurang",
+        "somsa_l0_category": "Kurang"
+      }
+    ]
+  }
+}

@@ -126,15 +126,26 @@ export async function saveKpiCategoryExport(filename,uploadDate,dataset){
   }finally{connection.release()}
 }
 
+const hasKpiCategoryRows=value=>Array.isArray(value?.dataset?.rows)&&value.dataset.rows.length>0
+async function loadBundledKpiCategoryExport(){
+  // Histori kategori bawaan dipaketkan bersama aplikasi agar Rekap Distribusi
+  // tetap mempunyai data awal tanpa pengguna harus mengunggah ulang ekspor KPI.
+  const value=await readLocalJson(path.join(DATA_DIR,'kpi-category-default.json'),null)
+  return hasKpiCategoryRows(value)?{...value,dataset:value.dataset}:null
+}
+
 export async function loadKpiCategoryExport(){
+  // Upload manual, jika nanti diperlukan, tetap menjadi sumber utama. Namun
+  // record MySQL kosong/korup tidak boleh menyembunyikan data bawaan grafik.
   if(!databaseEnabled){
     const value=await readLocalJson(path.join(DATA_DIR,'kpi-category-export.json'),null,{backupOnMalformed:true})
-    return value&&value.dataset?{...value,dataset:value.dataset}:null
+    return hasKpiCategoryRows(value)?{...value,dataset:value.dataset}:loadBundledKpiCategoryExport()
   }
   const [rows]=await getPool().query('SELECT filename,upload_date,dataset,updated_at FROM kpi_category_exports ORDER BY updated_at DESC LIMIT 1')
   const row=rows[0]
-  if(!row)return null
-  return {...row,upload_date:iso(row.upload_date),dataset:typeof row.dataset==='string'?JSON.parse(row.dataset):row.dataset,updated_at:row.updated_at?.toISOString?.()||row.updated_at}
+  if(!row)return loadBundledKpiCategoryExport()
+  const saved={...row,upload_date:iso(row.upload_date),dataset:typeof row.dataset==='string'?JSON.parse(row.dataset):row.dataset,updated_at:row.updated_at?.toISOString?.()||row.updated_at}
+  return hasKpiCategoryRows(saved)?saved:loadBundledKpiCategoryExport()
 }
 export async function deleteHistory(runIds){if(!databaseEnabled)throw new Error('Database history belum dikonfigurasi.');const [result]=await getPool().query('DELETE FROM kpi_history WHERE run_id IN (?)',[runIds]);return result.affectedRows}
 
