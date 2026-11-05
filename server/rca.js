@@ -137,7 +137,7 @@ function siteLine(row,index){
 
 async function addMaster(rows){
   let master=[]
-  try{master=(await siteData({includePm:false})).master||[]}catch{}
+  try{master=(await siteData({includePm:false,sourceKinds:['master']})).master||[]}catch{}
   const bySite=new Map(master.map(row=>[normalizeSite(row.site_id),row]))
   return rows.map(row=>{const item=bySite.get(normalizeSite(row.site_id));return {...row,class_site:item?.class_site||'',regional:item?.regional||''}})
 }

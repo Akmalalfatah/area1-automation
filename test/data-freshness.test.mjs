@@ -4,7 +4,7 @@ import {buildFreshness} from '../server/data-freshness.js'
 test('freshness distinguishes missing, current, stale, static and future data per source',()=>{
  const items=buildFreshness({master:{upload_date:'2026-08-01',filename:'Master.xlsx'},site:{upload_date:'2026-09-18',filename:'PM Site.xlsx'},ggr:{upload_date:'2026-09-17'},inap:{upload_date:'2026-09-19'}},'2026-09-18')
  const item=key=>items.find(row=>row.key===key)
- assert.equal(items.length,8);assert.equal(item('master').status,'Tersedia');assert.equal(item('master').cadence_days,null)
+ assert.equal(items.length,12);assert.equal(item('master').status,'Tersedia');assert.equal(item('master').cadence_days,null)
  assert.equal(item('site').status,'Tersedia');assert.equal(item('site').latest.filename,'PM Site.xlsx')
  assert.equal(item('ggr').status,'Tersedia');assert.equal(item('ggr').needs_upload,false);assert.equal(item('ggr').needs_update,true)
  assert.equal(item('inap').status,'Tersedia');assert.equal(item('inap').renewal_label,'Tanggal perlu validasi');assert.equal(item('swfm').status,'Belum upload')
@@ -19,8 +19,8 @@ test('INAP and SWFM renew by calendar month, independently of availability',()=>
  assert.equal(rows.find(row=>row.key==='inap').needs_update,false)
  assert.equal(rows.find(row=>row.key==='swfm').needs_update,true)
 })
-test('all eight uploaded datasets remain available with their own filename and date',()=>{
- const keys=['master','ggr','inap','swfm','dashboard','genset','site','ekpi']
+test('all configured uploaded datasets remain available with their own filename and date',()=>{
+ const keys=['master','ggr','inap','swfm','kpi_b13_r01','kpi_b13_r02','kpi_b13_r10','kpi_category','dashboard','genset','site','ekpi']
  const rows=buildFreshness(Object.fromEntries(keys.map(key=>[key,{filename:key+'.xlsx',upload_date:'2026-08-01'}])),'2026-09-18')
  for(const row of rows){assert.equal(row.status,'Tersedia');assert.equal(row.latest.filename,row.key+'.xlsx');assert.equal(row.latest.upload_date,'2026-08-01')}
 })

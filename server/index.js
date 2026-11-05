@@ -7,7 +7,7 @@ import ExcelJS from 'exceljs'
 import fs from 'node:fs/promises'
 import {BOOK1_START_COLUMNS, DEFAULT_REPORT_PROMPT, NOP_ORDER, REGION_NOPS, ROW_DEFINITIONS} from './constants.js'
 import {RUNS_DIR, SERVER_DIR, TEMPLATE_PATH, WEB_DIR} from './config.js'
-import {databaseEnabled, deleteHistory, initDb, latestPreventiveUpload, listHistory, loadKpiCategoryExport, loadPreviousHistoryDataset, loadPreventiveRows, saveKpiCategoryExport, savePreventiveUpload} from './db.js'
+import {databaseEnabled, deleteHistory, initDb, latestPreventiveUpload, listHistory, loadKpiCategoryExport, loadPreviousHistoryDataset, loadPreventiveRows, preventiveAvailablePeriods, saveKpiCategoryExport, savePreventiveUpload} from './db.js'
 import {buildAnalysis, buildMttrMetrics, createRun, dashboardPayload, generateReport, loadDataset, loadState, MTTR_TARGETS_BY_COMPONENT, parseKpiCategoryExport, processRun, saveState, uploadAndProcess, uploadTicketMttrSummary, ValidationError} from './services.js'
 import {buildPreventiveDashboard, parsePreventiveWorkbook} from './preventive.js'
 import {patchTemplate} from './export-xlsx.js'
@@ -62,14 +62,17 @@ app.post('/api/runs/:id/ticket-summary',upload.single('file'),asyncHandler(async
 app.post('/api/runs/:id/process',asyncHandler(async(req,res)=>{const dataset=await processRun(RUNS_DIR,req.params.id);res.json({ok:true,date:dataset.date})}))
 app.get('/api/runs/:id/dashboard',asyncHandler(async(req,res)=>{
   const payload=await dashboardPayload(RUNS_DIR,req.params.id,req.query.region||null,req.query.nop||null,req.query.category||null,req.query.baseline_run_id||null)
-  // Ticket summary PM is supplementary for eKPI. A temporarily unavailable PM
-  // source must not make the main eKPI dashboard unavailable.
-  try{
-    const derived=deriveTicketMttrByNop(await siteData(),payload.dataset.nops.map(item=>item.name),payload.dataset.reporting_period?.source_period||String(payload.dataset.date||'').slice(0,7))
-    payload.dataset.ticket_summaries={...(payload.dataset.ticket_summaries||{}),...derived}
-  }catch(error){
-    console.warn(`Ticket summary tidak tersedia untuk run ${req.params.id}: ${error.message}`)
-    payload.ticket_summary_warning='Ticket summary PM sementara tidak tersedia. Dashboard KPI utama tetap dapat digunakan.'
+  // Sumber SWFM besar hanya dibaca saat konsumen memang meminta ticket summary.
+  // Tampilan utama dan filter eKPI tidak memakainya; detail Peningkatan KPI
+  // memiliki endpoint bulan sendiri.
+  if(req.query.include_ticket_summary==='1'){
+    try{
+      const derived=deriveTicketMttrByNop(await siteData({sourceKinds:['master','swfm']}),payload.dataset.nops.map(item=>item.name),payload.dataset.reporting_period?.source_period||String(payload.dataset.date||'').slice(0,7))
+      payload.dataset.ticket_summaries={...(payload.dataset.ticket_summaries||{}),...derived}
+    }catch(error){
+      console.warn(`Ticket summary tidak tersedia untuk run ${req.params.id}: ${error.message}`)
+      payload.ticket_summary_warning='Ticket summary PM sementara tidak tersedia. Dashboard KPI utama tetap dapat digunakan.'
+    }
   }
   res.json(payload)
 }))
@@ -101,13 +104,31 @@ app.post('/api/runs/:id/report',asyncHandler(async(req,res)=>{
 
 app.get('/api/history',asyncHandler(async(req,res)=>res.json({items:await listHistory(req.query)})))
 app.get('/api/uploads',asyncHandler(async(req,res)=>res.json({items:await applicationUploadHistory(req.query.page)})))
-app.get('/api/kpi-category-export',asyncHandler(async(_req,res)=>res.json(await loadKpiCategoryExport()||{dataset:null})))
+const categoryLabel=value=>({K:'Kurang',C:'Cukup',B:'Baik',BS:'Baik Sekali',IS:'Istimewa'}[String(value||'').trim().toUpperCase()]||String(value||'').trim())
+app.get('/api/kpi-category-export',asyncHandler(async(req,res)=>{
+  const saved=await loadKpiCategoryExport(),base=saved?.dataset||{kind:'kpi_category_export',rows:[],periods:[]}
+  const byKey=new Map((base.rows||[]).map(row=>[`${row.period}|${row.name}`,{...row}]))
+  let activePeriod=''
+  if(req.query.run_id){
+    const active=await loadDataset(RUNS_DIR,req.query.run_id).catch(()=>null)
+    activePeriod=String(active?.reporting_period?.source_period||active?.date||'').slice(0,7)
+    for(const item of active?.nops||[]){
+      if(!activePeriod||!item.name)continue
+      const key=`${activePeriod}|${item.name}`,previous=byKey.get(key)||{}
+      byKey.set(key,{...previous,name:item.name,region:item.region,period:activePeriod,son_l1_category:categoryLabel(item.values?.category)})
+    }
+  }
+  const requestedPeriods=String(req.query.periods||'').split(',').filter(value=>/^\d{4}-\d{2}$/.test(value)),allowedPeriods=new Set(requestedPeriods)
+  const rows=[...byKey.values()].filter(row=>(!requestedPeriods.length||allowedPeriods.has(row.period))&&(!req.query.region||row.region===req.query.region)&&(!req.query.nop||row.name===req.query.nop)).sort((a,b)=>a.period.localeCompare(b.period)||a.name.localeCompare(b.name))
+  const dataset={...base,rows,row_count:rows.length,periods:[...new Set(rows.map(row=>row.period))],active_period:activePeriod||null,active_son_source:activePeriod?'eKPI Automation':null}
+  res.json(saved?{...saved,dataset}:{dataset})
+}))
 app.post('/api/kpi-category-export',upload.single('file'),asyncHandler(async(req,res)=>{
   assertXlsx(req.file);assertDate(req.body.upload_date)
   const dataset=await parseKpiCategoryExport(req.file.buffer)
   res.json(await saveKpiCategoryExport(req.file.originalname,req.body.upload_date,dataset))
 }))
-app.get('/api/master-site/upload',asyncHandler(async(_req,res)=>{const data=await siteData();res.json({latest_upload:(data.sources||[]).find(source=>source.source_kind==='master')||null})}))
+app.get('/api/master-site/upload',asyncHandler(async(_req,res)=>{const data=await siteData({sourceKinds:['master']});res.json({latest_upload:(data.sources||[]).find(source=>source.source_kind==='master')||null})}))
 app.get('/api/data-freshness',asyncHandler(async(_req,res)=>{
   // Freshness is informational. Return remaining sources when one history table
   // or a legacy upload is unavailable, rather than failing the entire page.
@@ -126,25 +147,32 @@ const preventivePeriod=query=>{
   const period=String(query.month||query.date_from||query.date_to||'').slice(0,7)
   return /^\d{4}-\d{2}$/.test(period)?period:null
 }
-const preventiveSourceData=async query=>{
+const preventiveSourceData=async (query,{includePunchlist=false}={})=>{
   const period=preventivePeriod(query)
   if(!period){
-    const data=await siteData({includeKpiB13:false})
-    // PM Punchlist dapat dibuka tanpa memilih bulan. Tetap ambil PM Site
-    // dari tabel preventive_uploads agar notes yang tersimpan di database
-    // tidak berubah menjadi daftar kosong.
+    const data=await siteData({includeKpiB13:false,includeEvaluations:true,includePunchlist})
     data.pm=await loadPreventiveRows({dateFrom:query.date_from,dateTo:query.date_to})
     return data
   }
-  const snapshot=await siteDataForUploadMonth(period,{includeKpiB13:false})
+  const snapshot=await siteDataForUploadMonth(period,{includeKpiB13:false,includeEvaluations:true,includePunchlist})
   const lastDay=new Date(Date.UTC(Number(period.slice(0,4)),Number(period.slice(5,7)),0)).getUTCDate()
   snapshot.data.pm=await loadPreventiveRows({dateFrom:`${period}-01`,dateTo:`${period}-${String(lastDay).padStart(2,'0')}`})
   return snapshot.data
 }
+// Punchlist mengikuti satu periode aktif seperti PM Dashboard/Site/Genset.
+const punchlistSourceData=async query=>{
+  // Punchlist mengikuti filter bulan PM lainnya. Jangan scan seluruh arsip
+  // saat bulan belum dipilih; gunakan bulan aktif sebagai default.
+  const availablePeriods=await preventiveAvailablePeriods('site')
+  const period=preventivePeriod(query)||availablePeriods[0]||new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',timeZone:'Asia/Jakarta'}).format(new Date()).slice(0,7)
+  const data=await preventiveSourceData({...query,month:period,date_from:`${period}-01`,date_to:`${period}-${String(new Date(Date.UTC(Number(period.slice(0,4)),Number(period.slice(5,7)),0)).getUTCDate()).padStart(2,'0')}`},{includePunchlist:true})
+  data.available_preventive_periods=availablePeriods
+  return data
+}
 // Klasifikasi Lainnya dijalankan otomatis di server. Hash catatan pada tabel
 // klasifikasi memastikan catatan yang sama tidak pernah dikirim ulang ke Gemini.
 const punchlistAutoJobs=new Map()
-const queuePunchlistAutoClassification=(query={},levels=['punchlist_l0','review_l1'])=>{
+const queuePunchlistAutoClassification=(query={},levels=['punchlist_l0','review_l1'],initialData=null)=>{
   const month=preventivePeriod(query)
   if(!databaseEnabled||!month)return false
   let queued=false
@@ -155,7 +183,10 @@ const queuePunchlistAutoClassification=(query={},levels=['punchlist_l0','review_
     const job=(async()=>{
       try{
         for(let batch=0;batch<120;batch++){
-          const data=await preventiveSourceData({month})
+          // Permintaan halaman sudah memuat data bulan aktif. Gunakan payload yang
+          // sama untuk batch pertama agar klasifikasi otomatis tidak membaca ulang
+          // seluruh PM Site tepat setelah respons halaman selesai disusun.
+          const data=batch===0&&initialData?initialData:await punchlistSourceData({month})
           const result=await classifyOtherPunchlistNotes(data,{month,level},25)
           if(!result.processed||!result.remaining)break
           await new Promise(resolve=>setTimeout(resolve,250))
@@ -167,21 +198,21 @@ const queuePunchlistAutoClassification=(query={},levels=['punchlist_l0','review_
   }
   return queued||levels.some(level=>punchlistAutoJobs.has(`${month}|${level}`))
 }
-const preventiveDashboardPayload=async query=>{const rows=await loadPreventiveRows({dateFrom:query.date_from,dateTo:query.date_to}),source=await preventiveSourceData(query),reviewedRows=enrichWorkConditions(enrichDashboardReview(rows,source),source),payload=buildPreventiveDashboard(reviewedRows,query.date_from,query.date_to,query.nop,query.site_id,'','','','','','','','','',query.regional),general=buildPreventiveDashboard(reviewedRows,query.date_from,query.date_to,query.nop,query.site_id,query.search,query.maintenance_type,query.status,query.pic,query.interval,query.type_power,query.scope_item,query.schedule_state,query.needs_attention,query.regional);payload.rows=enrichWorkConditions(enrichDashboardReview(general.rows,source),source);payload.general_count=payload.rows.length;payload.latest_upload=(await preventiveUploadHistory(query.maintenance_type||'dashboard',true))[0]||null;return payload}
+const preventiveDashboardPayload=async query=>{const source=await preventiveSourceData(query),rows=source.pm||[],reviewedRows=enrichWorkConditions(enrichDashboardReview(rows,source),source),payload=buildPreventiveDashboard(reviewedRows,query.date_from,query.date_to,query.nop,query.site_id,'','','','','','','','','',query.regional),general=buildPreventiveDashboard(reviewedRows,query.date_from,query.date_to,query.nop,query.site_id,query.search,query.maintenance_type,query.status,query.pic,query.interval,query.type_power,query.scope_item,query.schedule_state,query.needs_attention,query.regional);payload.rows=enrichWorkConditions(enrichDashboardReview(general.rows,source),source);payload.general_count=payload.rows.length;payload.latest_upload=(await preventiveUploadHistory(query.maintenance_type||'dashboard',true))[0]||null;return payload}
 app.get('/api/preventive/dashboard/export.xlsx',asyncHandler(async(req,res)=>{const payload=await preventiveDashboardPayload(req.query),workbook=buildPreventiveProgressWorkbook(payload,req.query),buffer=await workbook.xlsx.writeBuffer(),period=String(req.query.date_from||'preventive').slice(0,7);res.set({'content-type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','content-disposition':`attachment; filename="Progress-PM-${period}.xlsx"`});res.send(Buffer.from(buffer))}))
 app.get('/api/preventive/dashboard',asyncHandler(async(req,res)=>res.json(await preventiveDashboardPayload(req.query))))
 
 app.get('/api/pm-genset/detail',asyncHandler(async(req,res)=>{const data=await gensetData({dateFrom:req.query.date_from,dateTo:req.query.date_to}),pm=data.pm?.findLast(row=>row.maintenance_kind==='genset'&&workOrderKey(row)===req.query.id);if(!pm)throw new HttpError(404,'Pekerjaan PM Genset tidak ditemukan.');res.json(analyzeGenset(pm,data,req.query.window_days?{windowDays:Number(req.query.window_days)}:{}))}))
 app.put('/api/pm-genset/evaluation',asyncHandler(async(req,res)=>{const data=await gensetData({dateFrom:req.body.date_from,dateTo:req.body.date_to}),pm=data.pm?.findLast(row=>row.maintenance_kind==='genset'&&workOrderKey(row)===req.body.id);if(!pm)throw new HttpError(404,'Pekerjaan PM Genset tidak ditemukan.');res.json(await saveGensetEvaluation(pm,req.body))}))
 
-app.get('/api/pm-site',asyncHandler(async(req,res)=>res.json(listSites(await preventiveSourceData(req.query),req.query))))
-app.get('/api/punchlist',asyncHandler(async(req,res)=>{const data=await preventiveSourceData(req.query),payload=await listPunchlistSites(data,req.query),auto_classification=queuePunchlistAutoClassification(req.query);res.json({...payload,auto_classification})}))
-app.post('/api/punchlist/classify-others',asyncHandler(async(req,res)=>res.json(await classifyOtherPunchlistNotes(await preventiveSourceData(req.body||{}),req.body||{},req.body?.limit))))
-app.put('/api/punchlist/classification',asyncHandler(async(req,res)=>res.json(await savePunchlistManualClassification(await preventiveSourceData(req.body||{}),req.body||{}))))
+app.get('/api/pm-site',asyncHandler(async(req,res)=>res.json(listSites(await preventiveSourceData(req.query,{includePunchlist:true}),req.query))))
+app.get('/api/punchlist',asyncHandler(async(req,res)=>{const data=await punchlistSourceData(req.query),payload=await listPunchlistSites(data,req.query),auto_classification=queuePunchlistAutoClassification(req.query,undefined,data);res.json({...payload,auto_classification})}))
+app.post('/api/punchlist/classify-others',asyncHandler(async(req,res)=>res.json(await classifyOtherPunchlistNotes(await punchlistSourceData(req.body||{}),req.body||{},req.body?.limit))))
+app.put('/api/punchlist/classification',asyncHandler(async(req,res)=>res.json(await savePunchlistManualClassification(await punchlistSourceData(req.body||{}),req.body||{}))))
 app.put('/api/punchlist/:siteId',asyncHandler(async(req,res)=>{const saved=await savePunchlistNote(req.params.siteId,req.body);queuePunchlistAutoClassification(req.body||{},['review_l1']);res.json(saved)}))
 app.post('/api/pm-site/sources/:kind',upload.single('file'),asyncHandler(async(req,res)=>{assertXlsx(req.file);assertDate(req.body.upload_date);const kinds=['master','ggr','inap','swfm','kpi_b13_r01','kpi_b13_r02','kpi_b13_r10'];if(!kinds.includes(req.params.kind))throw new HttpError(422,'Jenis sumber upload tidak valid.');const regionByKind={kpi_b13_r01:'R01_Sumbagut',kpi_b13_r02:'R02_Sumbagsel',kpi_b13_r10:'R10_Sumbagteng'},region=regionByKind[req.params.kind];const dataset=region?await parseKpiB13(req.file.buffer,region):await enrichGensetSource(req.file.buffer,req.params.kind,await parseSiteSource(req.file.buffer,req.params.kind));res.json(await saveSiteSource(req.params.kind,req.file.originalname,req.body.upload_date,dataset))}))
-app.get('/api/pm-site/detail',asyncHandler(async(req,res)=>{const data=await preventiveSourceData(req.query),pm=data.pm?.find(row=>row.maintenance_kind==='site'&&workOrderKey(row)===req.query.id);if(!pm)throw new HttpError(404,'Pekerjaan PM Site tidak ditemukan.');res.json(analyzeSite(pm,data))}))
-app.put('/api/pm-site/evaluation',asyncHandler(async(req,res)=>{const data=await preventiveSourceData(req.body),pm=data.pm?.find(row=>row.maintenance_kind==='site'&&workOrderKey(row)===req.body.id);if(!pm)throw new HttpError(404,'Pekerjaan PM Site tidak ditemukan.');res.json(await saveEvaluation(pm,req.body))}))
+app.get('/api/pm-site/detail',asyncHandler(async(req,res)=>{const data=await preventiveSourceData(req.query,{includePunchlist:true}),pm=data.pm?.find(row=>row.maintenance_kind==='site'&&workOrderKey(row)===req.query.id);if(!pm)throw new HttpError(404,'Pekerjaan PM Site tidak ditemukan.');res.json(analyzeSite(pm,data))}))
+app.put('/api/pm-site/evaluation',asyncHandler(async(req,res)=>{const data=await preventiveSourceData(req.body,{includePunchlist:true}),pm=data.pm?.find(row=>row.maintenance_kind==='site'&&workOrderKey(row)===req.body.id);if(!pm)throw new HttpError(404,'Pekerjaan PM Site tidak ditemukan.');res.json(await saveEvaluation(pm,req.body))}))
 
 app.get('/api/runs/:id/export.xlsx',asyncHandler(async(req,res)=>{
   const dataset=await loadDataset(RUNS_DIR,req.params.id),selected=dataset.nops.filter(item=>(!req.query.region||item.region===req.query.region)&&(!req.query.nop||item.name===req.query.nop)&&(!req.query.category||item.values.category===req.query.category)),names=new Set(selected.map(x=>x.name))

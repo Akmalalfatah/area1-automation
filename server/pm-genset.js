@@ -98,10 +98,7 @@ export function analyzeGenset(pm,data,options={}){
 export async function gensetData({dateFrom,dateTo}={}){
   const period=String(dateFrom||dateTo||'').slice(0,7)
   const data=/^\d{4}-\d{2}$/.test(period)
-    ?(await siteDataForUploadMonth(period,{includeKpiB13:false})).data
-    :await siteData()
-  if(/^\d{4}-\d{2}$/.test(period))data.pm=await loadPreventiveRows({dateFrom,dateTo})
-  if(databaseEnabled){const [rows]=await getPool().query('SELECT * FROM pm_genset_evaluations');data.genset_evaluations=rows}
+    ?(await siteDataForUploadMonth(period,{includeKpiB13:false,includeEvaluations:true})).data    :await siteData({includeKpiB13:false,includeEvaluations:true})  data.pm=await loadPreventiveRows({dateFrom,dateTo})  if(databaseEnabled){const [rows]=await getPool().query('SELECT * FROM pm_genset_evaluations');data.genset_evaluations=rows}
   return data
 }
 export const gensetEvaluationStatuses=['Belum dievaluasi','Perlu ditinjau','Terverifikasi bermasalah','Tidak berkaitan dengan PM','Menunggu verifikasi lapangan','Selesai dievaluasi']

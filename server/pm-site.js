@@ -3,7 +3,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import {PROJECT_ROOT} from './config.js'
-import {databaseEnabled,getPool,loadPreventiveRows,loadHistoricalPmSiteNotes,recordApplicationUpload} from './db.js'
+import {databaseEnabled,getPool,loadPreventiveRows,recordApplicationUpload} from './db.js'
 import {workOrderKey,isTerminal} from './preventive.js'
 import {generateGeminiJson} from './services.js'
 
@@ -108,24 +108,26 @@ const safeDataset=value=>{
   try{const parsed=typeof value==='string'?JSON.parse(value):value;return parsed&&typeof parsed==='object'?parsed:{}}catch{return{}}
 }
 
-export async function siteData({includeKpiB13=false,includePm=true}={}){
+export async function siteData({includeKpiB13=false,includePm=false,includeEvaluations=false,includePunchlist=false,sourceKinds=null}={}){
   if(!databaseEnabled){
     const data=await preview(),uploaded=includePm?await loadPreventiveRows():[]
     const kinds=new Set(uploaded.map(row=>row.maintenance_kind))
     return{...data,pm:includePm?[...(data.pm||[]).filter(row=>!kinds.has(row.maintenance_kind)),...uploaded]:[],evaluations:[],punchlist_notes:[],read_only:true}
   }
-  const sourceWhere=includeKpiB13?'':' WHERE source_kind NOT IN (?,?,?,?)'
-  const sourceParams=includeKpiB13?[]:kpiB13SourceKinds
-  const [sourceResult,evaluationResult,punchlistResult,aiClassificationResult,historicalNotes,pm]=await Promise.all([
+  const requestedKinds=Array.isArray(sourceKinds)&&sourceKinds.length?[...new Set(sourceKinds)]:null
+  const whereParts=[],sourceParams=[]
+  if(!includeKpiB13){whereParts.push('source_kind NOT IN (?,?,?,?)');sourceParams.push(...kpiB13SourceKinds)}
+  if(requestedKinds){whereParts.push('source_kind IN (?)');sourceParams.push(requestedKinds)}
+  const sourceWhere=whereParts.length?` WHERE ${whereParts.join(' AND ')}`:''
+  const [sourceResult,evaluationResult,punchlistResult,aiClassificationResult,pm]=await Promise.all([
     getPool().query(`SELECT source_kind,filename,upload_date,dataset FROM pm_site_sources${sourceWhere}`,sourceParams),
-    getPool().query('SELECT * FROM pm_site_evaluations'),
-    getPool().query('SELECT site_id,note,updated_at FROM site_punchlist_notes'),
-    getPool().query('SELECT site_id,source_level,note_hash,category,subcategory,confidence,model,reason,updated_at FROM site_punchlist_ai_classifications'),
-    loadHistoricalPmSiteNotes(),
+    includeEvaluations||includePm||includePunchlist?getPool().query('SELECT * FROM pm_site_evaluations'):Promise.resolve([[]]),
+    includePunchlist?getPool().query('SELECT site_id,note,updated_at FROM site_punchlist_notes'):Promise.resolve([[]]),
+    includePunchlist?getPool().query('SELECT site_id,source_level,note_hash,category,subcategory,confidence,model,reason,updated_at FROM site_punchlist_ai_classifications'):Promise.resolve([[]]),
     includePm?loadPreventiveRows():Promise.resolve([])
   ])
   const sources=sourceResult[0],evaluations=evaluationResult[0],punchlistNotes=punchlistResult[0],ai_classifications=aiClassificationResult[0]
-  const data={pm,evaluations,punchlist_notes:punchlistNotes.map(row=>({...row,source:'review_l1'})),ai_classifications,historical_notes:historicalNotes.map(row=>({...row,source:'punchlist_l0'})),sources:sources.map(({dataset,...meta})=>meta),quality:[],read_only:false}
+  const data={pm,evaluations,punchlist_notes:punchlistNotes.map(row=>({...row,source:'review_l1'})),ai_classifications,historical_notes:[],sources:sources.map(({dataset,...meta})=>meta),quality:[],read_only:false}
   for(const source of sources){const dataset=safeDataset(source.dataset);data[source.source_kind]=dataset.rows||[];data.quality.push(...(dataset.issues||[]).map(issue=>({...issue,source:source.source_kind})))}
   const [records]=await getPool().query(`SELECT source_kind,payload FROM pm_site_source_rows${sourceWhere} ORDER BY source_kind,row_no`,sourceParams)
   for(const record of records){const payload=typeof record.payload==='string'?JSON.parse(record.payload):record.payload;data[record.source_kind].push(payload)}
@@ -133,17 +135,16 @@ export async function siteData({includeKpiB13=false,includePm=true}={}){
 }
 
 const uploadMonth=value=>String(value||'').slice(0,7)
-const sourceRowsForUploads=async (uploads,{period='',includeKpiB13=true}={})=>{
-  const [punchlistNotes,evaluations,aiClassifications,historicalNotes]=await Promise.all([
-    getPool().query('SELECT site_id,note,updated_at FROM site_punchlist_notes').then(([rows])=>rows),
-    getPool().query('SELECT * FROM pm_site_evaluations').then(([rows])=>rows),
-    getPool().query('SELECT site_id,source_level,note_hash,category,subcategory,confidence,model,reason,updated_at FROM site_punchlist_ai_classifications').then(([rows])=>rows),
-    loadHistoricalPmSiteNotes()
+const sourceRowsForUploads=async (uploads,{period='',includeKpiB13=true,includeEvaluations=false,includePunchlist=false}={})=>{
+  const [punchlistNotes,evaluations,aiClassifications]=await Promise.all([
+    includePunchlist?getPool().query('SELECT site_id,note,updated_at FROM site_punchlist_notes').then(([rows])=>rows):Promise.resolve([]),
+    includeEvaluations||includePunchlist?getPool().query('SELECT * FROM pm_site_evaluations').then(([rows])=>rows):Promise.resolve([]),
+    includePunchlist?getPool().query('SELECT site_id,source_level,note_hash,category,subcategory,confidence,model,reason,updated_at FROM site_punchlist_ai_classifications').then(([rows])=>rows):Promise.resolve([])
   ])
   // Peningkatan KPI tidak membutuhkan data PM. Hindari membaca snapshot PM
   // yang besar saat hanya kalkulasi B1-B3/SWFM dijalankan.
   const sourceMeta=upload=>{const dataset=safeDataset(upload.dataset);return{...Object.fromEntries(Object.entries(upload).filter(([key])=>key!=='dataset')),...Object.fromEntries(['row_count','date_start','date_end','periods','regional','sheet'].filter(key=>dataset[key]!==undefined).map(key=>[key,dataset[key]]))}}
-  const data={pm:[],evaluations,punchlist_notes:punchlistNotes.map(row=>({...row,source:'review_l1'})),ai_classifications:aiClassifications,historical_notes:historicalNotes.map(row=>({...row,source:'punchlist_l0'})),sources:uploads.map(sourceMeta),quality:[],read_only:false}
+  const data={pm:[],evaluations,punchlist_notes:punchlistNotes.map(row=>({...row,source:'review_l1'})),ai_classifications:aiClassifications,historical_notes:[],sources:uploads.map(sourceMeta),quality:[],read_only:false}
   if(uploads.length){
     const ids=uploads.map(upload=>upload.source_upload_id)
     const [records]=await getPool().query('SELECT source_upload_id,payload FROM pm_site_source_upload_rows WHERE source_upload_id IN (?) ORDER BY source_upload_id,row_no',[ids])
@@ -194,11 +195,11 @@ const sourceRowsForUploads=async (uploads,{period='',includeKpiB13=true}={})=>{
 
 // Mengambil snapshot terbaru berdasarkan bulan pada tanggal saat file diunggah.
 // Isi Date Occurred di dalam file tidak dipakai untuk memilih versi upload.
-export async function siteDataForUploadMonth(period,{includeKpiB13=true}={}){
-  if(!databaseEnabled)return{data:await siteData({includeKpiB13}),historical:false,available_periods:[]}
+export async function siteDataForUploadMonth(period,{includeKpiB13=true,includeEvaluations=false,includePunchlist=false}={}){
+  if(!databaseEnabled)return{data:await siteData({includeKpiB13,includeEvaluations,includePunchlist}),historical:false,available_periods:[]}
   const [periodRows]=await getPool().query("SELECT DISTINCT DATE_FORMAT(upload_date,'%Y-%m') AS period FROM pm_site_source_uploads WHERE upload_date IS NOT NULL ORDER BY period DESC")
   const available_periods=periodRows.map(row=>String(row.period||'')).filter(value=>/^\d{4}-\d{2}$/.test(value))
-  if(!available_periods.length)return{data:await siteData({includeKpiB13}),historical:false,available_periods:[]}
+  if(!available_periods.length)return{data:await siteData({includeKpiB13,includeEvaluations,includePunchlist}),historical:false,available_periods:[]}
   const selectedPeriod=/^\d{4}-\d{2}$/.test(String(period||''))?period:available_periods[0]
   const [year,month]=selectedPeriod.split('-').map(Number),monthStart=`${selectedPeriod}-01`,monthEnd=new Date(Date.UTC(year,month,1)).toISOString().slice(0,10)
   // Metadata bulan lain hanya dipakai untuk mengisi dropdown di atas. Isi file/payload
@@ -216,7 +217,7 @@ export async function siteDataForUploadMonth(period,{includeKpiB13=true}={}){
     if((!includeKpiB13&&kpiB13SourceKinds.includes(upload.source_kind))||seen.has(upload.source_kind)||(!isReference&&uploadPeriod(upload)!==selectedPeriod))continue
     seen.add(upload.source_kind);selected.push(upload)
   }
-  return{data:await sourceRowsForUploads(selected,{period:selectedPeriod,includeKpiB13}),historical:true,available_periods}
+  return{data:await sourceRowsForUploads(selected,{period:selectedPeriod,includeKpiB13,includeEvaluations,includePunchlist}),historical:true,available_periods}
 }
 
 const milliseconds=value=>Date.parse(value?.length===10?value+'T00:00:00Z':value+'Z')
@@ -291,7 +292,14 @@ export function analyzeSite(pm,data,today=new Date().toISOString().slice(0,10)){
 }
 export function listSites(data,filters={}){
   const unique=new Map()
-  for(const pm of data.pm||[])if(pm.maintenance_kind==='site')unique.set(workOrderKey(pm),pm)
+  for(const pm of data.pm||[]){
+    if(pm.maintenance_kind!=='site')continue
+    if(filters.date_from&&pm.schedule_date<filters.date_from||filters.date_to&&pm.schedule_date>filters.date_to)continue
+    if(filters.site_id&&normalizeSite(filters.site_id)!==normalizeSite(pm.site_id))continue
+    if(filters.nop&&pm.nop&&pm.nop!==filters.nop)continue
+    if(filters.regional&&pm.regional&&pm.regional!==filters.regional)continue
+    unique.set(workOrderKey(pm),pm)
+  }
   const analyzed=[...unique.values()].map(pm=>analyzeSite(pm,data))
   const option=field=>[...new Set(analyzed.map(detail=>field==='evaluation'?detail.evaluation_label:(detail.master?.[field]||detail.pm[field])).filter(Boolean))].sort()
   const rows=analyzed.filter(detail=>{
@@ -409,7 +417,7 @@ const isOthers=classified=>classified.status==='Ada Temuan'&&classified.findings
 const punchlistTaxonomy=()=>[...new Map(PUNCHLIST_RULES.map(([category,subcategory])=>[`${category}|${subcategory}`,{category,subcategory}])).values()]
 const aiFinding=(row,note)=>row&&row.note_hash===noteHash(note)&&row.category&&row.subcategory?{status:'Ada Temuan',findings:[{category:row.category,subcategory:row.subcategory,quote:note,count:1,source:'gemini',confidence:Number(row.confidence)||null}]}:null
 export async function listPunchlistSites(data,filters={}){
-  const pmSiteRows=(data.pm||[]).filter(row=>row.maintenance_kind==='site'),months=[...new Set(pmSiteRows.map(row=>String(row.schedule_date||'').slice(0,7)).filter(value=>/^\d{4}-\d{2}$/.test(value)))].sort().reverse()
+  const pmSiteRows=(data.pm||[]).filter(row=>row.maintenance_kind==='site'),months=[...new Set([...(data.available_preventive_periods||[]),...pmSiteRows.map(row=>String(row.schedule_date||row._upload_date||'').slice(0,7))].filter(value=>/^\d{4}-\d{2}$/.test(value)))].sort().reverse()
   const month=/^\d{4}-\d{2}$/.test(String(filters.month||''))?filters.month:''
   const end=month?new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5,7)),0)).getUTCDate():null
   const {search,category,...sourceFilters}=filters
@@ -417,7 +425,15 @@ export async function listPunchlistSites(data,filters={}){
   // Satu site dapat memiliki beberapa ticket pada bulan yang sama. Punchlist adalah
   // catatan per site, sehingga gunakan satu record terbaru per Site ID agar card,
   // hitungan, dan filter status tidak berulang atau saling tertukar.
-  const uniqueRows=[...new Map((base.rows||[]).filter(row=>normalizeSite(row.site_id)).map(row=>[normalizeSite(row.site_id),row])).values()]
+  const newestRowsBySite=new Map()
+  for(const row of base.rows||[]){
+    const siteId=normalizeSite(row.site_id)
+    if(!siteId)continue
+    const current=newestRowsBySite.get(siteId)
+    const timestamp=item=>String(item?._upload_date||item?.schedule_date||item?._updated_at||'')
+    if(!current||timestamp(row)>=timestamp(current))newestRowsBySite.set(siteId,row)
+  }
+  const uniqueRows=[...newestRowsBySite.values()]
   const query=String(search||'').trim().toLowerCase()
   const aiClassifications=siteIndex(data).aiClassifications
   const summarize=level=>{
@@ -433,7 +449,7 @@ export async function listPunchlistSites(data,filters={}){
     return{rows,summary:{level,month,regions,total_tickets:rows.length,total_findings:allFindings.length,status_by_regional,category_counts:countBy('category'),subcategory_counts:countBy('subcategory',['category'])}}
   }
   const reviewL1=summarize('review_l1'),punchlistL0=summarize('punchlist_l0')
-  return{rows:reviewL1.rows,l0_rows:punchlistL0.rows,options:{month:months,regional:[...new Set(uniqueRows.map(row=>row.regional).filter(Boolean))].sort(),nop:[...new Set(uniqueRows.map(row=>row.nop).filter(Boolean))].sort()},taxonomy:punchlistTaxonomy(),summary:reviewL1.summary,l0_summary:punchlistL0.summary}
+  return{rows:reviewL1.rows,l0_rows:punchlistL0.rows,selected_month:month||months[0]||'',options:{month:months,regional:[...new Set(uniqueRows.map(row=>row.regional).filter(Boolean))].sort(),nop:[...new Set(uniqueRows.map(row=>row.nop).filter(Boolean))].sort()},taxonomy:punchlistTaxonomy(),summary:reviewL1.summary,l0_summary:punchlistL0.summary}
 }
 
 export async function classifyOtherPunchlistNotes(data,filters={},limit=20){

@@ -127,7 +127,41 @@ async function uploadKpiCategoryExport(file, date) {
   window.dispatchEvent(new Event("kpi-category-uploaded"));
   return result;
 }
-const getKpiCategoryExport = () => api("/api/kpi-category-export");
+const getKpiCategoryExport = ({ runId, region, nop, periods } = {}) => {
+  const params = new URLSearchParams();
+  if (runId) params.set("run_id", runId);
+  if (region) params.set("region", region);
+  if (nop) params.set("nop", nop);
+  if (periods && periods.length) params.set("periods", periods.join(","));
+  return api(`/api/kpi-category-export${params.size ? `?${params}` : ""}`);
+};
+const PAGE_ASSETS = {
+  "preventive-dashboard": { styles: ["/static/pm-site.css?v=20261105-lazy"] },
+  "preventive-punchlist": { styles: ["/static/pm-punchlist.css?v=20261105-performance"] },
+  "preventive-site": { styles: ["/static/pm-site.css?v=20261105-lazy"], scripts: ["/static/pm-site.js?v=20261022-l0-l1-filters"] },
+  "preventive-genset": { styles: ["/static/pm-site.css?v=20261105-lazy", "/static/pm-genset.css?v=20261105-lazy"], scripts: ["/static/pm-site.js?v=20261022-l0-l1-filters", "/static/pm-genset.js?v=20261016-genset-operational-focus"] },
+  rca: { styles: ["/static/rca.css?v=20261105-lazy", "/static/rca-template.css?v=20261105-lazy", "/static/rca-typography.css?v=20261105-lazy"], scripts: ["/static/rca.js?v=20261023-duration-buckets"] },
+  "improvement-sumbagsel": { styles: ["/static/improvement-sumbagsel.css?v=20261105-lazy"], scripts: ["/static/improvement-sumbagsel.js?v=20261030-unified-filter-dropdowns"] }
+};
+const loadedPageAssets = new Map();
+const loadStylesheet = (href) => new Promise((resolve, reject) => {
+  if ([...document.styleSheets].some((sheet) => sheet.href === new URL(href, window.location.href).href)) return resolve();
+  const link = document.createElement("link");
+  link.rel = "stylesheet"; link.href = href; link.onload = resolve; link.onerror = () => reject(new Error(`Gagal memuat ${href}`));
+  document.head.appendChild(link);
+});
+const loadScript = (src) => new Promise((resolve, reject) => {
+  if ([...document.scripts].some((script) => script.src === new URL(src, window.location.href).href)) return resolve();
+  const script = document.createElement("script");
+  script.src = src; script.async = true; script.onload = resolve; script.onerror = () => reject(new Error(`Gagal memuat ${src}`));
+  document.body.appendChild(script);
+});
+const loadPageAssets = (page) => {
+  const assets = PAGE_ASSETS[page];
+  if (!assets) return Promise.resolve();
+  if (!loadedPageAssets.has(page)) loadedPageAssets.set(page, Promise.all((assets.styles || []).map(loadStylesheet)).then(async () => { for (const script of assets.scripts || []) await loadScript(script); }));
+  return loadedPageAssets.get(page);
+};
 const preventiveQueryParams = (filters = {}, maintenanceType = "") => {
   const params = new URLSearchParams();
   if (filters.dateFrom) params.set("date_from", filters.dateFrom);
@@ -445,7 +479,7 @@ class MasterSiteUploadSection extends React.Component {
   }
   render() {
     var _a, _b, _c;
-    const h = React.createElement, s = this.state, draft = s.drafts[s.kind] || {}, types = [["ekpi", "eKPI Automation"], ["kpi_category", "KPI Category SON L1 & SOMSA L0"], ["dashboard", "PM Punchlist"], ["genset", "PM Genset"], ["site", "PM Site"], ["master", "Master Site"], ["ggr", "GGR"], ["inap", "Ticket INAP"], ["swfm", "Ticket SWFM"], ["kpi_b13_r01", "KPIData B.1-B.3 R01"], ["kpi_b13_r02", "KPIData B.1-B.3 R02"], ["kpi_b13_r10", "KPIData B.1-B.3 R10"]], label = types.find(([key]) => key === s.kind)[1], latest = (_a = s.items.find((item) => item.key === s.kind)) == null ? void 0 : _a.latest;
+    const h = React.createElement, s = this.state, draft = s.drafts[s.kind] || {}, types = [["ekpi", "eKPI Automation"], ["kpi_category", "Data Upload SOMSA L0"], ["dashboard", "PM Punchlist"], ["genset", "PM Genset"], ["site", "PM Site"], ["master", "Master Site"], ["ggr", "GGR"], ["inap", "Ticket INAP"], ["swfm", "Ticket SWFM"], ["kpi_b13_r01", "KPIData B.1-B.3 R01"], ["kpi_b13_r02", "KPIData B.1-B.3 R02"], ["kpi_b13_r10", "KPIData B.1-B.3 R10"]], label = types.find(([key]) => key === s.kind)[1], latest = (_a = s.items.find((item) => item.key === s.kind)) == null ? void 0 : _a.latest;
     const formatDate = (value) => value && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(8, 10) + "/" + value.slice(5, 7) + "/" + value.slice(0, 4) : "-";
     const formatDateTime = (value) => { const date = value ? new Date(value) : null; return date && !Number.isNaN(date.getTime()) ? new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Jakarta", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }).format(date).replace(",", ", ") + " WIB" : formatDate(value); };
     return h(
@@ -471,7 +505,7 @@ class MasterSiteUploadSection extends React.Component {
           { id: "source-upload-panel", role: "tabpanel", "aria-labelledby": "source-tab-" + s.kind },
           h("div", { className: "source-current" }, h("strong", null, (latest == null ? void 0 : latest.filename) || "Belum ada file " + label + " tersimpan"), h("span", null, "Terakhir upload: " + formatDate(latest == null ? void 0 : latest.upload_date))),
           s.kind === "ekpi" && h("div", { className: "source-upload-period" }, h("label", null, "JENIS PERIODE KPI"), h("select", { className: "control", "aria-label": "Jenis periode KPI", value: draft.reportingType || "current", disabled: s.busy, onChange: (event) => { const reportingType = event.target.value; this.setDraft({ reportingType, date: reportingType === "closing_previous_month" ? todayIso() : draft.file ? inferDateFromFilename(draft.file.name) : draft.date }); } }, h("option", { value: "current" }, "Bulan berjalan"), h("option", { value: "closing_previous_month" }, "Closing bulan sebelumnya (H+1 tanpa batas)")), h("p", { className: "source-upload-note" }, "Untuk Closing, tanggal upload otomatis memakai hari ini sehingga periode file selalu divalidasi sebagai bulan sebelumnya. Berlaku setiap bulan dan dapat diubah bila mengunggah data historis.")),
-          s.kind === "kpi_category" && h("p", { className: "source-upload-note" }, "Gunakan KPI List Export Data. Sistem membaca kategori SON L1 dan SOMSA L0 lintas bulan untuk R01, R02, dan R10 tanpa mengubah KPI Table."),
+          s.kind === "kpi_category" && h("p", { className: "source-upload-note" }, "Upload histori kategori SOMSA L0 untuk R01, R02, dan R10. Kategori SON L1 pada bulan aktif diambil otomatis dari KPI Table eKPI terbaru."),
           h("div", { className: "source-upload-form" }, h("label", { className: "source-file-picker" }, h("span", null, "Choose File"), h("span", { title: ((_b = draft.file) == null ? void 0 : _b.name) || "" }, ((_c = draft.file) == null ? void 0 : _c.name) || "Pilih file " + label + " (.xlsx)"), h("input", { key: s.kind + "-" + Boolean(draft.file), type: "file", accept: ".xlsx", "aria-label": "File upload " + label, onChange: (event) => {
             var _a2;
             const file = ((_a2 = event.target.files) == null ? void 0 : _a2[0]) || null;
@@ -1446,26 +1480,39 @@ class LegacyKpiCategoryTrend extends React.Component {
 class KpiCategoryTrend extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { dataset: null, loading: true, filteredPeriods: null, metric: "both" };
+    this.state = { dataset: null, loading: false, filteredPeriods: null, metric: "both", activated: false };
   }
   componentDidMount() {
     this.onFiltered = (event) => {
       const periods = (event.detail && event.detail.sourcePeriods || []).filter((value) => /^\d{4}-\d{2}$/.test(String(value)));
       this.setState({ filteredPeriods: periods.length ? periods : null });
     };
-    this.onUploaded = () => this.load();
+    this.onUploaded = () => { if (this.state.activated) this.load(); };
     window.addEventListener("kpi:filtered-dashboard", this.onFiltered);
     window.addEventListener("kpi-category-uploaded", this.onUploaded);
-    this.load();
+    if ("IntersectionObserver" in window) {
+      this.observer = new IntersectionObserver((entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        this.observer.disconnect();
+        this.setState({ activated: true }, () => this.load());
+      }, { rootMargin: "320px 0px" });
+      if (this.root) this.observer.observe(this.root);
+    } else this.setState({ activated: true }, () => this.load());
+  }
+  componentDidUpdate(previousProps, previousState) {
+    if (!this.state.activated || !previousState.activated) return;
+    const periodsChanged = JSON.stringify(previousState.filteredPeriods || []) !== JSON.stringify(this.state.filteredPeriods || []);
+    if (previousProps.runId !== this.props.runId || previousProps.region !== this.props.region || previousProps.nop !== this.props.nop || periodsChanged) this.load();
   }
   componentWillUnmount() {
     window.removeEventListener("kpi:filtered-dashboard", this.onFiltered);
     window.removeEventListener("kpi-category-uploaded", this.onUploaded);
+    if (this.observer) this.observer.disconnect();
   }
   async load() {
     this.setState({ loading: true });
     try {
-      const response = await getKpiCategoryExport();
+      const response = await getKpiCategoryExport({ runId: this.props.runId, region: this.props.region, nop: this.props.nop, periods: this.state.filteredPeriods });
       this.setState({ dataset: response.dataset || null, loading: false });
     } catch (_error) { this.setState({ dataset: null, loading: false }); }
   }
@@ -1488,7 +1535,7 @@ class KpiCategoryTrend extends React.Component {
       const regionWidth = cardWidth / data.regions.length;
       data.regions.forEach((region, regionIndex) => {
         const groupX = x + regionIndex * regionWidth, monthly = data.periods.map((period) => {
-          const source = data.rows.filter((row) => row.region === region && row.period === period), counts = Object.fromEntries(meta.map((item) => [item.key, 0]));
+          const source = data.rows.filter((row) => row.region === region && row.period === period && String(row[chart.field] || "").trim()), counts = Object.fromEntries(meta.map((item) => [item.key, 0]));
           source.forEach((row) => { const label = String(row[chart.field] || "").trim().toLowerCase().replace(/\s+/g, " "); const match = meta.find((item) => item.key.toLowerCase() === label); if (match) counts[match.key] += 1; });
           return { period, counts, total: source.length };
         }).filter((item) => item.total);
@@ -1514,7 +1561,7 @@ class KpiCategoryTrend extends React.Component {
         React.createElement("span", null, `${periods.length} bulan`)),
       React.createElement("div", { className: "kpi-category-chart-groups", style: { gridTemplateColumns: `repeat(${Math.max(regions.length, 1)}, minmax(0, 1fr))` } }, regions.map((region) => {
         const monthly = periods.map((period) => {
-          const source = rows.filter((row) => row.region === region && row.period === period);
+          const source = rows.filter((row) => row.region === region && row.period === period && String(row[field] || "").trim());
           const counts = Object.fromEntries(meta.map((item) => [item.key, 0]));
           source.forEach((row) => {
             const label = String(row[field] || "").trim().toLowerCase().replace(/\s+/g, " ");
@@ -1545,11 +1592,11 @@ class KpiCategoryTrend extends React.Component {
     const periods = [...new Set(rows.map((row) => row.period))].sort();
     const regions = allowedRegions.filter((region) => (!this.props.region || region === this.props.region) && rows.some((row) => row.region === region));
     const data = { rows, periods, regions };
-    const description = periods.length ? `${periods.length} bulan data kategori · ${regions.join(", ") || "sesuai filter aktif"}` : "Gunakan upload KPI Category SON L1 & SOMSA L0 pada Data Upload.";
+    const description = periods.length ? `${periods.length} bulan data kategori · SON L1 bulan aktif dari eKPI · ${regions.join(", ") || "sesuai filter aktif"}` : "Upload SOMSA L0 melalui Data Upload; SON L1 bulan aktif mengikuti KPI Table eKPI terbaru.";
     const charts = [{ key: "son", title: "SON L1", field: "son_l1_category" }, { key: "somsa", title: "SOMSA L0", field: "somsa_l0_category" }].filter((chart) => this.state.metric === "both" || this.state.metric === chart.key);
-    return React.createElement("section", { className: "corporate-panel kpi-category-v2", "aria-label": "Rekap distribusi kategori KPI" },
+    return React.createElement("section", { ref: (node) => { this.root = node; }, className: "corporate-panel kpi-category-v2", "aria-label": "Rekap distribusi kategori KPI" },
       React.createElement("div", { className: "kpi-category-v2-title" }, React.createElement("div", null, React.createElement("h3", { className: "section-title" }, "REKAP DISTRIBUSI KATEGORI KPI"), React.createElement("p", null, description)), React.createElement("div", { className: "kpi-category-actions" }, React.createElement("div", { className: "kpi-category-metric-filter" }, React.createElement("select", { value: this.state.metric, onChange: (event) => this.setState({ metric: event.target.value }), className: "control kpi-category-metric-select h-9 min-w-[175px] px-3 pr-9 text-[10px] font-semibold", "aria-label": "Tampilan kategori KPI" }, React.createElement("option", { value: "both" }, "SON L1 & SOMSA L0"), React.createElement("option", { value: "son" }, "SON L1"), React.createElement("option", { value: "somsa" }, "SOMSA L0")), React.createElement(ChevronDown, { size: 15, className: "kpi-category-metric-chevron" })), rows.length && React.createElement("button", { type: "button", onClick: () => this.exportImage(charts, data, meta), className: "btn-secondary kpi-category-download flex h-9 items-center gap-2 px-3 text-[10px] font-semibold" }, React.createElement(Download, { size: 14, strokeWidth: 2.25 }), "Download Image"), this.state.loading && React.createElement(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" }))),
-      rows.length ? React.createElement("div", { className: `kpi-category-two-up ${charts.length === 1 ? "is-single" : ""}` }, charts.map((chart) => React.createElement(React.Fragment, { key: chart.key }, this.renderChart(chart.title, chart.field, data, meta)))) : React.createElement("p", { className: "kpi-category-empty" }, this.state.loading ? "Memuat data distribusi kategori..." : "Belum ada data kategori. Upload file KPI List Export Data melalui Data Upload untuk menampilkan SON L1 dan SOMSA L0."),
+      rows.length ? React.createElement("div", { className: `kpi-category-two-up ${charts.length === 1 ? "is-single" : ""}` }, charts.map((chart) => React.createElement(React.Fragment, { key: chart.key }, this.renderChart(chart.title, chart.field, data, meta)))) : React.createElement("p", { className: "kpi-category-empty" }, !this.state.activated ? "Data kategori akan dimuat saat bagian ini terlihat." : this.state.loading ? "Memuat data distribusi kategori..." : "Belum ada data kategori SOMSA L0 atau KPI Table eKPI pada filter aktif."),
       rows.length && React.createElement("footer", { className: "kpi-category-legend" }, meta.map((item) => React.createElement("span", { key: item.key }, React.createElement("i", { style: { background: item.color } }), item.key))));
   }
 }
@@ -1696,7 +1743,7 @@ class PunchlistWorkspace extends React.Component {
   constructor(props) {
     super(props);
     const scope = window.PMPunchlistScope || {};
-    this.state = { rows: [], l0Rows: [], options: { month: [], regional: [], nop: [] }, taxonomy: [], summary: null, summaryL0: null, summaryLevel: "punchlist_l0", search: "", month: scope.month || "", regional: scope.regional || "", nop: scope.nop || "", category: "", findingFilter: null, notes: {}, loading: true, saving: {}, classifying: false, autoReloads: 0, manualSite: null, manualCategory: "", manualSubcategory: "", manualSaving: false, error: "", message: "", dialogSite: null, dialogStep: "question", dialogNote: "" };
+    this.state = { rows: [], l0Rows: [], options: { month: [], regional: [], nop: [] }, taxonomy: [], summary: null, summaryL0: null, summaryLevel: "punchlist_l0", search: "", month: scope.month || "", regional: scope.regional || "", nop: scope.nop || "", category: "", findingFilter: null, notes: {}, loading: true, saving: {}, classifying: false, autoReloads: 0, visibleLimit: 100, manualSite: null, manualCategory: "", manualSubcategory: "", manualSaving: false, error: "", message: "", dialogSite: null, dialogStep: "question", dialogNote: "" };
     this.load = async () => {
       const { search, month, regional, nop, category } = this.state, params = new URLSearchParams();
       if (search) params.set("search", search);
@@ -1709,7 +1756,7 @@ class PunchlistWorkspace extends React.Component {
         const data = await api(`/api/punchlist${params.size ? `?${params}` : ""}`), notes = {};
         for (const row of data.rows || []) notes[row.site_id] = row.note || "";
         const autoReload = !!data.auto_classification && this.state.autoReloads < 12;
-        this.setState((state) => ({ rows: data.rows || [], l0Rows: data.l0_rows || [], options: data.options || { month: [], regional: [], nop: [] }, taxonomy: data.taxonomy || [], summary: data.summary || null, summaryL0: data.l0_summary || null, notes, autoReloads: autoReload ? state.autoReloads + 1 : 0 }));
+        this.setState((state) => ({ rows: data.rows || [], l0Rows: data.l0_rows || [], options: data.options || { month: [], regional: [], nop: [] }, taxonomy: data.taxonomy || [], summary: data.summary || null, summaryL0: data.l0_summary || null, month: state.month || data.selected_month || "", notes, visibleLimit: 100, autoReloads: autoReload ? state.autoReloads + 1 : 0 }));
         if (autoReload) window.setTimeout(() => this.load(), 1e4);
       } catch (error) {
         this.setState({ error: error.message });
@@ -1717,7 +1764,15 @@ class PunchlistWorkspace extends React.Component {
         this.setState({ loading: false });
       }
     };
-    this.setFilter = (key, value) => this.setState({ [key]: value }, this.load);
+    this.setFilter = (key, value) => {
+      if (key === "search") {
+        window.clearTimeout(this.searchTimer);
+        this.setState({ search: value, visibleLimit: 100 });
+        this.searchTimer = window.setTimeout(() => this.load(), 300);
+        return;
+      }
+      this.setState({ [key]: value, visibleLimit: 100 }, this.load);
+    };
     this.reviewOthers = () => this.setState({ category: "LAINNYA", search: "", regional: "", nop: "" }, this.load);
     this.closeOthers = () => this.setState({ category: "", search: "", regional: "", nop: "" }, this.load);
     this.selectFinding = (category, subcategory = "") => this.setState({ findingFilter: { category, subcategory }, noteFilter: "" }, () => document.getElementById("pm-punchlist-general")?.scrollIntoView({ behavior: "smooth", block: "start" }));
@@ -1784,6 +1839,7 @@ class PunchlistWorkspace extends React.Component {
     };
   }
   componentDidMount() { this.load(); }
+  componentWillUnmount() { window.clearTimeout(this.searchTimer); }
   render() {
     const h = React.createElement, s = this.state;
     const number = (value) => new Intl.NumberFormat("id-ID").format(Number(value || 0));
@@ -1803,24 +1859,25 @@ class PunchlistWorkspace extends React.Component {
     const noteFilter = s.noteFilter || "", findingFilter = s.findingFilter || null;
     const rowsByFinding = findingFilter ? activeRows.filter((row) => (row.findings || []).some((finding) => finding.category === findingFilter.category && (!findingFilter.subcategory || finding.subcategory === findingFilter.subcategory))) : activeRows;
     const visibleRows = noteFilter ? rowsByFinding.filter((row) => stateOf(row) === noteFilter) : rowsByFinding;
+    const renderedRows = visibleRows.slice(0, s.visibleLimit || 100);
     const summary = (activeLevel === "punchlist_l0" ? s.summaryL0 : s.summary) || { regions: [], status_by_regional: [], category_counts: [], subcategory_counts: [], total_findings: 0 };
     const regionLabel = (value) => String(value).replace(/_/g, " ");
 
     /* ---------- Filter ---------- */
     const field = (cls, label, control) => h("div", { className: `pl-field ${cls || ""}` }, h("label", { className: "filter-label" }, label), control);
-    const select = (key, allLabel, options, format) => h("select", { value: s[key], onChange: (event) => this.setFilter(key, event.target.value), className: "control" }, h("option", { value: "" }, allLabel), ...(options || []).map((value) => h("option", { key: value, value }, format ? format(value) : value)));
+    const select = (key, allLabel, options, format, allowAll = true) => h("select", { value: s[key], onChange: (event) => this.setFilter(key, event.target.value), className: "control" }, allowAll && h("option", { value: "" }, allLabel), ...(options || []).map((value) => h("option", { key: value, value }, format ? format(value) : value)));
     const monthName = (value) => new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}-01T00:00:00Z`));
     const filters = h("div", { className: "pl-filters" },
-      !s.category && field("", "BULAN", select("month", "All Bulan", s.options.month, monthName)),
+      !s.category && field("", "BULAN", select("month", "Pilih Bulan", s.options.month, monthName, false)),
       field("", "REGIONAL", select("regional", "All Regional", s.options.regional)),
       field("", "NOP", select("nop", "All NOP", s.options.nop, compactNop)),
       field("", "SEARCH", h("input", { value: s.search, onChange: (event) => this.setFilter("search", event.target.value), className: "control", placeholder: "Cari Site ID, Site Name, NOP, atau review" })));
     const segments = h("div", { className: "pl-segments", role: "group", "aria-label": "Filter status catatan" },
-      ...[["", "Semua", total], ["empty", "Belum dicatat", counts.empty], ["finding", "Ada temuan", counts.finding], ["clear", "Tidak ada temuan", counts.clear]].map(([value, label, count]) => h("button", { key: value || "all", type: "button", className: "pl-segment", "aria-pressed": noteFilter === value, onClick: () => this.setState({ noteFilter: value }) }, label, h("b", null, number(count)))));
+      ...[["", "Semua", total], ["empty", "Belum dicatat", counts.empty], ["finding", "Ada temuan", counts.finding], ["clear", "Tidak ada temuan", counts.clear]].map(([value, label, count]) => h("button", { key: value || "all", type: "button", className: "pl-segment", "aria-pressed": noteFilter === value, onClick: () => this.setState({ noteFilter: value, visibleLimit: 100 }) }, label, h("b", null, number(count)))));
 
     /* ---------- Daftar site ---------- */
     const cell = (label, value, extra) => h("div", { className: "pl-cell" }, h("p", { className: "pl-label" }, label), h("p", { className: `pl-value ${extra || ""}` }, value));
-    const cards = visibleRows.map((row, index) => {
+    const cards = renderedRows.map((row, index) => {
       const st = stateOf(row), note = noteOf(row);
       return h("details", { key: `${row.site_id}-${row.schedule_date || ""}-${row.ticket_no || ""}-${index}`, className: `pl-card is-${st}` },
         h("summary", { className: "pl-card-summary" },
@@ -1997,19 +2054,36 @@ class PunchlistWorkspace extends React.Component {
           h("div", null, h("p", { className: "pl-eyebrow" }, `GENERAL INFORMATION — ${levelTitle}`), h("h2", { className: "section-title" }, listTitle), h("p", { className: "pl-section-desc" }, activeLevel === "punchlist_l0" ? "Catatan lapangan berasal dari Notes PM Site dan bersifat referensi." : "Filter status review L1 dan buka card site untuk mengisi Action Temuan.")),
           h("div", { className: "pl-head-actions" }, findingFilter && h("button", { type: "button", onClick: this.clearFindingFilter, className: "btn-secondary h-8 px-3 text-[9px] font-semibold" }, "× ", findingText), h("span", { className: "pl-count", role: "status" }, countText), s.loading && h(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" }), s.category === "LAINNYA" && h("button", { type: "button", onClick: this.closeOthers, className: "btn-secondary h-8 px-3 text-[9px] font-semibold" }, "KEMBALI KE SEMUA"))),
         segments,
-        h("div", { className: "pl-list kpi-scrollbar" }, ...cards, !s.loading && !visibleRows.length && h("p", { className: "pl-empty" }, findingFilter ? `Tidak ada site dengan temuan ${findingText} pada filter aktif.` : s.category === "LAINNYA" ? "Tidak ada temuan Lainnya pada filter aktif." : total ? "Tidak ada site yang cocok dengan filter status ini." : "Belum ada data PM Site. Upload data PM Site terlebih dahulu."))));
+        h("div", { className: "pl-list kpi-scrollbar" }, ...cards,
+          !s.loading && renderedRows.length < visibleRows.length && h("button", { type: "button", className: "btn-secondary pl-load-more", onClick: () => this.setState((state) => ({ visibleLimit: (state.visibleLimit || 100) + 100 })) }, `TAMPILKAN 100 SITE BERIKUTNYA (${number(visibleRows.length - renderedRows.length)} TERSISA)`),
+          !s.loading && !visibleRows.length && h("p", { className: "pl-empty" }, findingFilter ? `Tidak ada site dengan temuan ${findingText} pada filter aktif.` : s.category === "LAINNYA" ? "Tidak ada temuan Lainnya pada filter aktif." : total ? "Tidak ada site yang cocok dengan filter status ini." : "Belum ada data PM Site. Upload data PM Site terlebih dahulu."))));
   }
 }
 class App extends React.Component {
   constructor(props) {
     super(props);
     __publicField(this, "openPage", async (page, preserveFilters = false) => {
+      // RCA dan Improvement tidak membutuhkan run KPI. Saat aplikasi dibuka
+      // langsung ke salah satu halaman itu, bootstrap eKPI memang sengaja
+      // ditunda. Memasuki eKPI/Data Upload untuk pertama kali memulai ulang
+      // shell pada halaman yang tepat agar hanya data yang relevan dimuat.
+      if ((page === "ekpi" || page === "data-upload") && this.state.run?.id === "__deferred__") {
+        window.location.assign(page === "data-upload" ? `${window.location.pathname}?page=data-upload` : window.location.pathname);
+        return;
+      }
       const isPreventive = page.startsWith("preventive");
+      try {
+        this.setState({ pageLoading: true, pageError: "" });
+        await loadPageAssets(page);
+      } catch (error) {
+        this.setState({ pageLoading: false, pageError: error.message });
+        return;
+      }
       window.history.replaceState({}, "", page === "data-upload" ? `${window.location.pathname}?page=data-upload` : page === "rca" ? `${window.location.pathname}?page=rca` : window.location.pathname);
       window.dispatchEvent(new Event("app:navigate"));
       clearTimeout(this.preventiveSearchTimer);
       const filters = preserveFilters ? this.state.preventiveFilters : defaultPreventiveFilters();
-      this.setState({ preventiveFilters: filters, navigationRevision: (this.state.navigationRevision || 0) + 1, activePage: page, preventiveOpen: isPreventive || this.state.preventiveOpen, preventiveFile: null, preventiveDate: "", preventiveData: isPreventive ? null : this.state.preventiveData, pageError: "", notice: "" });
+      this.setState({ preventiveFilters: filters, navigationRevision: (this.state.navigationRevision || 0) + 1, activePage: page, preventiveOpen: isPreventive || this.state.preventiveOpen, preventiveFile: null, preventiveDate: "", preventiveData: isPreventive ? null : this.state.preventiveData, pageLoading: false, pageError: "", notice: "" });
       if (page === "preventive-dashboard" || page === "preventive-genset" || page === "preventive-site") await this.refreshPreventive(filters, page === "preventive-genset" ? "genset" : page === "preventive-site" ? "site" : "");
     });
     __publicField(this, "togglePreventive", () => {
@@ -2210,7 +2284,7 @@ class App extends React.Component {
         this.setState({ shareLoading: false });
       }
     });
-    this.state = { config: null, run: null, dashboard: null, activePage: ["data-upload", "rca", "improvement-sumbagsel"].includes(new URLSearchParams(window.location.search).get("page")) ? new URLSearchParams(window.location.search).get("page") : "ekpi", preventiveOpen: false, preventiveData: null, preventiveScope: "", preventiveFile: null, preventiveDate: "", preventiveBusy: false, preventiveLoading: false, preventiveFilters: defaultPreventiveFilters(), region: "", nop: "", rowGroup: "", historyFilters: { day: "", month: "", year: "" }, historyItems: [], rangeStart: "", rangeEnd: "", rangeDashboard: null, kpiFilterContext: null, rangeLoading: false, draftFile: null, draftDate: "", busyUpload: false, pageError: "", prompt: "", promptDraft: "", reportText: "", reportError: "", reportLoading: false, tableImageLoading: false, shareLoading: false, showPrompt: false, notice: "" };
+    this.state = { config: null, run: null, dashboard: null, activePage: ["data-upload", "rca", "improvement-sumbagsel"].includes(new URLSearchParams(window.location.search).get("page")) ? new URLSearchParams(window.location.search).get("page") : "ekpi", pageLoading: false, preventiveOpen: false, preventiveData: null, preventiveScope: "", preventiveFile: null, preventiveDate: "", preventiveBusy: false, preventiveLoading: false, preventiveFilters: defaultPreventiveFilters(), region: "", nop: "", rowGroup: "", historyFilters: { day: "", month: "", year: "" }, historyItems: [], rangeStart: "", rangeEnd: "", rangeDashboard: null, kpiFilterContext: null, rangeLoading: false, draftFile: null, draftDate: "", busyUpload: false, pageError: "", prompt: "", promptDraft: "", reportText: "", reportError: "", reportLoading: false, tableImageLoading: false, shareLoading: false, showPrompt: false, notice: "" };
     this.requestId = 0;
     this.preventiveRequestId = 0;
     this.preventiveSearchTimer = null;
@@ -2224,6 +2298,8 @@ class App extends React.Component {
     window.removeEventListener("kpi:filtered-dashboard", this.onFilteredKpiDashboard);
   }
   async componentDidMount() {
+    try { await loadPageAssets(this.state.activePage); }
+    catch (error) { this.setState({ pageError: error.message }); }
     this.onFilteredKpiDashboard = (event) => {
       const detail = event.detail || {}, dashboard = detail.dashboard || null;
       this.setState({ rangeDashboard: dashboard, kpiFilterContext: dashboard ? detail : null }, () => {
@@ -2240,6 +2316,13 @@ class App extends React.Component {
       });
     };
     window.addEventListener("kpi:filtered-dashboard", this.onFilteredKpiDashboard);
+    // Halaman mandiri tidak memerlukan konfigurasi, riwayat, atau dashboard
+    // eKPI. Menunda seluruh bootstrap ini menghilangkan pembacaan snapshot
+    // KPI lama saat pengguna hanya membuka RCA/Improvement.
+    if (["rca", "improvement-sumbagsel"].includes(this.state.activePage)) {
+      this.setState({ config: { default_prompt: "", regions: {} }, run: { id: "__deferred__", processed: false } });
+      return;
+    }
     try {
       const config = await getConfig();
       window.__defaultReportPrompt = config.default_prompt;

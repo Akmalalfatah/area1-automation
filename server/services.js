@@ -99,21 +99,27 @@ export async function parseKpiCategoryExport(buffer){
   const matrix=sheetMatrix(sheet)
   if(matrix.length<2)throw new ValidationError('File KPI Category tidak memiliki baris data.')
   const headers=Object.fromEntries((matrix[0]||[]).map((value,index)=>[String(value??'').trim().toLowerCase(),index]))
-  const required=['nop','period','sonl 1 score category','somsal 0 score category']
-  const missing=required.filter(key=>headers[key]===undefined)
+  // SON L1 bulan aktif berasal dari upload eKPI Automation. File kategori
+  // terpisah kini wajib membawa SOMSA L0; kolom SON L1 lama tetap diterima
+  // untuk mempertahankan histori yang sudah tersedia.
+  const somsaHeader=['somsa l0 score category','somsal 0 score category','somsa l 0 score category'].find(key=>headers[key]!==undefined)
+  const sonHeader=['son l1 score category','sonl 1 score category','son l 1 score category'].find(key=>headers[key]!==undefined)
+  const missing=['nop','period'].filter(key=>headers[key]===undefined)
+  if(!somsaHeader)missing.push('SOMSA L0 Score Category')
   if(missing.length)throw new ValidationError(`Kolom KPI Category tidak lengkap: ${missing.join(', ')}.`)
   const records=new Map()
   for(const row of matrix.slice(1)){
-    const name=NOP_ORDER.find(item=>normalizeNop(item)===normalizeNop(row[headers.nop]))
+    const uploadedNop=normalizeNop(row[headers.nop]).replace(/^NOP\s+/,'')
+    const name=NOP_ORDER.find(item=>normalizeNop(item).replace(/^NOP\s+/,'')===uploadedNop)
     const period=categoryExportPeriod(row[headers.period])
     if(!name||!period)continue
-    const son_l1_category=String(row[headers['sonl 1 score category']]??'').trim()
-    const somsa_l0_category=String(row[headers['somsal 0 score category']]??'').trim()
+    const son_l1_category=sonHeader===undefined?'':String(row[headers[sonHeader]]??'').trim()
+    const somsa_l0_category=String(row[headers[somsaHeader]]??'').trim()
     if(!son_l1_category&&!somsa_l0_category)continue
     records.set(`${period}|${name}`,{name,region:NOP_TO_REGION[name],period,son_l1_category,somsa_l0_category})
   }
   const rows=[...records.values()].sort((a,b)=>a.period.localeCompare(b.period)||a.name.localeCompare(b.name))
-  if(!rows.length)throw new ValidationError('Tidak ada kategori SON L1 atau SOMSA L0 untuk R01, R02, dan R10 pada file ini.')
+  if(!rows.length)throw new ValidationError('Tidak ada kategori SOMSA L0 untuk R01, R02, dan R10 pada file ini.')
   const periods=[...new Set(rows.map(row=>row.period))]
   return {kind:'kpi_category_export',row_count:rows.length,periods,rows}
 }

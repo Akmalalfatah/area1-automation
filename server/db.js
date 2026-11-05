@@ -23,6 +23,16 @@ export function getPool(){
 
 const iso=value=>value instanceof Date?value.toISOString().slice(0,10):String(value).slice(0,10)
 const json=value=>JSON.stringify(value)
+async function writeJsonAtomic(file,value){
+  const temporary=`${file}.tmp`
+  await fs.writeFile(temporary,JSON.stringify(value),'utf8')
+  try{await fs.rename(temporary,file)}
+  catch(error){
+    if(!['EPERM','EACCES','EEXIST'].includes(error.code))throw error
+    await fs.copyFile(temporary,file)
+    await fs.unlink(temporary).catch(()=>{})
+  }
+}
 
 export async function initDb(serverDir){
   if(!databaseEnabled)return
@@ -79,16 +89,14 @@ export async function listHistory({day,month,year}={}){
 export async function loadHistoryDataset(runId){if(!databaseEnabled)return null;const [rows]=await getPool().query('SELECT dataset FROM kpi_history WHERE run_id=?',[runId]);const value=rows[0]?.dataset;return typeof value==='string'?JSON.parse(value):value||null}
 export async function loadPreviousHistoryDataset(runId,currentDate,reportingType=null){
   if(!databaseEnabled||!currentDate)return null
-  // Jangan pernah membandingkan Bulan Berjalan dengan Closing (atau sebaliknya)
-  // hanya karena tanggal upload-nya berurutan. Jenis periode tersimpan di
-  // dataset, sehingga lakukan seleksi setelah JSON dibaca.
-  const [rows]=await getPool().query('SELECT dataset FROM kpi_history WHERE run_id<>? AND date_end<? ORDER BY date_end DESC,created_at DESC LIMIT 100',[runId,currentDate])
-  for(const row of rows){
-    const value=typeof row.dataset==='string'?JSON.parse(row.dataset):row.dataset
-    const type=value?.reporting_period?.type||'current'
-    if(!reportingType||type===reportingType)return value||null
-  }
-  return null
+  // Seleksi tipe periode langsung di MySQL. Versi lama membaca dan mem-parse
+  // sampai 100 snapshot besar hanya untuk menemukan satu baseline yang cocok.
+  const params=[runId,currentDate]
+  const typeSql=reportingType?" AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(dataset,'$.reporting_period.type')),'current')=?":''
+  if(reportingType)params.push(reportingType)
+  const [rows]=await getPool().query(`SELECT dataset FROM kpi_history WHERE run_id<>? AND date_end<?${typeSql} ORDER BY date_end DESC,created_at DESC LIMIT 1`,params)
+  const value=rows[0]?.dataset
+  return typeof value==='string'?JSON.parse(value):value||null
 }
 
 // Satu snapshot ekspor KPI Category memuat seluruh histori bulan. Simpan
@@ -100,8 +108,7 @@ export async function saveKpiCategoryExport(filename,uploadDate,dataset){
     const file=path.join(DATA_DIR,'kpi-category-export.json')
     await fs.mkdir(DATA_DIR,{recursive:true})
     const record={filename,upload_date:uploadDate,dataset,updated_at:new Date().toISOString()}
-    await fs.writeFile(file+'.tmp',JSON.stringify(record,null,2),'utf8')
-    await fs.rename(file+'.tmp',file)
+    await writeJsonAtomic(file,record)
     await recordApplicationUpload('kpi_category','kpi-category-export',filename,uploadDate,rowCount)
     return {filename,upload_date:uploadDate,row_count:rowCount,period_count:(dataset?.periods||[]).length}
   }
@@ -164,8 +171,7 @@ async function savePreventiveUploadImpl(uploadId,uploadDate,filename,dataset){
     const replaced=records.filter(matches).length
     const kept=records.map(record=>matches(record)?{...record,active:false}:record)
     kept.push({upload_id:uploadId,upload_date:uploadDate,filename,dataset,updated_at:new Date().toISOString()})
-    await fs.writeFile(file+'.tmp',JSON.stringify(kept),'utf8')
-    await fs.rename(file+'.tmp',file)
+    await writeJsonAtomic(file,kept)
     return replaced
   }
   const connection=await getPool().getConnection()
@@ -184,24 +190,52 @@ async function localPreventiveUploads(includeInactive=false){
 const uploadKind=record=>record.dataset?.maintenance_kind||(String(record.filename).toLowerCase().includes('genset')?'genset':'site')
 export async function preventiveUploadHistory(page='dashboard',activeOnly=false){
   if(!['dashboard','genset','site'].includes(page))throw Object.assign(new Error('Halaman upload tidak valid.'),{status:422})
-  const records=databaseEnabled?(await getPool().query('SELECT upload_id,filename,dataset,upload_date,updated_at FROM preventive_uploads ORDER BY upload_date DESC,updated_at DESC'))[0]:await localPreventiveUploads(true)
+  if(databaseEnabled){
+    const [records]=await getPool().query(`SELECT upload_id,filename,upload_date,updated_at,
+      COALESCE(JSON_UNQUOTE(JSON_EXTRACT(dataset,'$.upload_page')),JSON_UNQUOTE(JSON_EXTRACT(dataset,'$.maintenance_kind')),CASE WHEN LOWER(filename) LIKE '%genset%' THEN 'genset' ELSE 'site' END) AS page,
+      CAST(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(dataset,'$.row_count')),'0') AS UNSIGNED) AS row_count,
+      JSON_UNQUOTE(JSON_EXTRACT(dataset,'$.date_start')) AS date_start,
+      JSON_UNQUOTE(JSON_EXTRACT(dataset,'$.date_end')) AS date_end
+      FROM preventive_uploads
+      WHERE COALESCE(JSON_UNQUOTE(JSON_EXTRACT(dataset,'$.upload_page')),JSON_UNQUOTE(JSON_EXTRACT(dataset,'$.maintenance_kind')),CASE WHEN LOWER(filename) LIKE '%genset%' THEN 'genset' ELSE 'site' END)=?
+      ORDER BY updated_at DESC,upload_date DESC`,[page])
+    return records.map(record=>({...record,upload_date:iso(record.upload_date),row_count:Number(record.row_count)||0,page}))
+  }
+  const records=await localPreventiveUploads(true)
   return records.map(record=>({...record,dataset:typeof record.dataset==='string'?JSON.parse(record.dataset):record.dataset})).filter(record=>(!activeOnly||record.active!==false)&&(record.dataset?.upload_page||uploadKind(record))===page).reverse().sort((a,b)=>String(b.updated_at).localeCompare(String(a.updated_at))).map(record=>({upload_id:record.upload_id,filename:record.filename,upload_date:iso(record.upload_date),row_count:record.dataset?.row_count||0,date_start:record.dataset?.date_start,date_end:record.dataset?.date_end,updated_at:record.updated_at,page}))
 }
 export async function recordApplicationUpload(page,id,filename,date,count,connection){
   if(databaseEnabled){await (connection||getPool()).query('INSERT INTO application_upload_history(upload_id,page,filename,upload_date,row_count) VALUES(?,?,?,?,?) ON DUPLICATE KEY UPDATE filename=VALUES(filename),upload_date=VALUES(upload_date),row_count=VALUES(row_count)',[id,page,filename,date,count]);return}
   const file=path.join(DATA_DIR,'upload-history.json');await fs.mkdir(DATA_DIR,{recursive:true});let records=await readLocalJson(file,[],{backupOnMalformed:true});
   if(!Array.isArray(records))records=[]
-  records=records.filter(row=>row.upload_id!==id);records.push({upload_id:id,page,filename,upload_date:date,row_count:count,updated_at:new Date().toISOString()});await fs.writeFile(file+'.tmp',JSON.stringify(records),'utf8');await fs.rename(file+'.tmp',file)
+  records=records.filter(row=>row.upload_id!==id);records.push({upload_id:id,page,filename,upload_date:date,row_count:count,updated_at:new Date().toISOString()});await writeJsonAtomic(file,records)
 }
 export async function applicationUploadHistory(page){
   if(!['ekpi','kpi_category','dashboard','genset','site','master','ggr','inap','swfm','kpi_b13','kpi_b13_r01','kpi_b13_r02','kpi_b13_r10'].includes(page))throw Object.assign(new Error('Halaman upload tidak valid.'),{status:422})
   const isSource=['master','ggr','inap','swfm','kpi_b13','kpi_b13_r01','kpi_b13_r02','kpi_b13_r10'].includes(page);
-  const legacy=isSource?databaseEnabled?(await getPool().query("SELECT CONCAT(source_kind,'-legacy') AS upload_id,filename,upload_date FROM pm_site_sources WHERE source_kind=?",[page]))[0].map(row=>({...row,page})):[]:page==='ekpi'?(await listHistory()).map(row=>({upload_id:row.run_id,filename:row.history?.upload?.filename||row.history?.file,upload_date:row.history?.upload?.date||row.date_end,updated_at:row.updated_at,page})):page==='kpi_category'?await (async()=>{const category=await loadKpiCategoryExport();return category?[{upload_id:'kpi-category-export',filename:category.filename,upload_date:category.upload_date,updated_at:category.updated_at,page}]:[]})():await preventiveUploadHistory(page)
   let logged=[];
   if(databaseEnabled)logged=(await getPool().query('SELECT upload_id,page,filename,upload_date,row_count,updated_at,history_order FROM application_upload_history WHERE page=? ORDER BY updated_at DESC,history_order DESC',[page]))[0];
   else if(page==='ekpi'){const records=await readLocalJson(path.join(DATA_DIR,'upload-history.json'),[]);logged=(Array.isArray(records)?records:[]).filter(row=>row?.page===page)}
+  // Riwayat terstruktur adalah sumber utama. Fallback legacy hanya dibaca bila
+  // tabel history belum memiliki data, sehingga halaman Data Upload tidak ikut
+  // membuka dataset/snapshot besar untuk setiap kartu freshness.
+  let legacy=[]
+  if(!logged.length){
+    legacy=isSource?databaseEnabled?(await getPool().query("SELECT CONCAT(source_kind,'-legacy') AS upload_id,filename,upload_date FROM pm_site_sources WHERE source_kind=?",[page]))[0].map(row=>({...row,page})):[]:page==='ekpi'?(await listHistory()).map(row=>({upload_id:row.run_id,filename:row.history?.upload?.filename||row.history?.file,upload_date:row.history?.upload?.date||row.date_end,updated_at:row.updated_at,page})):page==='kpi_category'?await (async()=>{const category=await loadKpiCategoryExport();return category?[{upload_id:'kpi-category-export',filename:category.filename,upload_date:category.upload_date,updated_at:category.updated_at,page}]:[]})():await preventiveUploadHistory(page)
+  }
   const historical=isSource?legacy.filter(row=>!logged.some(item=>item.filename===row.filename&&iso(item.upload_date)===iso(row.upload_date))):legacy
   return [...new Map([...historical,...logged].map(row=>[row.upload_id,{...row,upload_date:iso(row.upload_date)}])).values()].sort((a,b)=>String(b.updated_at).localeCompare(String(a.updated_at))||Number(b.history_order||0)-Number(a.history_order||0))
+}
+
+export async function preventiveAvailablePeriods(kind='site'){
+  if(!databaseEnabled){
+    const records=await localPreventiveUploads(true)
+    return [...new Set(records.filter(record=>uploadKind(record)===kind).map(record=>iso(record.upload_date).slice(0,7)).filter(value=>/^\d{4}-\d{2}$/.test(value)))].sort().reverse()
+  }
+  const [rows]=await getPool().query(`SELECT DISTINCT DATE_FORMAT(upload_date,'%Y-%m') AS period FROM preventive_uploads
+    WHERE COALESCE(JSON_UNQUOTE(JSON_EXTRACT(dataset,'$.maintenance_kind')),CASE WHEN LOWER(filename) LIKE '%genset%' THEN 'genset' WHEN LOWER(filename) LIKE '%punchlist%' THEN 'punchlist' ELSE 'site' END)=?
+    ORDER BY period DESC`,[kind])
+  return rows.map(row=>String(row.period||'')).filter(value=>/^\d{4}-\d{2}$/.test(value))
 }
 const monthList=(dateFrom,dateTo)=>{
   const format=date=>new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',timeZone:'Asia/Jakarta'}).format(date).slice(0,7)
@@ -232,26 +266,4 @@ export async function loadPreventiveRows({dateFrom,dateTo}={}){
   return uniqueRecords.flatMap(record=>{const dataset=typeof record.dataset==='string'?JSON.parse(record.dataset):record.dataset;const filename=String(record.filename||'').toLowerCase(),maintenance_kind=dataset?.maintenance_kind||(filename.includes('genset')?'genset':filename.includes('punchlist')?'punchlist':'site');return(dataset?.rows||[]).map(row=>({...row,maintenance_kind:row.maintenance_kind||maintenance_kind,_upload_date:iso(record.upload_date),_updated_at:record.updated_at?.toISOString?.()||record.updated_at}))})
 }
 
-// Catatan PM Punchlist adalah atribut site, bukan status pekerjaan bulanan.
-// Ambil Notes yang sudah pernah ada pada upload PM Site terdahulu sebagai
-// fallback saat file bulan aktif belum membawa kembali kolom Notes tersebut.
-let preventiveNotesCache={at:0,rows:[]}
-export async function loadHistoricalPmSiteNotes(){
-  if(!databaseEnabled)return[]
-  if(Date.now()-preventiveNotesCache.at<60_000)return preventiveNotesCache.rows
-  const [records]=await getPool().query('SELECT filename,dataset,updated_at FROM preventive_uploads ORDER BY updated_at DESC')
-  const notes=new Map()
-  for(const record of records){
-    let dataset
-    try{dataset=typeof record.dataset==='string'?JSON.parse(record.dataset):record.dataset}catch{continue}
-    const filename=String(record.filename||'').toLowerCase(),kind=dataset?.maintenance_kind||(filename.includes('genset')?'genset':filename.includes('punchlist')?'punchlist':'site')
-    if(kind!=='site'||!Array.isArray(dataset?.rows))continue
-    for(const row of dataset.rows||[]){
-      const siteId=String(row.site_id||'').trim().toUpperCase(),note=String(row.notes??row.note??row.catatan??'').trim()
-      if(siteId&&note&&!notes.has(siteId))notes.set(siteId,{site_id:siteId,note,updated_at:record.updated_at?.toISOString?.()||record.updated_at||null})
-    }
-  }
-  preventiveNotesCache={at:Date.now(),rows:[...notes.values()]}
-  return preventiveNotesCache.rows
-}
 export async function latestPreventiveUpload(){const rows=databaseEnabled?(await getPool().query('SELECT upload_id,upload_date,filename,dataset,updated_at FROM preventive_uploads ORDER BY upload_date DESC,updated_at DESC LIMIT 1'))[0]:await localPreventiveUploads();const row=rows.sort((a,b)=>String(b.upload_date).localeCompare(String(a.upload_date))||String(b.updated_at).localeCompare(String(a.updated_at)))[0];if(!row)return null;const dataset=typeof row.dataset==='string'?JSON.parse(row.dataset):row.dataset;return{upload_id:row.upload_id,upload_date:iso(row.upload_date),filename:row.filename,row_count:dataset?.row_count||0,data_month:dataset?.data_month,date_start:dataset?.date_start,date_end:dataset?.date_end,updated_at:row.updated_at?.toISOString?.()||row.updated_at}}

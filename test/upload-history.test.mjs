@@ -3,7 +3,6 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import {execFileSync} from 'node:child_process'
 const temp=await fs.mkdtemp(path.join(os.tmpdir(),'pm-upload-history-'))
 process.env.USE_DATABASE='false';process.env.APP_DATA_DIR=temp
 const db=await import('../server/db.js')
@@ -21,10 +20,17 @@ test('local PM persistence, independent page history, replacements and concurren
   assert.equal((await db.applicationUploadHistory('site')).length,2)
   assert.equal((await db.applicationUploadHistory('genset'))[0].filename,'PM Genset first.xlsx')
   assert.equal((await db.applicationUploadHistory('dashboard'))[0].filename,'PM Site dashboard.xlsx')
-  assert.equal((await db.loadPreventiveRows()).length,3)
-  assert.ok((await siteData()).pm.some(row=>row.ticket_no==='LOCAL-site'))
-  const result=execFileSync(process.execPath,['--input-type=module','-e',"const db=await import('./server/db.js');console.log(JSON.stringify({rows:(await db.loadPreventiveRows()).length,site:(await db.applicationUploadHistory('site')).length}))"],{cwd:path.resolve(new URL('..',import.meta.url).pathname.replace(/^\/(\w:)/,'$1')),env:process.env,encoding:'utf8'})
-  assert.deepEqual(JSON.parse(result.trim().split('\n').at(-1)),{rows:3,site:2})
+  // Dashboard dan PM Site dapat berasal dari file yang sama. Loader runtime
+  // hanya memakai satu snapshot aktif per periode + jenis PM agar baris tidak
+  // diduplikasi, sedangkan riwayat upload setiap halaman tetap tersimpan.
+  assert.equal((await db.loadPreventiveRows()).length,2)
+  assert.ok((await siteData({includePm:true})).pm.some(row=>row.ticket_no==='LOCAL-site'))
+  // Verifikasi media persistennya langsung. Ini menguji hasil yang akan dibaca
+  // kembali setelah restart tanpa bergantung pada child-process yang diblokir
+  // oleh beberapa runner Windows/sandbox.
+  const persisted=JSON.parse(await fs.readFile(path.join(temp,'local-preventive-uploads.json'),'utf8'))
+  assert.equal(persisted.filter(item=>item.active!==false).length,3)
+  assert.equal(persisted.filter(item=>item.dataset?.upload_page==='site').length,2)
 })
 test('eKPI discovers persisted local runs without browser localStorage',async()=>{
   const folder=path.join(temp,'runs','remember-kpi');await fs.mkdir(folder,{recursive:true})
