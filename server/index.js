@@ -30,7 +30,9 @@ const app=express(), upload=multer({
 // API clients do not send compressed JSON. Reject encoded request bodies before
 // body-parser can create a decompression stream.
 app.use(express.json({limit:'1mb',inflate:false}))
-app.use('/static',express.static(`${WEB_DIR}/static`))
+// Static assets are versioned in index.html/app.js. no-cache prevents a proxy
+// from pairing a freshly deployed app.js with an older CSS or PM module.
+app.use('/static',express.static(`${WEB_DIR}/static`,{etag:true,maxAge:0,setHeaders(res){res.setHeader('Cache-Control','no-cache, max-age=0, must-revalidate')}}))
 app.get('/',(_req,res)=>res.sendFile(`${WEB_DIR}/index.html`))
 app.get('/api/health',(_req,res)=>res.json({status:'ok',runtime:'node'}))
 app.get('/api/config',(_req,res)=>res.json({regions:REGION_NOPS,default_prompt:DEFAULT_REPORT_PROMPT,database_enabled:databaseEnabled}))

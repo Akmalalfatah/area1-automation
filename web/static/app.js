@@ -140,12 +140,12 @@ const getKpiCategoryExport = ({ runId, region, nop, periods } = {}) => {
   return api(`/api/kpi-category-export${params.size ? `?${params}` : ""}`);
 };
 const PAGE_ASSETS = {
-  "preventive-dashboard": { styles: ["/static/pm-site.css?v=20261105-lazy"] },
-  "preventive-punchlist": { styles: ["/static/pm-punchlist.css?v=20261105-performance"] },
-  "preventive-site": { styles: ["/static/pm-site.css?v=20261105-lazy"], scripts: ["/static/pm-site.js?v=20261022-l0-l1-filters"] },
-  "preventive-genset": { styles: ["/static/pm-site.css?v=20261105-lazy", "/static/pm-genset.css?v=20261105-lazy"], scripts: ["/static/pm-site.js?v=20261022-l0-l1-filters", "/static/pm-genset.js?v=20261016-genset-operational-focus"] },
-  rca: { styles: ["/static/rca.css?v=20261105-lazy", "/static/rca-template.css?v=20261105-lazy", "/static/rca-typography.css?v=20261105-lazy"], scripts: ["/static/rca.js?v=20261023-duration-buckets"] },
-  "improvement-sumbagsel": { styles: ["/static/improvement-sumbagsel.css?v=20261105-lazy"], scripts: ["/static/improvement-sumbagsel.js?v=20261030-unified-filter-dropdowns"] }
+  "preventive-dashboard": { styles: ["/static/pm-site.css?v=20261105-asset-integrity"] },
+  "preventive-punchlist": { styles: ["/static/pm-punchlist.css?v=20261105-asset-integrity"] },
+  "preventive-site": { styles: ["/static/pm-site.css?v=20261105-asset-integrity"], scripts: ["/static/pm-site.js?v=20261105-asset-integrity"] },
+  "preventive-genset": { styles: ["/static/pm-site.css?v=20261105-asset-integrity", "/static/pm-genset.css?v=20261105-asset-integrity"], scripts: ["/static/pm-site.js?v=20261105-asset-integrity", "/static/pm-genset.js?v=20261105-asset-integrity"] },
+  rca: { styles: ["/static/rca.css?v=20261105-asset-integrity", "/static/rca-template.css?v=20261105-asset-integrity", "/static/rca-typography.css?v=20261105-asset-integrity"], scripts: ["/static/rca.js?v=20261105-asset-integrity"] },
+  "improvement-sumbagsel": { styles: ["/static/improvement-sumbagsel.css?v=20261105-asset-integrity"], scripts: ["/static/improvement-sumbagsel.js?v=20261105-asset-integrity"] }
 };
 const PAGE_MODULES = {
   "preventive-site": ["PMSiteModule"],
