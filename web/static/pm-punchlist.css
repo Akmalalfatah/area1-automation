@@ -77,8 +77,7 @@
 /* ---------- Filters ---------- */
 .pl-filters { display:grid; grid-template-columns:repeat(3,minmax(150px,.6fr)) minmax(260px,1.7fr); align-items:end; gap:14px; padding-bottom:16px; border-bottom:1px solid #e2e8f0; }
 .pl-field { display:flex; flex-direction:column; gap:6px; min-width:0; }
-.pl-field .control { width:100%; min-width:0; height:40px; padding:0 12px; font-size:11px; }
-.pl-field select.control { font-weight:600; }
+.pl-field .control { width:100%; min-width:0; height:40px; padding:0 12px; font-size:10px; font-weight:600; }
 
 .pl-segments { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
 .pl-segment { display:inline-flex; align-items:center; gap:8px; padding:7px 12px; border:1px solid #cbd5e1; border-radius:3px; background:#fff; color:#53657a; font-size:10px; font-weight:600; cursor:pointer; transition:border-color .15s ease,color .15s ease,background .15s ease; }

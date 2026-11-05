@@ -538,7 +538,7 @@ class MasterSiteUploadSection extends React.Component {
   }
   render() {
     var _a, _b, _c;
-    const h = React.createElement, s = this.state, draft = s.drafts[s.kind] || {}, types = [["ekpi", "eKPI Automation"], ["kpi_category", "Data Upload SOMSA L0"], ["dashboard", "PM Punchlist"], ["genset", "PM Genset"], ["site", "PM Site"], ["master", "Master Site"], ["ggr", "GGR"], ["inap", "Ticket INAP"], ["swfm", "Ticket SWFM"], ["kpi_b13_r01", "KPIData B.1-B.3 R01"], ["kpi_b13_r02", "KPIData B.1-B.3 R02"], ["kpi_b13_r10", "KPIData B.1-B.3 R10"]], label = types.find(([key]) => key === s.kind)[1], latest = (_a = s.items.find((item) => item.key === s.kind)) == null ? void 0 : _a.latest;
+    const h = React.createElement, s = this.state, draft = s.drafts[s.kind] || {}, types = [["ekpi", "eKPI Automation"], ["kpi_category", "SOMSA L0"], ["dashboard", "PM Punchlist"], ["genset", "PM Genset"], ["site", "PM Site"], ["master", "Master Site"], ["ggr", "GGR"], ["inap", "Ticket INAP"], ["swfm", "Ticket SWFM"], ["kpi_b13_r01", "KPIData B.1-B.3 R01"], ["kpi_b13_r02", "KPIData B.1-B.3 R02"], ["kpi_b13_r10", "KPIData B.1-B.3 R10"]], label = types.find(([key]) => key === s.kind)[1], latest = (_a = s.items.find((item) => item.key === s.kind)) == null ? void 0 : _a.latest;
     const formatDate = (value) => value && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(8, 10) + "/" + value.slice(5, 7) + "/" + value.slice(0, 4) : "-";
     const formatDateTime = (value) => { const date = value ? new Date(value) : null; return date && !Number.isNaN(date.getTime()) ? new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Jakarta", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }).format(date).replace(",", ", ") + " WIB" : formatDate(value); };
     return h(
@@ -791,9 +791,18 @@ function PreventiveDashboardCards({ data, file, date, busy, loading, filters, on
     h("div", { className: "preventive-filter-search" }, h("label", { className: "filter-label mb-1 block" }, "SEARCH"), h("input", { type: "search", value: filters.search, onChange: (event) => onFilter("search", event.target.value), placeholder: "Cari Site ID, Site Name, NOP, atau Notes", className: "control h-10 w-full px-3 text-[10px]" }))
   );
   const statuses = PM_PROGRESS_STATUSES, nopSummary = (data == null ? void 0 : data.nop_summary) || [];
-  const columns = ["REGIONAL", "NOP", "PLAN SITE", "CLOSED", "SUBMITTED DATE", "BELUM SUBMITTED", ...statuses.map(([, label]) => label)];
+  // Satu schema dipakai oleh header dan seluruh baris. Ini mencegah sel status
+  // lama/tersisa muncul tanpa pasangan header pada tabel progress.
+  const progressColumns = [
+    { key: "plan", label: "PLAN SITE", className: "is-plan", value: item => Number(item.plan) || 0 },
+    { key: "approved", label: "CLOSED", className: item => Number(item.plan) && Number(item.approved) ? "is-approved" : "is-zero", value: item => Number(item.approved) || 0 },
+    { key: "submitted", label: "SUBMITTED DATE", value: item => Number(item.submitted) || 0 },
+    { key: "pending", label: "BELUM SUBMITTED", className: item => Number(item.pending) >= 50 ? "is-pending is-high" : "is-pending", value: item => Number(item.pending) || 0 },
+    ...statuses.map(([key, label]) => ({ key, label, className: item => `is-status is-status-${key}${Number(item.progress_statuses?.[key]) ? "" : " is-zero"}`, value: item => Number(item.progress_statuses?.[key]) || 0 }))
+  ];
+  const columns = ["REGIONAL", "NOP", ...progressColumns.map(column => column.label)];
   const progressTotal = pmProgressTotal;
-  const progressCells = (item, prefix) => { const plan = Number(item.plan) || 0, submitted = Number(item.submitted) || 0; return [h("td", { key: `${prefix}-plan`, className: "is-plan" }, plan), h("td", { key: `${prefix}-approved`, className: plan && Number(item.approved) ? "is-approved" : "is-zero" }, Number(item.approved) || 0), h("td", { key: `${prefix}-submitted` }, submitted), h("td", { key: `${prefix}-pending`, className: Number(item.pending) >= 50 ? "is-pending is-high" : "is-pending" }, Number(item.pending) || 0), ...statuses.map(([key]) => h("td", { key: `${prefix}-${key}`, className: `is-status is-status-${key}${Number(item.progress_statuses?.[key]) ? "" : " is-zero"}` }, Number(item.progress_statuses?.[key]) || 0))]; };
+  const progressCells = (item, prefix) => progressColumns.map(column => h("td", { key: `${prefix}-${column.key}`, className: typeof column.className === "function" ? column.className(item) : column.className }, column.value(item)));
   const progressRows = pmGroupByRegional(nopSummary).flatMap(([regional, items], groupIndex) => { const total = progressTotal(items), tone = `pm-region-tone-${groupIndex % 3}`, rowSpan = items.length + 1; return [...items.map((item, index) => h("tr", { className: `preventive-nop-row ${tone}` + (index % 2 ? " is-stripe" : ""), key: `${regional}-${item.nop}` }, index === 0 ? h("th", { scope: "rowgroup", rowSpan, className: "preventive-progress-regional" }, regional) : null, h("th", { scope: "row", className: "preventive-progress-nop" }, compactNop(item.nop)), ...progressCells(item, `${regional}-${item.nop}`))), h("tr", { className: `preventive-progress-regional-total ${tone}`, key: `regional-${regional}` }, h("th", { scope: "row", className: "preventive-progress-total-label" }, "GRAND TOTAL"), ...progressCells(total, `regional-${regional}`))]; });
   const allProgressTotal = progressTotal(nopSummary);
   progressRows.push(h("tr", { className: "preventive-progress-grand", key: "progress-total" }, h("th", { scope: "row", colSpan: 2 }, "TOTAL SELURUH REGIONAL"), ...progressCells(allProgressTotal, "progress-total")));
