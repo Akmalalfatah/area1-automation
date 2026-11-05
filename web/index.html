@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#17365D" />
   <title>A1 Operations Command Center</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2317365D'/%3E%3Cpath d='M8 24 16 7l8 17h-4.1L16 15.5 12.1 24H8Z' fill='white'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -16,14 +17,16 @@
   <script src="/static/react-dom.production.min.js"></script>
   <script>
     /* Safe fallbacks: a stale cached PM module must never make React render undefined. */
-    window.PMAttentionCharts = window.PMAttentionCharts || function () { return null; };
-    window.PMWorkStatus = window.PMWorkStatus || function () { return null; };
-    window.PMConditionBadge = window.PMConditionBadge || function () { return null; };
-    window.PMSiteModule = window.PMSiteModule || function () { return null; };
-    window.PMGensetWorkspace = window.PMGensetWorkspace || function () { return null; };
-    window.RCAWorkspace = window.RCAWorkspace || function () { return null; };
-    window.SumbagselImprovement = window.SumbagselImprovement || function () { return null; };
+    window.__a1Fallback = window.__a1Fallback || function () { return null; };
+    window.__a1Fallback.__a1Placeholder = true;
+    window.PMAttentionCharts = window.PMAttentionCharts || window.__a1Fallback;
+    window.PMWorkStatus = window.PMWorkStatus || window.__a1Fallback;
+    window.PMConditionBadge = window.PMConditionBadge || window.__a1Fallback;
+    window.PMSiteModule = window.PMSiteModule || window.__a1Fallback;
+    window.PMGensetWorkspace = window.PMGensetWorkspace || window.__a1Fallback;
+    window.RCAWorkspace = window.RCAWorkspace || window.__a1Fallback;
+    window.SumbagselImprovement = window.SumbagselImprovement || window.__a1Fallback;
   </script>
-<script src="/static/app.js?v=20261105-lazy-data-loading"></script>
+<script src="/static/app.js?v=20261105-runtime-guard"></script>
 </body>
 </html>

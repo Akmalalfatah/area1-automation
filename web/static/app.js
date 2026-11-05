@@ -6,6 +6,10 @@ var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { en
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 const React = window.React;
 const ReactDOM = window.ReactDOM;
+// A failed or stale lazy-loaded module must never be passed directly to React.
+// React error #130 is otherwise raised when a global component is undefined.
+const EmptyRuntimeModule = () => null;
+const runtimeComponent = (name, fallback = EmptyRuntimeModule) => typeof window[name] === "function" ? window[name] : fallback;
 const ICON_PATHS = {
   Activity: ['<path d="M3 12h4l2-7 4 14 2-7h6"/>'],
   BarChart3: ['<path d="M3 3v18h18"/>', '<path d="M7 16v-4M12 16V8M17 16V5"/>'],
@@ -143,23 +147,62 @@ const PAGE_ASSETS = {
   rca: { styles: ["/static/rca.css?v=20261105-lazy", "/static/rca-template.css?v=20261105-lazy", "/static/rca-typography.css?v=20261105-lazy"], scripts: ["/static/rca.js?v=20261023-duration-buckets"] },
   "improvement-sumbagsel": { styles: ["/static/improvement-sumbagsel.css?v=20261105-lazy"], scripts: ["/static/improvement-sumbagsel.js?v=20261030-unified-filter-dropdowns"] }
 };
+const PAGE_MODULES = {
+  "preventive-site": ["PMSiteModule"],
+  "preventive-genset": ["PMSiteModule", "PMGensetWorkspace"],
+  rca: ["RCAWorkspace"],
+  "improvement-sumbagsel": ["SumbagselImprovement"]
+};
 const loadedPageAssets = new Map();
 const loadStylesheet = (href) => new Promise((resolve, reject) => {
-  if ([...document.styleSheets].some((sheet) => sheet.href === new URL(href, window.location.href).href)) return resolve();
+  const absoluteHref = new URL(href, window.location.href).href;
+  if ([...document.styleSheets].some((sheet) => sheet.href === absoluteHref)) return resolve();
+  const existing = [...document.querySelectorAll("link[rel='stylesheet']")].find((link) => link.href === absoluteHref);
+  if (existing) {
+    if (existing.dataset.a1Loaded === "true") return resolve();
+    if (existing.dataset.a1Failed === "true") existing.remove();
+    else {
+      existing.addEventListener("load", resolve, { once: true });
+      existing.addEventListener("error", () => reject(new Error(`Gagal memuat ${href}`)), { once: true });
+      return;
+    }
+  }
   const link = document.createElement("link");
-  link.rel = "stylesheet"; link.href = href; link.onload = resolve; link.onerror = () => reject(new Error(`Gagal memuat ${href}`));
+  link.rel = "stylesheet"; link.href = href;
+  link.onload = () => { link.dataset.a1Loaded = "true"; resolve(); };
+  link.onerror = () => { link.dataset.a1Failed = "true"; link.remove(); reject(new Error(`Gagal memuat ${href}`)); };
   document.head.appendChild(link);
 });
 const loadScript = (src) => new Promise((resolve, reject) => {
-  if ([...document.scripts].some((script) => script.src === new URL(src, window.location.href).href)) return resolve();
+  const absoluteSrc = new URL(src, window.location.href).href;
+  const existing = [...document.scripts].find((script) => script.src === absoluteSrc);
+  if (existing) {
+    if (existing.dataset.a1Loaded === "true") return resolve();
+    if (existing.dataset.a1Failed === "true") existing.remove();
+    else {
+      existing.addEventListener("load", resolve, { once: true });
+      existing.addEventListener("error", () => reject(new Error(`Gagal memuat ${src}`)), { once: true });
+      return;
+    }
+  }
   const script = document.createElement("script");
-  script.src = src; script.async = true; script.onload = resolve; script.onerror = () => reject(new Error(`Gagal memuat ${src}`));
+  script.src = src; script.async = true;
+  script.onload = () => { script.dataset.a1Loaded = "true"; resolve(); };
+  script.onerror = () => { script.dataset.a1Failed = "true"; script.remove(); reject(new Error(`Gagal memuat ${src}`)); };
   document.body.appendChild(script);
 });
 const loadPageAssets = (page) => {
   const assets = PAGE_ASSETS[page];
   if (!assets) return Promise.resolve();
-  if (!loadedPageAssets.has(page)) loadedPageAssets.set(page, Promise.all((assets.styles || []).map(loadStylesheet)).then(async () => { for (const script of assets.scripts || []) await loadScript(script); }));
+  if (!loadedPageAssets.has(page)) {
+    const request = Promise.all((assets.styles || []).map(loadStylesheet)).then(async () => {
+      for (const script of assets.scripts || []) await loadScript(script);
+      const missing = (PAGE_MODULES[page] || []).filter((name) => typeof window[name] !== "function" || window[name].__a1Placeholder);
+      if (missing.length) throw new Error(`Modul halaman belum tersedia: ${missing.join(", ")}. Muat ulang halaman setelah semua file deployment diperbarui.`);
+    });
+    loadedPageAssets.set(page, request);
+    request.catch(() => loadedPageAssets.delete(page));
+  }
   return loadedPageAssets.get(page);
 };
 const preventiveQueryParams = (filters = {}, maintenanceType = "") => {
@@ -688,6 +731,8 @@ function PreventiveOperationalInsights({ data, filters, onFilter }) {
 }
 function PreventiveDashboardCards({ data, file, date, busy, loading, filters, onFile, onDate, onUpload, onFilter, onReview, onRefresh }) {
   const h = React.createElement;
+  const WorkStatus = runtimeComponent("PMWorkStatus");
+  const ConditionBadge = runtimeComponent("PMConditionBadge");
   const rows = data && data.rows || [];
   const visibleRows = rows.slice(0, 100);
   const details = (row) => [
@@ -749,14 +794,14 @@ function PreventiveDashboardCards({ data, file, date, busy, loading, filters, on
         h("div", { className: "preventive-card-section" }, h("p", { className: "preventive-card-label" }, "SITE ID"), h("p", { className: "pm-site-work-value" }, row.site_id)),
         h("div", { className: "preventive-card-section with-divider" }, h("p", { className: "preventive-card-label" }, "SITE NAME"), h("p", { className: "pm-site-work-value" }, row.site_name)),
         h("div", { className: "preventive-card-section with-divider" }, h("p", { className: "preventive-card-label" }, "NOP"), h("p", { className: "pm-site-work-value" }, compactNop(row.nop))),
-        h("div", { className: "preventive-card-section with-divider" }, h("p", { className: "preventive-card-label" }, "STATUS PM"), h("div", { className: "pm-card-statuses" }, h(window.PMWorkStatus, { status: row.status || "Belum tersedia" }), h(window.PMConditionBadge, { row }))),
+        h("div", { className: "preventive-card-section with-divider" }, h("p", { className: "preventive-card-label" }, "STATUS PM"), h("div", { className: "pm-card-statuses" }, h(WorkStatus, { status: row.status || "Belum tersedia" }), h(ConditionBadge, { row }))),
         h(ChevronRight, { size: 15, className: "preventive-card-chevron" })
       ),
       h(
         "div",
         { className: "preventive-card-details" },
         h("div", { className: `pm-dashboard-review ${((_a = row.review_reasons) == null ? void 0 : _a.length) ? "needs-review" : ""}` }, h("div", null, h("strong", null, row.review_label || "Memerlukan pemeriksaan"), h("p", null, ((_b = row.review_reasons) == null ? void 0 : _b.length) ? row.review_reasons.join(" \xB7 ") : "Pemeriksaan ringkas jadwal dan Master Site; riwayat gangguan ditinjau pada halaman evaluasi.")), ["site", "genset"].includes(row.maintenance_kind) && h("button", { type: "button", onClick: () => onReview(row) }, `Evaluasi ${row.maintenance_kind === "genset" ? "PM Genset" : "PM Site"} \u2192`)),
-        h("div", { className: "preventive-detail-grid" }, ...details(row).map(([label, value]) => h("div", { key: label }, h("p", { className: "preventive-card-label" }, label), label === "STATUS" ? h(window.PMWorkStatus, { status: value }) : h("p", { className: "mt-1 text-[10px] font-medium leading-4 text-[#42536A]" }, value)))),
+        h("div", { className: "preventive-detail-grid" }, ...details(row).map(([label, value]) => h("div", { key: label }, h("p", { className: "preventive-card-label" }, label), label === "STATUS" ? h(WorkStatus, { status: value }) : h("p", { className: "mt-1 text-[10px] font-medium leading-4 text-[#42536A]" }, value)))),
         h("div", { className: "pm-dashboard-master" }, h("h3", null, "MASTER SITE"), row.master ? h("div", { className: "preventive-detail-grid" }, ...[["CLASS / TYPE", [row.master.class_site, row.master.type_site].filter(Boolean).join(" \xB7 ")], ["REGIONAL / NOP", [row.master.regional, row.master.nop].filter(Boolean).join(" \xB7 ")], ["CLUSTER", row.master.cluster], ["SITE AKTIF", masterActiveLabel(row.master.active)], ["GENSET AKTIF", masterActiveLabel(row.master.genset_active)], ["OWNER", row.master.owner]].map(([label, value]) => h("div", { key: label }, h("p", { className: "preventive-card-label" }, label), h("p", { className: "mt-1 text-[10px] text-[#42536A]" }, value || "Belum tersedia")))) : h("p", null, "Site belum ditemukan pada Master Site. Upload atau periksa data referensi di Dashboard.")),
         h("div", { className: "preventive-notes" }, h("p", { className: "preventive-card-label" }, row.punchlist_note ? "PUNCHLIST SITE" : "NOTES"), h("p", { className: "mt-1 text-[10px] leading-5 text-[#42536A]" }, row.punchlist_note || row.notes || "-"))
       )
@@ -782,8 +827,11 @@ function PreventivePlaceholder({ title }) {
   return /* @__PURE__ */ React.createElement("section", { className: "corporate-panel flex min-h-[360px] items-center justify-center p-8 text-center" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("h2", { className: "section-title" }, title.toUpperCase()), /* @__PURE__ */ React.createElement("p", { className: "mt-3 text-[11px] text-slate-400" }, "Section ini sudah disiapkan pada navigasi dan dapat dilanjutkan setelah desain serta data Excel-nya ditentukan.")));
 }
 function PreventiveRoutinePage({ data, file, date, busy, loading, filters, onFile, onDate, onUpload, onFilter, kind, onOpenGenset }) {
-  if (kind === "site") return React.createElement(window.PMSiteModule, { filters, pmData: data, upload: onFilter.uploadProps || {}, UploadPanel: () => null, SummaryCard: PreventiveSummaryCard });
+  if (kind === "site") return React.createElement(runtimeComponent("PMSiteModule"), { filters, pmData: data, upload: onFilter.uploadProps || {}, UploadPanel: () => null, SummaryCard: PreventiveSummaryCard });
   const h = React.createElement;
+  const WorkStatus = runtimeComponent("PMWorkStatus");
+  const ConditionBadge = runtimeComponent("PMConditionBadge");
+  const AttentionCharts = runtimeComponent("PMAttentionCharts");
   const upload = onFilter.uploadProps || {};
   const rows = data && data.rows || [];
   const cards = rows.slice(0, 100).map((row, index) => h("button", {
@@ -794,7 +842,7 @@ function PreventiveRoutinePage({ data, file, date, busy, loading, filters, onFil
   }, h(
     "div",
     { className: "preventive-card-head" },
-    ...[["SITE ID", row.site_id], ["SITE NAME", row.site_name], ["NOP", compactNop(row.nop)], ["PIC", row.pic || "Belum tersedia"], ["STATUS PM", row.status || "Belum tersedia"]].map(([label, value], i) => h("div", { key: label, className: `preventive-card-section ${i ? "with-divider" : ""}` }, h("p", { className: "preventive-card-label" }, label), label === "STATUS PM" ? h("div", { className: "pm-card-statuses" }, h(window.PMWorkStatus, { status: value }), h(window.PMConditionBadge, { row })) : h("p", { className: "pm-site-work-value" }, value))),
+    ...[["SITE ID", row.site_id], ["SITE NAME", row.site_name], ["NOP", compactNop(row.nop)], ["PIC", row.pic || "Belum tersedia"], ["STATUS PM", row.status || "Belum tersedia"]].map(([label, value], i) => h("div", { key: label, className: `preventive-card-section ${i ? "with-divider" : ""}` }, h("p", { className: "preventive-card-label" }, label), label === "STATUS PM" ? h("div", { className: "pm-card-statuses" }, h(WorkStatus, { status: value }), h(ConditionBadge, { row })) : h("p", { className: "pm-site-work-value" }, value))),
     h(ChevronRight, { size: 15, className: "preventive-card-chevron" })
   )));
   const routineSelect = (label, field, items, placeholder, width) => h("div", null, h("label", { className: "filter-label mb-1 block" }, label), h("select", { value: filters[field] || "", onChange: (e) => onFilter(field, e.target.value), className: `control h-10 ${width} px-3 text-[10px] font-semibold` }, h("option", { value: "" }, placeholder), ...items.map((item) => h("option", { key: item, value: item }, field === "nop" ? compactNop(item) : { overdue: "Terlambat", upcoming: "Belum Jatuh Tempo", submitted: "Submitted" }[item] || item))));
@@ -802,7 +850,7 @@ function PreventiveRoutinePage({ data, file, date, busy, loading, filters, onFil
   const generalFilters = h("div", { className: "preventive-filter-row border-b-0 pb-0" }, routineSelect("PIC", "pic", data && data.pic_options || [], "All PIC", "w-[170px]"), routineSelect("TYPE POWER", "typePower", data && data.type_power_options || [], "All Type Power", "w-[180px]"), routineSelect("SCOPE ITEM", "scopeItem", data && data.scope_item_options || [], "All Scope Item", "w-[210px]"), routineSelect("STATUS PM", "status", data && data.status_options || [], "All Status", "w-[160px]"), h("div", { className: "min-w-[245px] flex-1" }, h("label", { className: "filter-label mb-1 block" }, "SEARCH"), h("input", { value: filters.search || "", onChange: (e) => onFilter("search", e.target.value), className: "control h-10 w-full px-3 text-[10px] font-semibold", placeholder: "Cari Site ID, Site Name, atau ticket" })));
   const filtersBar = h("div", { className: "space-y-3" }, dateRow);
   const title = kind === "genset" ? "PM GENSET" : "PM SITE";
-  return h("div", { className: "space-y-4" }, h("div", { className: "grid grid-cols-4 gap-4" }, h(PreventiveSummaryCard, { label: `PLAN ${kind === "genset" ? "GENSET" : "SITE"}`, value: data && data.plan != null ? data.plan : 0, detail: `${shortDate(filters.dateFrom)} sampai ${shortDate(filters.dateTo)}`, tone: "navy" }), h(PreventiveSummaryCard, { label: "SUBMITTED", value: data && data.submitted != null ? data.submitted : 0, detail: "Site unik dengan Submitted Date terisi", tone: "green" }), h(PreventiveSummaryCard, { label: "ACHIEVEMENT", value: `${formatNumber(data && data.achievement != null ? data.achievement : 0)}%`, detail: "Submitted dibanding Plan pada filter aktif", tone: "orange" }), h(PreventiveSummaryCard, { label: "BELUM SUBMIT", value: data && data.pending != null ? data.pending : 0, detail: "Site plan yang belum memiliki Submitted Date", tone: "red" })), h("section", { className: "corporate-panel p-5" }, filtersBar, h("div", { className: "pm-filter-charts" }, h(window.PMAttentionCharts, { rows, kind: "genset", loading })), h("div", { className: "mt-4 flex items-center justify-between" }, h("div", null, h("h2", { className: "section-title" }, `${title} - GENERAL INFORMATION`), h("p", { className: "mt-1 text-[10px] text-slate-400" }, `Schedule ${data && data.period_start ? shortDate(data.period_start) : "-"} sampai ${data && data.period_end ? shortDate(data.period_end) : "-"} · Menampilkan ${Math.min(rows.length, 100)} dari ${rows.length} site`)), loading && h(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" })), generalFilters, h("div", { className: "kpi-scrollbar preventive-card-list" }, ...(cards.length ? cards : [h("div", { key: "empty", className: "flex h-[180px] items-center justify-center text-[10px] text-slate-400" }, `Belum ada data ${title} pada rentang tanggal dan filter ini.`)]))));
+  return h("div", { className: "space-y-4" }, h("div", { className: "grid grid-cols-4 gap-4" }, h(PreventiveSummaryCard, { label: `PLAN ${kind === "genset" ? "GENSET" : "SITE"}`, value: data && data.plan != null ? data.plan : 0, detail: `${shortDate(filters.dateFrom)} sampai ${shortDate(filters.dateTo)}`, tone: "navy" }), h(PreventiveSummaryCard, { label: "SUBMITTED", value: data && data.submitted != null ? data.submitted : 0, detail: "Site unik dengan Submitted Date terisi", tone: "green" }), h(PreventiveSummaryCard, { label: "ACHIEVEMENT", value: `${formatNumber(data && data.achievement != null ? data.achievement : 0)}%`, detail: "Submitted dibanding Plan pada filter aktif", tone: "orange" }), h(PreventiveSummaryCard, { label: "BELUM SUBMIT", value: data && data.pending != null ? data.pending : 0, detail: "Site plan yang belum memiliki Submitted Date", tone: "red" })), h("section", { className: "corporate-panel p-5" }, filtersBar, h("div", { className: "pm-filter-charts" }, h(AttentionCharts, { rows, kind: "genset", loading })), h("div", { className: "mt-4 flex items-center justify-between" }, h("div", null, h("h2", { className: "section-title" }, `${title} - GENERAL INFORMATION`), h("p", { className: "mt-1 text-[10px] text-slate-400" }, `Schedule ${data && data.period_start ? shortDate(data.period_start) : "-"} sampai ${data && data.period_end ? shortDate(data.period_end) : "-"} · Menampilkan ${Math.min(rows.length, 100)} dari ${rows.length} site`)), loading && h(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" })), generalFilters, h("div", { className: "kpi-scrollbar preventive-card-list" }, ...(cards.length ? cards : [h("div", { key: "empty", className: "flex h-[180px] items-center justify-center text-[10px] text-slate-400" }, `Belum ada data ${title} pada rentang tanggal dan filter ini.`)]))));
 }
 function UploadPanel({ run, draftFile, draftDate, busyUpload, setDraftFile, setDraftDate, onUpload }) {
   return null;
@@ -2390,8 +2438,8 @@ class App extends React.Component {
     const decliningNopName = declining ? compactNop(declining.nop) : "-";
     const preventivePage = s.activePage.startsWith("preventive");
     const pageTitle = s.activePage === "data-upload" ? "DATA UPLOAD" : s.activePage === "rca" ? "RCA ALARM DOWN" : s.activePage === "improvement-sumbagsel" ? "IMPROVEMENT SUMBAGSEL" : preventivePage ? "PREVENTIVE MANAGEMENT" : "AUTOMATION MANAGEMENT";
-    if (s.activePage === "rca") return /* @__PURE__ */ React.createElement("div", { className: "app-shell min-h-screen bg-[#E9EFF5] pl-[250px]" }, /* @__PURE__ */ React.createElement(Sidebar, { activePage: s.activePage, preventiveOpen: s.preventiveOpen, onPage: this.openPage, onTogglePreventive: this.togglePreventive }), /* @__PURE__ */ React.createElement("header", { className: "h-[66px] bg-white shadow-[0_1px_0_#D7DFE8]" }, /* @__PURE__ */ React.createElement("div", { className: "flex h-full items-center px-6" }, /* @__PURE__ */ React.createElement("h1", { className: "text-[20px] font-semibold text-[#29496C]" }, pageTitle))), /* @__PURE__ */ React.createElement("main", { className: "space-y-4 p-5" }, /* @__PURE__ */ React.createElement(window.RCAWorkspace || MissingPmModule, { key: s.navigationRevision, title: "RCA ALARM DOWN BELUM TERSEDIA" })));
-    if (s.activePage === "improvement-sumbagsel") return /* @__PURE__ */ React.createElement("div", { className: "app-shell min-h-screen bg-[#E9EFF5] pl-[250px]" }, /* @__PURE__ */ React.createElement(Sidebar, { activePage: s.activePage, preventiveOpen: s.preventiveOpen, onPage: this.openPage, onTogglePreventive: this.togglePreventive }), /* @__PURE__ */ React.createElement("header", { className: "h-[66px] bg-white shadow-[0_1px_0_#D7DFE8]" }, /* @__PURE__ */ React.createElement("div", { className: "flex h-full items-center px-6" }, /* @__PURE__ */ React.createElement("h1", { className: "text-[20px] font-semibold text-[#29496C]" }, pageTitle))), /* @__PURE__ */ React.createElement("main", { className: "space-y-4 p-5" }, /* @__PURE__ */ React.createElement(window.SumbagselImprovement || MissingPmModule, { key: s.navigationRevision, title: "DASHBOARD IMPROVEMENT SUMBAGSEL BELUM TERSEDIA" })));
+    if (s.activePage === "rca") return /* @__PURE__ */ React.createElement("div", { className: "app-shell min-h-screen bg-[#E9EFF5] pl-[250px]" }, /* @__PURE__ */ React.createElement(Sidebar, { activePage: s.activePage, preventiveOpen: s.preventiveOpen, onPage: this.openPage, onTogglePreventive: this.togglePreventive }), /* @__PURE__ */ React.createElement("header", { className: "h-[66px] bg-white shadow-[0_1px_0_#D7DFE8]" }, /* @__PURE__ */ React.createElement("div", { className: "flex h-full items-center px-6" }, /* @__PURE__ */ React.createElement("h1", { className: "text-[20px] font-semibold text-[#29496C]" }, pageTitle))), /* @__PURE__ */ React.createElement("main", { className: "space-y-4 p-5" }, /* @__PURE__ */ React.createElement(runtimeComponent("RCAWorkspace"), { key: s.navigationRevision, title: "RCA ALARM DOWN BELUM TERSEDIA" })));
+    if (s.activePage === "improvement-sumbagsel") return /* @__PURE__ */ React.createElement("div", { className: "app-shell min-h-screen bg-[#E9EFF5] pl-[250px]" }, /* @__PURE__ */ React.createElement(Sidebar, { activePage: s.activePage, preventiveOpen: s.preventiveOpen, onPage: this.openPage, onTogglePreventive: this.togglePreventive }), /* @__PURE__ */ React.createElement("header", { className: "h-[66px] bg-white shadow-[0_1px_0_#D7DFE8]" }, /* @__PURE__ */ React.createElement("div", { className: "flex h-full items-center px-6" }, /* @__PURE__ */ React.createElement("h1", { className: "text-[20px] font-semibold text-[#29496C]" }, pageTitle))), /* @__PURE__ */ React.createElement("main", { className: "space-y-4 p-5" }, /* @__PURE__ */ React.createElement(runtimeComponent("SumbagselImprovement"), { key: s.navigationRevision, title: "DASHBOARD IMPROVEMENT SUMBAGSEL BELUM TERSEDIA" })));
     const refreshTicketSummary = async () => {
       const dashboard = await getDashboard(s.run.id, s.region, s.nop);
       this.setState({ dashboard, rangeDashboard: null, notice: "Ticket Summary MTTR tersimpan untuk NOP ini." });
@@ -2400,7 +2448,7 @@ class App extends React.Component {
     return /* @__PURE__ */ React.createElement("div", { className: "app-shell min-h-screen bg-[#E9EFF5] pl-[250px]" }, /* @__PURE__ */ React.createElement(Sidebar, { activePage: s.activePage, preventiveOpen: s.preventiveOpen, onPage: this.openPage, onTogglePreventive: this.togglePreventive }), /* @__PURE__ */ React.createElement("header", { className: "h-[66px] bg-white shadow-[0_1px_0_#D7DFE8]" }, /* @__PURE__ */ React.createElement("div", { className: "flex h-full items-center px-6" }, /* @__PURE__ */ React.createElement("h1", { className: "text-[20px] font-semibold text-[#29496C]" }, pageTitle))), /* @__PURE__ */ React.createElement("main", { className: "space-y-4 p-5" }, s.pageError && /* @__PURE__ */ React.createElement("div", { className: "border border-red-300 bg-red-50 px-4 py-3 text-[10px] text-red-800" }, s.pageError), s.notice && /* @__PURE__ */ React.createElement("div", { className: "border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10px] font-medium text-emerald-800" }, s.notice), s.activePage === "ekpi" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(UploadPanel, { run: s.run, draftFile: s.draftFile, draftDate: s.draftDate, busyUpload: s.busyUpload, setDraftFile: (file) => this.setState({ draftFile: file }), setDraftDate: (value) => this.setState({ draftDate: value }), onUpload: this.handleUpload })), s.activePage === "ekpi" && ready && /* @__PURE__ */ React.createElement("div", { className: "flex min-w-0 flex-col gap-4" }, /* @__PURE__ */ React.createElement(KpiWorkspace, { config: s.config, dashboard: s.rangeDashboard || s.dashboard, region: s.region, nop: s.nop, rowGroup: s.rowGroup, onRegion: this.onRegion, onNop: this.onNop, onRowGroup: this.onRowGroup, rangeStart: s.rangeStart, rangeEnd: s.rangeEnd, rangeLoading: s.rangeLoading, onRangeDate: this.onRangeDate, onClearRange: this.clearDateRange, tableRef: this.setTableRef, runId: s.run.id, onTicketUploaded: refreshTicketSummary }), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-[1fr_1fr_1fr_1.05fr] gap-4" }, /* @__PURE__ */ React.createElement(SummaryCard, { label: analysis.comparison_available ? "NOP IMPROVED" : "AVAILABLE NOP", value: analysis.comparison_available ? `${analysis.improved_count} NOPs` : `${analysis.nop_count} NOPs`, detail: analysis.comparison_available ? best ? `Peningkatan tertinggi: ${bestNopName} (${deltaText(best.delta)} poin)` : "Belum ada NOP dengan peningkatan" : `Mencakup ${analysis.nop_count} NOP pada filter aktif`, tone: "green" }), /* @__PURE__ */ React.createElement(SummaryCard, { label: analysis.comparison_available ? "NOP DECLINE" : "AVERAGE KPI SCORE", value: analysis.comparison_available ? `${analysis.declined_count} NOPs` : `${formatNumber(analysis.current_average)}%`, detail: analysis.comparison_available ? declining ? `Penurunan terbesar: ${decliningNopName} (${deltaText(declining.delta)} poin)` : "Tidak ada NOP yang menurun" : `Rata-rata KPI seluruh NOP pada filter`, tone: "red" }), /* @__PURE__ */ React.createElement(SummaryCard, { label: analysis.comparison_available ? "BEST IMPROVEMENT" : "BEST KPI SCORE", value: bestNopName, delta: analysis.comparison_available && best ? `${deltaText(best.delta)}%` : "", detail: best ? `${bestNopName} mencatat KPI Score ${formatNumber(best.end)}%` : "Belum ada data KPI", tone: "navy" }), /* @__PURE__ */ React.createElement(ExportCard, { hasTable: Boolean(ready), hasReport: Boolean(s.reportText), reportLoading: s.reportLoading, tableImageLoading: s.tableImageLoading, shareLoading: s.shareLoading, onDownloadTableImage: this.downloadTableImage, onCopyReport: this.copyReport, onShareExcel: this.shareExcel, onSettings: () => this.setState({ showPrompt: true, promptDraft: s.prompt }) })), /* @__PURE__ */ React.createElement(KpiCategoryTrend, { runId: s.run.id, region: s.region, nop: s.nop }), /* @__PURE__ */ React.createElement(TopImprovementChart, { items: analysis.top_nops, comparisonAvailable: analysis.comparison_available }), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 items-stretch gap-4" }, /* @__PURE__ */ React.createElement(NopComparisonPanel, { best: analysis.top_nops, attention: analysis.attention_nops, comparisonAvailable: analysis.comparison_available }), /* @__PURE__ */ React.createElement(PointKpiPanel, { best: analysis.top_components, worst: analysis.worst_components, comparisonAvailable: analysis.comparison_available })), s.reportError && /* @__PURE__ */ React.createElement("div", { className: "border border-amber-200 bg-amber-50 px-4 py-3 text-[10px] text-amber-800" }, "AI Report: ", s.reportError)), s.activePage === "preventive-dashboard" && /* @__PURE__ */ React.createElement(PreventiveDashboardCards, { data: s.preventiveData, file: s.preventiveFile, date: s.preventiveDate, busy: s.preventiveBusy, loading: s.preventiveLoading, filters: s.preventiveFilters, onFile: (file) => this.setState({ preventiveFile: file }), onDate: (value) => this.setState({ preventiveDate: value }), onUpload: this.handlePreventiveUpload, onFilter: this.changePreventiveFilter, onRefresh: () => this.refreshPreventive(), onReview: (row) => {
       const page = row.maintenance_kind === "genset" ? "preventive-genset" : "preventive-site";
       this.setState({ preventiveFilters: { ...this.state.preventiveFilters, siteId: row.site_id, search: "", nop: "" } }, () => this.openPage(page, true));
-    } }), s.activePage === "preventive-punchlist" && /* @__PURE__ */ React.createElement(PunchlistWorkspace, { key: s.navigationRevision }), s.activePage === "preventive-genset" && /* @__PURE__ */ React.createElement(window.PMGensetWorkspace, { key: s.navigationRevision, RoutinePage: PreventiveRoutinePage, SummaryCard: PreventiveSummaryCard, data: s.preventiveData, loading: s.preventiveLoading, filters: s.preventiveFilters, onFilter: this.changePreventiveFilter, kind: "genset" }), s.activePage === "preventive-site" && /* @__PURE__ */ React.createElement(PreventiveRoutinePage, { key: s.navigationRevision, data: s.preventiveData, loading: s.preventiveLoading, filters: s.preventiveFilters, onFilter: this.changePreventiveFilter, kind: "site" })), s.showPrompt && /* @__PURE__ */ React.createElement(PromptModal, { draft: s.promptDraft, setDraft: (value) => this.setState({ promptDraft: value }), onClose: () => this.setState({ showPrompt: false }), onSave: this.savePrompt }));
+    } }), s.activePage === "preventive-punchlist" && /* @__PURE__ */ React.createElement(PunchlistWorkspace, { key: s.navigationRevision }), s.activePage === "preventive-genset" && /* @__PURE__ */ React.createElement(runtimeComponent("PMGensetWorkspace"), { key: s.navigationRevision, RoutinePage: PreventiveRoutinePage, SummaryCard: PreventiveSummaryCard, data: s.preventiveData, loading: s.preventiveLoading, filters: s.preventiveFilters, onFilter: this.changePreventiveFilter, kind: "genset" }), s.activePage === "preventive-site" && /* @__PURE__ */ React.createElement(PreventiveRoutinePage, { key: s.navigationRevision, data: s.preventiveData, loading: s.preventiveLoading, filters: s.preventiveFilters, onFilter: this.changePreventiveFilter, kind: "site" })), s.showPrompt && /* @__PURE__ */ React.createElement(PromptModal, { draft: s.promptDraft, setDraft: (value) => this.setState({ promptDraft: value }), onClose: () => this.setState({ showPrompt: false }), onSave: this.savePrompt }));
   }
 }
 ReactDOM.render(/* @__PURE__ */ React.createElement(App, null), document.getElementById("root"));
