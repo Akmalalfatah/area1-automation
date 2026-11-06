@@ -288,6 +288,6 @@
 .pm-page-button{border:1px solid #c5d2e1;background:#fff;color:#29496c;border-radius:5px;padding:7px 12px;font:inherit;cursor:pointer;transition:background .15s ease,border-color .15s ease}
 .pm-page-button:hover:not(:disabled){background:#eef4fa;border-color:#8ea9c4}
 .pm-page-button:disabled{cursor:not-allowed;opacity:.45}
-.pl-section > .pm-work-pagination{width:100%;box-sizing:border-box;justify-content:center;margin:16px 0 0;padding:12px 0 0;clear:both}
-.pl-section > .pm-work-pagination{margin-left:-22px;margin-right:-22px;width:calc(100% + 44px);padding:12px 22px 0;background:#eef3f8}
+.pl-page > .pm-work-pagination{display:flex;justify-content:space-between;align-items:center;flex-wrap:nowrap;gap:12px;width:100%;box-sizing:border-box;margin:0;padding:14px 0;border-top:1px solid #d7e0ea;background:transparent;color:#42536a;font-size:11px;font-weight:600}
 .pm-page-position{min-width:150px;text-align:center;color:#667992}
+@media(max-width:560px){.pl-page > .pm-work-pagination{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.pl-page > .pm-work-pagination > .pm-page-position{grid-column:1/-1;grid-row:1;min-width:0}.pl-page > .pm-work-pagination > .pm-page-button{grid-row:2;min-width:0;width:100%}}

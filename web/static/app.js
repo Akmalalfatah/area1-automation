@@ -157,11 +157,11 @@ const getKpiCategoryExport = ({ runId, region, nop, periods } = {}) => {
 };
 const PAGE_ASSETS = {
   "preventive-dashboard": { styles: ["/static/pm-site.css?v=20261105-asset-integrity"] },
-  "preventive-punchlist": { styles: ["/static/pm-punchlist.css?v=20261106-pagination"] },
+  "preventive-punchlist": { styles: ["/static/pm-punchlist.css?v=20261106-pagination-spread-v1"] },
   "preventive-site": { styles: ["/static/pm-site.css?v=20261105-asset-integrity"], scripts: ["/static/pm-site.js?v=20261105-asset-integrity"] },
   "preventive-genset": { styles: ["/static/pm-site.css?v=20261105-asset-integrity", "/static/pm-genset.css?v=20261105-asset-integrity"], scripts: ["/static/pm-site.js?v=20261105-asset-integrity", "/static/pm-genset.js?v=20261105-asset-integrity"] },
   rca: { styles: ["/static/rca.css?v=20261105-asset-integrity", "/static/rca-template.css?v=20261105-asset-integrity", "/static/rca-typography.css?v=20261105-asset-integrity"], scripts: ["/static/rca.js?v=20261105-asset-integrity"] },
-  "improvement-sumbagsel": { styles: ["/static/improvement-sumbagsel.css?v=20261106-pagination"], scripts: ["/static/improvement-sumbagsel.js?v=20261106-evidence"] }
+  "improvement-sumbagsel": { styles: ["/static/improvement-sumbagsel.css?v=20261106-pm-visual-style-v3"], scripts: ["/static/improvement-sumbagsel.js?v=20261106-page-limit-50-v5"] }
 };
 const PAGE_MODULES = {
   "preventive-site": ["PMSiteModule"],
@@ -2152,8 +2152,9 @@ class PunchlistWorkspace extends React.Component {
           h("div", { className: "pl-head-actions" }, findingFilter && h("button", { type: "button", onClick: this.clearFindingFilter, className: "btn-secondary h-8 px-3 text-[9px] font-semibold" }, "× ", findingText), h("span", { className: "pl-count", role: "status" }, countText), s.loading && h(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" }), s.category === "LAINNYA" && h("button", { type: "button", onClick: this.closeOthers, className: "btn-secondary h-8 px-3 text-[9px] font-semibold" }, "KEMBALI KE SEMUA"))),
         segments,
         h("div", { className: "pl-list kpi-scrollbar" }, ...cards),
-        !s.loading && h("nav", { className: "pm-work-pagination", "aria-label": "Navigasi daftar PM Punchlist" }, h("button", { className: "pm-page-button", disabled: page <= 1, onClick: () => this.setState((state) => ({ page: Math.max(1, (state.page || 1) - 1) })) }, "← Sebelumnya"), h("span", { className: "pm-page-position" }, "Menampilkan ", pageFrom, "-", pageTo, " dari ", number(visibleRows.length), " · Halaman ", page, " / ", totalPages), h("button", { className: "pm-page-button", disabled: page >= totalPages, onClick: () => this.setState((state) => ({ page: Math.min(totalPages, (state.page || 1) + 1) })) }, "Berikutnya →")),
-        !s.loading && !visibleRows.length && h("p", { className: "pl-empty" }, findingFilter ? `Tidak ada site dengan temuan ${findingText} pada filter aktif.` : s.category === "LAINNYA" ? "Tidak ada temuan Lainnya pada filter aktif." : total ? "Tidak ada site yang cocok dengan filter status ini." : "Belum ada data PM Site. Upload data PM Site terlebih dahulu.")));
+        !s.loading && !visibleRows.length && h("p", { className: "pl-empty" }, "Tidak ada site yang cocok dengan filter.")),
+!s.loading && h("nav", { className: "pm-work-pagination", "aria-label": "Navigasi daftar PM Punchlist" }, h("button", { className: "pm-page-button", disabled: page <= 1, onClick: () => this.setState((state) => ({ page: Math.max(1, (state.page || 1) - 1) })) }, "← Sebelumnya"), h("span", { className: "pm-page-position" }, "Halaman ", page, " / ", totalPages), h("button", { className: "pm-page-button", disabled: page >= totalPages, onClick: () => this.setState((state) => ({ page: Math.min(totalPages, (state.page || 1) + 1) })) }, "Berikutnya →")),
+        null);
   }
 }
 class App extends React.Component {
