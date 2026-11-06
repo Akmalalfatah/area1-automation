@@ -5,8 +5,9 @@ import express from 'express'
 import multer from 'multer'
 import ExcelJS from 'exceljs'
 import fs from 'node:fs/promises'
+import path from 'node:path'
 import {BOOK1_START_COLUMNS, DEFAULT_REPORT_PROMPT, NOP_ORDER, REGION_NOPS, ROW_DEFINITIONS} from './constants.js'
-import {RUNS_DIR, SERVER_DIR, TEMPLATE_PATH, WEB_DIR} from './config.js'
+import {DATA_DIR, RUNS_DIR, SERVER_DIR, TEMPLATE_PATH, WEB_DIR} from './config.js'
 import {databaseEnabled, deleteHistory, initDb, latestPreventiveUpload, listHistory, loadKpiCategoryExport, loadPreviousHistoryDataset, loadPreventiveRows, preventiveAvailablePeriods, saveKpiCategoryExport, savePreventiveUpload} from './db.js'
 import {buildAnalysis, buildMttrMetrics, createRun, dashboardPayload, generateReport, loadDataset, loadState, MTTR_TARGETS_BY_COMPONENT, parseKpiCategoryExport, processRun, saveState, uploadAndProcess, uploadTicketMttrSummary, ValidationError} from './services.js'
 import {buildPreventiveDashboard, parsePreventiveWorkbook} from './preventive.js'
@@ -33,6 +34,8 @@ app.use(express.json({limit:'1mb',inflate:false}))
 // Static assets are versioned in index.html/app.js. no-cache prevents a proxy
 // from pairing a freshly deployed app.js with an older CSS or PM module.
 app.use('/static',express.static(`${WEB_DIR}/static`,{etag:true,maxAge:0,setHeaders(res){res.setHeader('Cache-Control','no-cache, max-age=0, must-revalidate')}}))
+const improvementEvidenceDir=path.join(DATA_DIR,'improvement-evidence')
+app.use('/evidence/improvement',express.static(improvementEvidenceDir,{etag:true,maxAge:0,setHeaders(res){res.setHeader('Cache-Control','private, max-age=0, must-revalidate')}}))
 app.get('/',(_req,res)=>res.sendFile(`${WEB_DIR}/index.html`))
 app.get('/api/health',(_req,res)=>res.json({status:'ok',runtime:'node'}))
 app.get('/api/config',(_req,res)=>res.json({regions:REGION_NOPS,default_prompt:DEFAULT_REPORT_PROMPT,database_enabled:databaseEnabled}))
@@ -44,9 +47,21 @@ app.post('/api/rca/template',asyncHandler(async(req,res)=>res.json(await rcaTemp
 
 app.get('/api/improvement-sumbagsel',asyncHandler(async(req,res)=>res.json(await improvementDashboard(req.query))))
 app.post('/api/improvement-sumbagsel/activity-import',upload.single('file'),asyncHandler(async(req,res)=>{assertCsv(req.file);res.json(await importActivityProgressCsv(req.file.buffer,req.file.originalname))}))
+app.post('/api/improvement-sumbagsel/:siteId/evidence',upload.single('file'),asyncHandler(async(req,res)=>{
+  assertEvidenceImage(req.file)
+  const safeSiteId=String(req.params.siteId||'').replace(/[^a-z0-9_-]/gi,'_')
+  if(!safeSiteId)throw new HttpError(422,'Site ID tidak valid.')
+  const extension=req.file.mimetype==='image/png'?'png':'jpg'
+  const filename=`${safeSiteId}-${Date.now()}-${Math.random().toString(36).slice(2,10)}.${extension}`
+  await fs.mkdir(improvementEvidenceDir,{recursive:true})
+  await fs.writeFile(path.join(improvementEvidenceDir,filename),req.file.buffer,{flag:'wx'})
+  const evidence_link=`/evidence/improvement/${filename}`
+  const result=await updateImprovement(req.params.siteId,{evidence_link})
+  res.status(201).json({evidence_link,site:result.site})
+}))
 app.get('/api/improvement-sumbagsel/export.xlsx',asyncHandler(async(req,res)=>{
   const payload=await improvementDashboard(req.query), workbook=new ExcelJS.Workbook(), sheet=workbook.addWorksheet('Site Priority Enhancement')
-  const columns=[['Site ID','site_id'],['Site Name','site_name'],['NOP','nop'],['Priority Enhancement','priority_enhancement'],['Responsibility','responsibility'],['PIC Team Lapangan','pic_team_lapangan'],['RC Category','rca'],['Action Cat','action_cat'],['Program','program'],['Detail Program Activity','detail_program_activity'],['PO HTDE 2026','po_htde_2026'],['PO Upgrade Daya 2026','po_upgrade_daya_2026'],['Status','status'],['Week Plan','plan_week'],['Date Plan','plan_date'],['Problem Dependency','problem_dependency'],['Remark / Progress','remark_progress']]
+  const columns=[['Site ID','site_id'],['Site Name','site_name'],['NOP','nop'],['Priority Enhancement','priority_enhancement'],['Responsibility','responsibility'],['PIC Team Lapangan','pic_team_lapangan'],['RC Category','rca'],['Action Cat','action_cat'],['Program','program'],['Detail Program Activity','detail_program_activity'],['PO HTDE 2026','po_htde_2026'],['PO Upgrade Daya 2026','po_upgrade_daya_2026'],['Status','status'],['Week Plan','plan_week'],['Date Plan','plan_date'],['Problem Dependency','problem_dependency'],['Evidence','evidence_link'],['Remark / Progress','remark_progress']]
   sheet.columns=columns.map(([header,key])=>({header,key,width:Math.max(14,Math.min(36,header.length+8))}))
   payload.sites.forEach(site=>sheet.addRow(Object.fromEntries(columns.map(([,key])=>[key,site[key]??'']))))
   sheet.getRow(1).font={bold:true,color:{argb:'FFFFFFFF'}};sheet.getRow(1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF29496C'}}
@@ -237,6 +252,11 @@ app.get('/api/runs/:id/mttr-boosting/export.xlsx',asyncHandler(async(req,res)=>{
 class HttpError extends Error{constructor(status,message){super(message);this.status=status}}
 function assertXlsx(file){if(!file||!file.originalname?.toLowerCase().endsWith('.xlsx'))throw new HttpError(400,'File harus berformat .xlsx')}
 function assertCsv(file){if(!file||!file.originalname?.toLowerCase().endsWith('.csv'))throw new HttpError(400,'File harus berformat .csv')}
+function assertEvidenceImage(file){
+  const isPng=file?.mimetype==='image/png'&&file.buffer?.subarray(0,8).equals(Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]))
+  const isJpeg=file?.mimetype==='image/jpeg'&&file.buffer?.subarray(0,3).equals(Buffer.from([0xff,0xd8,0xff]))
+  if(!isPng&&!isJpeg)throw new HttpError(422,'Evidence harus berupa foto .jpg, .jpeg, atau .png yang valid.')
+}
 function assertDate(value){if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value||''))||Number.isNaN(Date.parse(`${value}T00:00:00Z`)))throw new HttpError(400,'Tanggal upload tidak valid.')}
 function boostingPeriod(query,fallbackDate){
   const year=String(query.year||String(fallbackDate||'').slice(0,4)).trim(),month=String(query.month||String(fallbackDate||'').slice(5,7)).trim().padStart(2,'0'),period=`${year}-${month}`

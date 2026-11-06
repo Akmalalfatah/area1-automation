@@ -25,7 +25,8 @@ async function updates(){
  const [rows]=await getPool().query('SELECT site_id,data FROM sumbagsel_improvement_updates')
  return Object.fromEntries(rows.map(row=>[row.site_id,typeof row.data==='string'?JSON.parse(row.data):row.data]))
 }
-function mergeSite(site,update){return {...site,...(update||{}),site_id:site.site_id,nop:canonicalNop(site.nop),priority_enhancement:site.priority_enhancement,program:text(update?.activity_program)||update?.program||site.program,rca:update?.rca??site.rca,site_flicker:site.site_flicker,action_cat:site.action_cat}}
+const evidenceItems=update=>[...new Set([...(Array.isArray(update?.evidence_items)?update.evidence_items:[]),text(update?.evidence_link)].map(text).filter(Boolean))]
+function mergeSite(site,update){const items=evidenceItems(update);return {...site,...(update||{}),evidence_items:items,evidence_link:items.at(-1)||'',site_id:site.site_id,nop:canonicalNop(site.nop),priority_enhancement:site.priority_enhancement,program:text(update?.activity_program)||update?.program||site.program,rca:update?.rca??site.rca,site_flicker:site.site_flicker,action_cat:site.action_cat}}
 const week=value=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(text(value)))return '';const d=new Date(`${value}T00:00:00Z`),jan4=new Date(Date.UTC(d.getUTCFullYear(),0,4)),week=1+Math.round(((d-jan4)/86400000-3+(jan4.getUTCDay()+6)%7)/7);return `Week ${week}`}
 const csvHeader=value=>text(value).replace(/^\uFEFF/,'').toLowerCase().replace(/\s+/g,' ')
 const activityHeaders={
@@ -128,9 +129,33 @@ export async function updateImprovement(siteId,body={}){
  next.activity_history=[...(existing.activity_history||[]),{type:'update',at:new Date().toISOString(),status:next.status||site.status,note:next.remark_progress||''}]
  await persist(siteId,next);return {site:mergeSite(site,next),plan_week:week(next.plan_date),done_week:week(next.done_date)}
 }
+export async function addImprovementEvidence(siteId,evidenceLink){
+ const source=await seed(),site=source.sites.find(row=>row.site_id===siteId);if(!site)throw Object.assign(new Error('Site Improvement tidak ditemukan.'),{status:404})
+ const existing=(await updates())[siteId]||{},next={...existing}
+ if(!Object.prototype.hasOwnProperty.call(existing,'edit_backup'))next.edit_backup={...existing}
+ next.evidence_items=[...evidenceItems(existing),text(evidenceLink)]
+ next.evidence_link=next.evidence_items.at(-1)||''
+ next.activity_history=[...(existing.activity_history||[]),{type:'evidence',action:'upload',at:new Date().toISOString(),evidence_link:next.evidence_link}]
+ await persist(siteId,next)
+ return {site:mergeSite(site,next),evidence_items:next.evidence_items}
+}
+export async function removeImprovementEvidence(siteId,evidenceLink){
+ const source=await seed(),site=source.sites.find(row=>row.site_id===siteId);if(!site)throw Object.assign(new Error('Site Improvement tidak ditemukan.'),{status:404})
+ const existing=(await updates())[siteId]||{},target=text(evidenceLink),items=evidenceItems(existing)
+ if(!target||!items.includes(target))throw Object.assign(new Error('Foto evidence tidak ditemukan.'),{status:404})
+ const next={...existing,evidence_items:items.filter(item=>item!==target)}
+ next.evidence_link=next.evidence_items.at(-1)||''
+ next.activity_history=[...(existing.activity_history||[]),{type:'evidence',action:'delete',at:new Date().toISOString(),evidence_link:target}]
+ await persist(siteId,next)
+ return {site:mergeSite(site,next),evidence_items:next.evidence_items}
+}
 export async function revertImprovementEdit(siteId){
  const source=await seed(),site=source.sites.find(row=>row.site_id===siteId);if(!site)throw Object.assign(new Error('Site Improvement tidak ditemukan.'),{status:404})
- const existing=(await updates())[siteId]||{},previous=Object.prototype.hasOwnProperty.call(existing,'edit_backup')?existing.edit_backup:{}
+ const existing=(await updates())[siteId]||{}
+ if(!Object.prototype.hasOwnProperty.call(existing,'edit_backup')){
+  const error=new Error('Belum ada perubahan Edit yang dapat dikembalikan untuk site ini.');error.status=409;throw error
+ }
+ const previous=existing.edit_backup||{}
  await persist(siteId,previous)
  return {site:mergeSite(site,previous),plan_week:week(previous.plan_date),done_week:week(previous.done_date)}
 }

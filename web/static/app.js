@@ -161,7 +161,7 @@ const PAGE_ASSETS = {
   "preventive-site": { styles: ["/static/pm-site.css?v=20261105-asset-integrity"], scripts: ["/static/pm-site.js?v=20261105-asset-integrity"] },
   "preventive-genset": { styles: ["/static/pm-site.css?v=20261105-asset-integrity", "/static/pm-genset.css?v=20261105-asset-integrity"], scripts: ["/static/pm-site.js?v=20261105-asset-integrity", "/static/pm-genset.js?v=20261105-asset-integrity"] },
   rca: { styles: ["/static/rca.css?v=20261105-asset-integrity", "/static/rca-template.css?v=20261105-asset-integrity", "/static/rca-typography.css?v=20261105-asset-integrity"], scripts: ["/static/rca.js?v=20261105-asset-integrity"] },
-  "improvement-sumbagsel": { styles: ["/static/improvement-sumbagsel.css?v=20261105-asset-integrity"], scripts: ["/static/improvement-sumbagsel.js?v=20261105-asset-integrity"] }
+  "improvement-sumbagsel": { styles: ["/static/improvement-sumbagsel.css?v=20261106-evidence"], scripts: ["/static/improvement-sumbagsel.js?v=20261106-evidence"] }
 };
 const PAGE_MODULES = {
   "preventive-site": ["PMSiteModule"],
@@ -747,10 +747,17 @@ function PreventiveOperationalInsights({ data, filters, onFilter }) {
 }
 function PreventiveDashboardCards({ data, file, date, busy, loading, filters, onFile, onDate, onUpload, onFilter, onReview, onRefresh }) {
   const h = React.createElement;
+  const [page, setPage] = React.useState(1);
+  React.useEffect(() => setPage(1), [filters.month, filters.regional, filters.nop, filters.search, filters.status, filters.maintenanceType, filters.needsAttention]);
   const WorkStatus = runtimeComponent("PMWorkStatus");
   const ConditionBadge = runtimeComponent("PMConditionBadge");
   const rows = data && data.rows || [];
-  const visibleRows = rows.slice(0, 100);
+  const pageSize = 50;
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const visibleRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const pageFrom = rows.length ? (safePage - 1) * pageSize + 1 : 0;
+  const pageTo = Math.min(safePage * pageSize, rows.length);
   const details = (row) => [
     ["SCHEDULE DATE", shortDate(row.schedule_date)],
     ["SUBMITTED DATE", shortDate(row.submitted_date)],
@@ -841,9 +848,10 @@ function PreventiveDashboardCards({ data, file, date, busy, loading, filters, on
       progressFilters,
       h("div", { className: "mt-5" }, progressTable),
       h("div", { className: "mt-6 border-t border-slate-200 pt-5" },
-        h("div", { className: "flex items-center justify-between" }, h("div", null, h("h2", { className: "section-title" }, "GENERAL INFORMATION"), h("p", { className: "mt-1 text-[10px] text-slate-400" }, `Schedule ${data && data.period_start ? shortDate(data.period_start) : "-"} sampai ${data && data.period_end ? shortDate(data.period_end) : "-"} \xB7 Menampilkan ${Math.min(rows.length, 100)} dari ${rows.length} site`)), loading && h(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" })),
+        h("div", { className: "flex items-center justify-between" }, h("div", null, h("h2", { className: "section-title" }, "GENERAL INFORMATION"), h("p", { className: "mt-1 text-[10px] text-slate-400" }, `Schedule ${data && data.period_start ? shortDate(data.period_start) : "-"} sampai ${data && data.period_end ? shortDate(data.period_end) : "-"} \xB7 Menampilkan ${pageFrom}-${pageTo} dari ${rows.length} site`)), loading && h(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" })),
         generalFilters,
-        h("div", { className: "kpi-scrollbar preventive-card-list" }, ...cards)
+        h("div", { className: "kpi-scrollbar preventive-card-list" }, ...cards),
+        h("nav", { className: "pm-work-pagination", "aria-label": "Navigasi daftar PM Dashboard" }, h("button", { className: "pm-page-button", disabled: safePage <= 1, onClick: () => setPage((value) => Math.max(1, value - 1)) }, "← Sebelumnya"), h("span", { className: "pm-page-position" }, "Halaman ", safePage, " / ", totalPages), h("button", { className: "pm-page-button", disabled: safePage >= totalPages, onClick: () => setPage((value) => Math.min(totalPages, value + 1)) }, "Berikutnya →"))
       )
     )
   );
@@ -852,6 +860,8 @@ function PreventivePlaceholder({ title }) {
   return /* @__PURE__ */ React.createElement("section", { className: "corporate-panel flex min-h-[360px] items-center justify-center p-8 text-center" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("h2", { className: "section-title" }, title.toUpperCase()), /* @__PURE__ */ React.createElement("p", { className: "mt-3 text-[11px] text-slate-400" }, "Section ini sudah disiapkan pada navigasi dan dapat dilanjutkan setelah desain serta data Excel-nya ditentukan.")));
 }
 function PreventiveRoutinePage({ data, file, date, busy, loading, filters, onFile, onDate, onUpload, onFilter, kind, onOpenGenset }) {
+  const [page, setPage] = React.useState(1);
+  React.useEffect(() => setPage(1), [filters.month, filters.dateFrom, filters.dateTo, filters.regional, filters.nop, filters.search, filters.pic, filters.typePower, filters.scopeItem, filters.status]);
   if (kind === "site") return React.createElement(runtimeComponent("PMSiteModule"), { filters, pmData: data, upload: onFilter.uploadProps || {}, UploadPanel: () => null, SummaryCard: PreventiveSummaryCard });
   const h = React.createElement;
   const WorkStatus = runtimeComponent("PMWorkStatus");
@@ -859,7 +869,13 @@ function PreventiveRoutinePage({ data, file, date, busy, loading, filters, onFil
   const AttentionCharts = runtimeComponent("PMAttentionCharts");
   const upload = onFilter.uploadProps || {};
   const rows = data && data.rows || [];
-  const cards = rows.slice(0, 100).map((row, index) => h("button", {
+  const pageSize = 50;
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const pageRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const pageFrom = rows.length ? (safePage - 1) * pageSize + 1 : 0;
+  const pageTo = Math.min(safePage * pageSize, rows.length);
+  const cards = pageRows.map((row, index) => h("button", {
     type: "button",
     key: `${row.site_id}-${row.schedule_date}-${row.ticket_no}-${index}`,
     className: "preventive-info-card genset-list-card",
@@ -875,7 +891,7 @@ function PreventiveRoutinePage({ data, file, date, busy, loading, filters, onFil
   const generalFilters = h("div", { className: "preventive-filter-row border-b-0 pb-0" }, routineSelect("PIC", "pic", data && data.pic_options || [], "All PIC", "w-[170px]"), routineSelect("TYPE POWER", "typePower", data && data.type_power_options || [], "All Type Power", "w-[180px]"), routineSelect("SCOPE ITEM", "scopeItem", data && data.scope_item_options || [], "All Scope Item", "w-[210px]"), routineSelect("STATUS PM", "status", data && data.status_options || [], "All Status", "w-[160px]"), h("div", { className: "min-w-[245px] flex-1" }, h("label", { className: "filter-label mb-1 block" }, "SEARCH"), h("input", { value: filters.search || "", onChange: (e) => onFilter("search", e.target.value), className: "control h-10 w-full px-3 text-[10px] font-semibold", placeholder: "Cari Site ID, Site Name, atau ticket" })));
   const filtersBar = h("div", { className: "space-y-3" }, dateRow);
   const title = kind === "genset" ? "PM GENSET" : "PM SITE";
-  return h("div", { className: "space-y-4" }, h("div", { className: "grid grid-cols-4 gap-4" }, h(PreventiveSummaryCard, { label: `PLAN ${kind === "genset" ? "GENSET" : "SITE"}`, value: data && data.plan != null ? data.plan : 0, detail: `${shortDate(filters.dateFrom)} sampai ${shortDate(filters.dateTo)}`, tone: "navy" }), h(PreventiveSummaryCard, { label: "SUBMITTED", value: data && data.submitted != null ? data.submitted : 0, detail: "Site unik dengan Submitted Date terisi", tone: "green" }), h(PreventiveSummaryCard, { label: "ACHIEVEMENT", value: `${formatNumber(data && data.achievement != null ? data.achievement : 0)}%`, detail: "Submitted dibanding Plan pada filter aktif", tone: "orange" }), h(PreventiveSummaryCard, { label: "BELUM SUBMIT", value: data && data.pending != null ? data.pending : 0, detail: "Site plan yang belum memiliki Submitted Date", tone: "red" })), h("section", { className: "corporate-panel p-5" }, filtersBar, h("div", { className: "pm-filter-charts" }, h(AttentionCharts, { rows, kind: "genset", loading })), h("div", { className: "mt-4 flex items-center justify-between" }, h("div", null, h("h2", { className: "section-title" }, `${title} - GENERAL INFORMATION`), h("p", { className: "mt-1 text-[10px] text-slate-400" }, `Schedule ${data && data.period_start ? shortDate(data.period_start) : "-"} sampai ${data && data.period_end ? shortDate(data.period_end) : "-"} · Menampilkan ${Math.min(rows.length, 100)} dari ${rows.length} site`)), loading && h(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" })), generalFilters, h("div", { className: "kpi-scrollbar preventive-card-list" }, ...(cards.length ? cards : [h("div", { key: "empty", className: "flex h-[180px] items-center justify-center text-[10px] text-slate-400" }, `Belum ada data ${title} pada rentang tanggal dan filter ini.`)]))));
+  return h("div", { className: "space-y-4" }, h("div", { className: "grid grid-cols-4 gap-4" }, h(PreventiveSummaryCard, { label: `PLAN ${kind === "genset" ? "GENSET" : "SITE"}`, value: data && data.plan != null ? data.plan : 0, detail: `${shortDate(filters.dateFrom)} sampai ${shortDate(filters.dateTo)}`, tone: "navy" }), h(PreventiveSummaryCard, { label: "SUBMITTED", value: data && data.submitted != null ? data.submitted : 0, detail: "Site unik dengan Submitted Date terisi", tone: "green" }), h(PreventiveSummaryCard, { label: "ACHIEVEMENT", value: `${formatNumber(data && data.achievement != null ? data.achievement : 0)}%`, detail: "Submitted dibanding Plan pada filter aktif", tone: "orange" }), h(PreventiveSummaryCard, { label: "BELUM SUBMIT", value: data && data.pending != null ? data.pending : 0, detail: "Site plan yang belum memiliki Submitted Date", tone: "red" })), h("section", { className: "corporate-panel p-5" }, filtersBar, h("div", { className: "pm-filter-charts" }, h(AttentionCharts, { rows, kind: "genset", loading })), h("div", { className: "mt-4 flex items-center justify-between" }, h("div", null, h("h2", { className: "section-title" }, `${title} - GENERAL INFORMATION`), h("p", { className: "mt-1 text-[10px] text-slate-400" }, `Schedule ${data && data.period_start ? shortDate(data.period_start) : "-"} sampai ${data && data.period_end ? shortDate(data.period_end) : "-"} · Menampilkan ${pageFrom}-${pageTo} dari ${rows.length} site`)), loading && h(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" })), generalFilters, h("div", { className: "kpi-scrollbar preventive-card-list" }, ...(cards.length ? cards : [h("div", { key: "empty", className: "flex h-[180px] items-center justify-center text-[10px] text-slate-400" }, `Belum ada data ${title} pada rentang tanggal dan filter ini.`)])), h("nav", { className: "pm-work-pagination", "aria-label": `Navigasi daftar ${title}` }, h("button", { className: "pm-page-button", disabled: safePage <= 1, onClick: () => setPage((value) => Math.max(1, value - 1)) }, "← Sebelumnya"), h("span", { className: "pm-page-position" }, "Halaman ", safePage, " / ", totalPages), h("button", { className: "pm-page-button", disabled: safePage >= totalPages, onClick: () => setPage((value) => Math.min(totalPages, value + 1)) }, "Berikutnya →"))));
 }
 function UploadPanel({ run, draftFile, draftDate, busyUpload, setDraftFile, setDraftDate, onUpload }) {
   return null;
@@ -1816,7 +1832,7 @@ class PunchlistWorkspace extends React.Component {
   constructor(props) {
     super(props);
     const scope = window.PMPunchlistScope || {};
-    this.state = { rows: [], l0Rows: [], options: { month: [], regional: [], nop: [] }, taxonomy: [], summary: null, summaryL0: null, summaryLevel: "punchlist_l0", search: "", month: scope.month || "", regional: scope.regional || "", nop: scope.nop || "", category: "", findingFilter: null, notes: {}, loading: true, saving: {}, classifying: false, autoReloads: 0, visibleLimit: 100, manualSite: null, manualCategory: "", manualSubcategory: "", manualSaving: false, error: "", message: "", dialogSite: null, dialogStep: "question", dialogNote: "" };
+    this.state = { rows: [], l0Rows: [], options: { month: [], regional: [], nop: [] }, taxonomy: [], summary: null, summaryL0: null, summaryLevel: "punchlist_l0", search: "", month: scope.month || "", regional: scope.regional || "", nop: scope.nop || "", category: "", findingFilter: null, notes: {}, loading: true, saving: {}, classifying: false, autoReloads: 0, page: 1, manualSite: null, manualCategory: "", manualSubcategory: "", manualSaving: false, error: "", message: "", dialogSite: null, dialogStep: "question", dialogNote: "" };
     this.load = async () => {
       const { search, month, regional, nop, category } = this.state, params = new URLSearchParams();
       if (search) params.set("search", search);
@@ -1829,7 +1845,7 @@ class PunchlistWorkspace extends React.Component {
         const data = await api(`/api/punchlist${params.size ? `?${params}` : ""}`), notes = {};
         for (const row of data.rows || []) notes[row.site_id] = row.note || "";
         const autoReload = !!data.auto_classification && this.state.autoReloads < 12;
-        this.setState((state) => ({ rows: data.rows || [], l0Rows: data.l0_rows || [], options: data.options || { month: [], regional: [], nop: [] }, taxonomy: data.taxonomy || [], summary: data.summary || null, summaryL0: data.l0_summary || null, month: state.month || data.selected_month || "", notes, visibleLimit: 100, autoReloads: autoReload ? state.autoReloads + 1 : 0 }));
+        this.setState((state) => ({ rows: data.rows || [], l0Rows: data.l0_rows || [], options: data.options || { month: [], regional: [], nop: [] }, taxonomy: data.taxonomy || [], summary: data.summary || null, summaryL0: data.l0_summary || null, month: state.month || data.selected_month || "", notes, page: 1, autoReloads: autoReload ? state.autoReloads + 1 : 0 }));
         if (autoReload) window.setTimeout(() => this.load(), 1e4);
       } catch (error) {
         this.setState({ error: error.message });
@@ -1840,15 +1856,15 @@ class PunchlistWorkspace extends React.Component {
     this.setFilter = (key, value) => {
       if (key === "search") {
         window.clearTimeout(this.searchTimer);
-        this.setState({ search: value, visibleLimit: 100 });
+        this.setState({ search: value, page: 1 });
         this.searchTimer = window.setTimeout(() => this.load(), 300);
         return;
       }
-      this.setState({ [key]: value, visibleLimit: 100 }, this.load);
+      this.setState({ [key]: value, page: 1 }, this.load);
     };
-    this.reviewOthers = () => this.setState({ category: "LAINNYA", search: "", regional: "", nop: "" }, this.load);
-    this.closeOthers = () => this.setState({ category: "", search: "", regional: "", nop: "" }, this.load);
-    this.selectFinding = (category, subcategory = "") => this.setState({ findingFilter: { category, subcategory }, noteFilter: "" }, () => document.getElementById("pm-punchlist-general")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    this.reviewOthers = () => this.setState({ category: "LAINNYA", search: "", regional: "", nop: "", page: 1 }, this.load);
+    this.closeOthers = () => this.setState({ category: "", search: "", regional: "", nop: "", page: 1 }, this.load);
+    this.selectFinding = (category, subcategory = "") => this.setState({ findingFilter: { category, subcategory }, noteFilter: "", page: 1 }, () => document.getElementById("pm-punchlist-general")?.scrollIntoView({ behavior: "smooth", block: "start" }));
     this.clearFindingFilter = () => this.setState({ findingFilter: null });
     this.classifyOthers = async () => {
       const { search, month, regional, nop, category, summaryLevel } = this.state;
@@ -1932,7 +1948,7 @@ class PunchlistWorkspace extends React.Component {
     const noteFilter = s.noteFilter || "", findingFilter = s.findingFilter || null;
     const rowsByFinding = findingFilter ? activeRows.filter((row) => (row.findings || []).some((finding) => finding.category === findingFilter.category && (!findingFilter.subcategory || finding.subcategory === findingFilter.subcategory))) : activeRows;
     const visibleRows = noteFilter ? rowsByFinding.filter((row) => stateOf(row) === noteFilter) : rowsByFinding;
-    const renderedRows = visibleRows.slice(0, s.visibleLimit || 100);
+    const pageSize = 50, totalPages = Math.max(1, Math.ceil(visibleRows.length / pageSize)), page = Math.min(Math.max(1, s.page || 1), totalPages), renderedRows = visibleRows.slice((page - 1) * pageSize, page * pageSize), pageFrom = visibleRows.length ? (page - 1) * pageSize + 1 : 0, pageTo = Math.min(page * pageSize, visibleRows.length);
     const summary = (activeLevel === "punchlist_l0" ? s.summaryL0 : s.summary) || { regions: [], status_by_regional: [], category_counts: [], subcategory_counts: [], total_findings: 0 };
     const regionLabel = (value) => String(value).replace(/_/g, " ");
 
@@ -1946,7 +1962,7 @@ class PunchlistWorkspace extends React.Component {
       field("", "NOP", select("nop", "All NOP", s.options.nop, compactNop)),
       field("", "SEARCH", h("input", { value: s.search, onChange: (event) => this.setFilter("search", event.target.value), className: "control", placeholder: "Cari Site ID, Site Name, NOP, atau review" })));
     const segments = h("div", { className: "pl-segments", role: "group", "aria-label": "Filter status catatan" },
-      ...[["", "Semua", total], ["empty", "Belum dicatat", counts.empty], ["finding", "Ada temuan", counts.finding], ["clear", "Tidak ada temuan", counts.clear]].map(([value, label, count]) => h("button", { key: value || "all", type: "button", className: "pl-segment", "aria-pressed": noteFilter === value, onClick: () => this.setState({ noteFilter: value, visibleLimit: 100 }) }, label, h("b", null, number(count)))));
+      ...[["", "Semua", total], ["empty", "Belum dicatat", counts.empty], ["finding", "Ada temuan", counts.finding], ["clear", "Tidak ada temuan", counts.clear]].map(([value, label, count]) => h("button", { key: value || "all", type: "button", className: "pl-segment", "aria-pressed": noteFilter === value, onClick: () => this.setState({ noteFilter: value, page: 1 }) }, label, h("b", null, number(count)))));
 
     /* ---------- Daftar site ---------- */
     const cell = (label, value, extra) => h("div", { className: "pl-cell" }, h("p", { className: "pl-label" }, label), h("p", { className: `pl-value ${extra || ""}` }, value));
@@ -2128,7 +2144,7 @@ class PunchlistWorkspace extends React.Component {
           h("div", { className: "pl-head-actions" }, findingFilter && h("button", { type: "button", onClick: this.clearFindingFilter, className: "btn-secondary h-8 px-3 text-[9px] font-semibold" }, "× ", findingText), h("span", { className: "pl-count", role: "status" }, countText), s.loading && h(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" }), s.category === "LAINNYA" && h("button", { type: "button", onClick: this.closeOthers, className: "btn-secondary h-8 px-3 text-[9px] font-semibold" }, "KEMBALI KE SEMUA"))),
         segments,
         h("div", { className: "pl-list kpi-scrollbar" }, ...cards,
-          !s.loading && renderedRows.length < visibleRows.length && h("button", { type: "button", className: "btn-secondary pl-load-more", onClick: () => this.setState((state) => ({ visibleLimit: (state.visibleLimit || 100) + 100 })) }, `TAMPILKAN 100 SITE BERIKUTNYA (${number(visibleRows.length - renderedRows.length)} TERSISA)`),
+          !s.loading && h("nav", { className: "pm-work-pagination", "aria-label": "Navigasi daftar PM Punchlist" }, h("button", { className: "pm-page-button", disabled: page <= 1, onClick: () => this.setState((state) => ({ page: Math.max(1, (state.page || 1) - 1) })) }, "← Sebelumnya"), h("span", { className: "pm-page-position" }, "Menampilkan ", pageFrom, "-", pageTo, " dari ", number(visibleRows.length), " · Halaman ", page, " / ", totalPages), h("button", { className: "pm-page-button", disabled: page >= totalPages, onClick: () => this.setState((state) => ({ page: Math.min(totalPages, (state.page || 1) + 1) })) }, "Berikutnya →")),
           !s.loading && !visibleRows.length && h("p", { className: "pl-empty" }, findingFilter ? `Tidak ada site dengan temuan ${findingText} pada filter aktif.` : s.category === "LAINNYA" ? "Tidak ada temuan Lainnya pada filter aktif." : total ? "Tidak ada site yang cocok dengan filter status ini." : "Belum ada data PM Site. Upload data PM Site terlebih dahulu."))));
   }
 }
