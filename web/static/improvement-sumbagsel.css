@@ -126,6 +126,7 @@
 .imp-hero{border-top:1px solid #d8e1eb;border-left:4px solid #e27b2b}
 .imp-filterbox,.imp-tablebox,.imp-responsibility-table{border-color:#d8e1eb}
 .imp-tablebox th,.imp-responsibility-table th{border-right:0;border-bottom:1px solid #d8e1eb;background:#f4f7fb;color:#708198;font-size:9px;font-weight:600;letter-spacing:.08em}
+.imp-responsibility-table th.is-number{color:#708198}
 .imp-tablebox td,.imp-responsibility-table td{border-right:0;border-bottom:1px solid #edf1f6}
 .imp-tablebox tbody tr:hover td,.imp-responsibility-table tbody tr:hover td{background:#f8fafc}
 .imp-table-scroll{max-height:min(70vh,680px);overscroll-behavior:contain}
