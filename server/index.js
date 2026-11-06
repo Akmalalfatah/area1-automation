@@ -18,7 +18,7 @@ import {gensetData,analyzeGenset,saveGensetEvaluation,enrichGensetSource} from '
 import {preventiveUploadHistory,applicationUploadHistory} from './db.js'
 import {buildKpiB13Summaries,parseKpiB13} from './kpi-b13.js'
 import {rcaDashboard,rcaSnapshots,rcaTemplate,syncRcaGoogle} from './rca.js'
-import {improvementDashboard,updateImprovement,revertImprovementEdit,approveImprovement,importActivityProgressCsv} from './improvement-sumbagsel.js'
+import {improvementDashboard,updateImprovement,revertImprovementEdit,approveImprovement,importActivityProgressCsv,addImprovementEvidence,removeImprovementEvidence} from './improvement-sumbagsel.js'
 
 // Keep Multer's callback synchronous. Apart from rejecting invalid uploads later
 // with assertXlsx(), this avoids the async fileFilter crash path in older Multer.
@@ -26,6 +26,11 @@ const synchronousUploadFilter=(_req,_file,callback)=>callback(null,true)
 const app=express(), upload=multer({
   storage:multer.memoryStorage(),
   limits:{fileSize:25*1024*1024},
+  fileFilter:synchronousUploadFilter
+})
+const evidenceUpload=multer({
+  storage:multer.memoryStorage(),
+  limits:{fileSize:8*1024*1024,files:50},
   fileFilter:synchronousUploadFilter
 })
 // API clients do not send compressed JSON. Reject encoded request bodies before
@@ -47,21 +52,33 @@ app.post('/api/rca/template',asyncHandler(async(req,res)=>res.json(await rcaTemp
 
 app.get('/api/improvement-sumbagsel',asyncHandler(async(req,res)=>res.json(await improvementDashboard(req.query))))
 app.post('/api/improvement-sumbagsel/activity-import',upload.single('file'),asyncHandler(async(req,res)=>{assertCsv(req.file);res.json(await importActivityProgressCsv(req.file.buffer,req.file.originalname))}))
-app.post('/api/improvement-sumbagsel/:siteId/evidence',upload.single('file'),asyncHandler(async(req,res)=>{
-  assertEvidenceImage(req.file)
+app.post('/api/improvement-sumbagsel/:siteId/evidence',evidenceUpload.array('files',50),asyncHandler(async(req,res)=>{
+  const files=Array.isArray(req.files)?req.files:[]
+  if(!files.length)throw new HttpError(400,'Pilih minimal satu foto evidence.')
+  files.forEach(assertEvidenceImage)
   const safeSiteId=String(req.params.siteId||'').replace(/[^a-z0-9_-]/gi,'_')
   if(!safeSiteId)throw new HttpError(422,'Site ID tidak valid.')
-  const extension=req.file.mimetype==='image/png'?'png':'jpg'
-  const filename=`${safeSiteId}-${Date.now()}-${Math.random().toString(36).slice(2,10)}.${extension}`
   await fs.mkdir(improvementEvidenceDir,{recursive:true})
-  await fs.writeFile(path.join(improvementEvidenceDir,filename),req.file.buffer,{flag:'wx'})
-  const evidence_link=`/evidence/improvement/${filename}`
-  const result=await updateImprovement(req.params.siteId,{evidence_link})
-  res.status(201).json({evidence_link,site:result.site})
+  const evidence_links=[]
+  for(const [index,file] of files.entries()){
+    const extension=file.mimetype==='image/png'?'png':'jpg'
+    const filename=`${safeSiteId}-${Date.now()}-${index}-${Math.random().toString(36).slice(2,10)}.${extension}`
+    await fs.writeFile(path.join(improvementEvidenceDir,filename),file.buffer,{flag:'wx'})
+    evidence_links.push(`/evidence/improvement/${filename}`)
+  }
+  const result=await addImprovementEvidence(req.params.siteId,evidence_links)
+  res.status(201).json({evidence_links,evidence_items:result.evidence_items,site:result.site})
+}))
+app.delete('/api/improvement-sumbagsel/:siteId/evidence',asyncHandler(async(req,res)=>{
+  const evidence_link=String(req.body?.evidence_link||'')
+  const result=await removeImprovementEvidence(req.params.siteId,evidence_link)
+  const match=evidence_link.match(/^\/evidence\/improvement\/([^/]+)$/)
+  if(match)await fs.rm(path.join(improvementEvidenceDir,match[1]),{force:true})
+  res.json({evidence_items:result.evidence_items,site:result.site})
 }))
 app.get('/api/improvement-sumbagsel/export.xlsx',asyncHandler(async(req,res)=>{
   const payload=await improvementDashboard(req.query), workbook=new ExcelJS.Workbook(), sheet=workbook.addWorksheet('Site Priority Enhancement')
-  const columns=[['Site ID','site_id'],['Site Name','site_name'],['NOP','nop'],['Priority Enhancement','priority_enhancement'],['Responsibility','responsibility'],['PIC Team Lapangan','pic_team_lapangan'],['RC Category','rca'],['Action Cat','action_cat'],['Program','program'],['Detail Program Activity','detail_program_activity'],['PO HTDE 2026','po_htde_2026'],['PO Upgrade Daya 2026','po_upgrade_daya_2026'],['Status','status'],['Week Plan','plan_week'],['Date Plan','plan_date'],['Problem Dependency','problem_dependency'],['Evidence','evidence_link'],['Remark / Progress','remark_progress']]
+  const columns=[['Site ID','site_id'],['Site Name','site_name'],['NOP','nop'],['Priority Enhancement','priority_enhancement'],['Responsibility','responsibility'],['PIC Team Lapangan','pic_team_lapangan'],['RC Category','rca'],['Action Cat','action_cat'],['Program','program'],['Detail Program Activity','detail_program_activity'],['PO HTDE 2026','po_htde_2026'],['PO Upgrade Daya 2026','po_upgrade_daya_2026'],['Status','status'],['Week Plan','plan_week'],['Date Plan','plan_date'],['Problem Dependency','problem_dependency'],['Remark / Progress','remark_progress']]
   sheet.columns=columns.map(([header,key])=>({header,key,width:Math.max(14,Math.min(36,header.length+8))}))
   payload.sites.forEach(site=>sheet.addRow(Object.fromEntries(columns.map(([,key])=>[key,site[key]??'']))))
   sheet.getRow(1).font={bold:true,color:{argb:'FFFFFFFF'}};sheet.getRow(1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF29496C'}}

@@ -133,9 +133,10 @@ export async function addImprovementEvidence(siteId,evidenceLink){
  const source=await seed(),site=source.sites.find(row=>row.site_id===siteId);if(!site)throw Object.assign(new Error('Site Improvement tidak ditemukan.'),{status:404})
  const existing=(await updates())[siteId]||{},next={...existing}
  if(!Object.prototype.hasOwnProperty.call(existing,'edit_backup'))next.edit_backup={...existing}
- next.evidence_items=[...evidenceItems(existing),text(evidenceLink)]
+ const incoming=(Array.isArray(evidenceLink)?evidenceLink:[evidenceLink]).map(text).filter(Boolean)
+ next.evidence_items=[...new Set([...evidenceItems(existing),...incoming])]
  next.evidence_link=next.evidence_items.at(-1)||''
- next.activity_history=[...(existing.activity_history||[]),{type:'evidence',action:'upload',at:new Date().toISOString(),evidence_link:next.evidence_link}]
+ next.activity_history=[...(existing.activity_history||[]),{type:'evidence',action:'upload',at:new Date().toISOString(),evidence_link:incoming.join(', ')}]
  await persist(siteId,next)
  return {site:mergeSite(site,next),evidence_items:next.evidence_items}
 }

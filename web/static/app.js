@@ -157,11 +157,11 @@ const getKpiCategoryExport = ({ runId, region, nop, periods } = {}) => {
 };
 const PAGE_ASSETS = {
   "preventive-dashboard": { styles: ["/static/pm-site.css?v=20261105-asset-integrity"] },
-  "preventive-punchlist": { styles: ["/static/pm-punchlist.css?v=20261105-asset-integrity"] },
+  "preventive-punchlist": { styles: ["/static/pm-punchlist.css?v=20261106-pagination"] },
   "preventive-site": { styles: ["/static/pm-site.css?v=20261105-asset-integrity"], scripts: ["/static/pm-site.js?v=20261105-asset-integrity"] },
   "preventive-genset": { styles: ["/static/pm-site.css?v=20261105-asset-integrity", "/static/pm-genset.css?v=20261105-asset-integrity"], scripts: ["/static/pm-site.js?v=20261105-asset-integrity", "/static/pm-genset.js?v=20261105-asset-integrity"] },
   rca: { styles: ["/static/rca.css?v=20261105-asset-integrity", "/static/rca-template.css?v=20261105-asset-integrity", "/static/rca-typography.css?v=20261105-asset-integrity"], scripts: ["/static/rca.js?v=20261105-asset-integrity"] },
-  "improvement-sumbagsel": { styles: ["/static/improvement-sumbagsel.css?v=20261106-evidence"], scripts: ["/static/improvement-sumbagsel.js?v=20261106-evidence"] }
+  "improvement-sumbagsel": { styles: ["/static/improvement-sumbagsel.css?v=20261106-pagination"], scripts: ["/static/improvement-sumbagsel.js?v=20261106-evidence"] }
 };
 const PAGE_MODULES = {
   "preventive-site": ["PMSiteModule"],
@@ -745,10 +745,8 @@ function PreventiveOperationalInsights({ data, filters, onFilter }) {
     h("div", { className: "pm-reg-list" }, ...rows)
   );
 }
-function PreventiveDashboardCards({ data, file, date, busy, loading, filters, onFile, onDate, onUpload, onFilter, onReview, onRefresh }) {
+function renderPreventiveDashboardCards({ data, file, date, busy, loading, filters, onFile, onDate, onUpload, onFilter, onReview, onRefresh }, page, setPage) {
   const h = React.createElement;
-  const [page, setPage] = React.useState(1);
-  React.useEffect(() => setPage(1), [filters.month, filters.regional, filters.nop, filters.search, filters.status, filters.maintenanceType, filters.needsAttention]);
   const WorkStatus = runtimeComponent("PMWorkStatus");
   const ConditionBadge = runtimeComponent("PMConditionBadge");
   const rows = data && data.rows || [];
@@ -856,12 +854,16 @@ function PreventiveDashboardCards({ data, file, date, busy, loading, filters, on
     )
   );
 }
+class PreventiveDashboardCards extends React.Component {
+  constructor(props) { super(props); this.state = { page: 1, filterKey: this.filterKey(props) }; }
+  filterKey(props) { const f = props.filters || {}; return [f.month, f.regional, f.nop, f.search, f.status, f.maintenanceType, f.needsAttention].join('|'); }
+  componentDidUpdate() { const key = this.filterKey(this.props); if (key !== this.state.filterKey) this.setState({ page: 1, filterKey: key }); }
+  render() { return renderPreventiveDashboardCards(this.props, this.state.page, (next) => this.setState({ page: typeof next === 'function' ? next(this.state.page) : next })); }
+}
 function PreventivePlaceholder({ title }) {
   return /* @__PURE__ */ React.createElement("section", { className: "corporate-panel flex min-h-[360px] items-center justify-center p-8 text-center" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("h2", { className: "section-title" }, title.toUpperCase()), /* @__PURE__ */ React.createElement("p", { className: "mt-3 text-[11px] text-slate-400" }, "Section ini sudah disiapkan pada navigasi dan dapat dilanjutkan setelah desain serta data Excel-nya ditentukan.")));
 }
-function PreventiveRoutinePage({ data, file, date, busy, loading, filters, onFile, onDate, onUpload, onFilter, kind, onOpenGenset }) {
-  const [page, setPage] = React.useState(1);
-  React.useEffect(() => setPage(1), [filters.month, filters.dateFrom, filters.dateTo, filters.regional, filters.nop, filters.search, filters.pic, filters.typePower, filters.scopeItem, filters.status]);
+function renderPreventiveRoutinePage({ data, file, date, busy, loading, filters, onFile, onDate, onUpload, onFilter, kind, onOpenGenset }, page, setPage) {
   if (kind === "site") return React.createElement(runtimeComponent("PMSiteModule"), { filters, pmData: data, upload: onFilter.uploadProps || {}, UploadPanel: () => null, SummaryCard: PreventiveSummaryCard });
   const h = React.createElement;
   const WorkStatus = runtimeComponent("PMWorkStatus");
@@ -892,6 +894,12 @@ function PreventiveRoutinePage({ data, file, date, busy, loading, filters, onFil
   const filtersBar = h("div", { className: "space-y-3" }, dateRow);
   const title = kind === "genset" ? "PM GENSET" : "PM SITE";
   return h("div", { className: "space-y-4" }, h("div", { className: "grid grid-cols-4 gap-4" }, h(PreventiveSummaryCard, { label: `PLAN ${kind === "genset" ? "GENSET" : "SITE"}`, value: data && data.plan != null ? data.plan : 0, detail: `${shortDate(filters.dateFrom)} sampai ${shortDate(filters.dateTo)}`, tone: "navy" }), h(PreventiveSummaryCard, { label: "SUBMITTED", value: data && data.submitted != null ? data.submitted : 0, detail: "Site unik dengan Submitted Date terisi", tone: "green" }), h(PreventiveSummaryCard, { label: "ACHIEVEMENT", value: `${formatNumber(data && data.achievement != null ? data.achievement : 0)}%`, detail: "Submitted dibanding Plan pada filter aktif", tone: "orange" }), h(PreventiveSummaryCard, { label: "BELUM SUBMIT", value: data && data.pending != null ? data.pending : 0, detail: "Site plan yang belum memiliki Submitted Date", tone: "red" })), h("section", { className: "corporate-panel p-5" }, filtersBar, h("div", { className: "pm-filter-charts" }, h(AttentionCharts, { rows, kind: "genset", loading })), h("div", { className: "mt-4 flex items-center justify-between" }, h("div", null, h("h2", { className: "section-title" }, `${title} - GENERAL INFORMATION`), h("p", { className: "mt-1 text-[10px] text-slate-400" }, `Schedule ${data && data.period_start ? shortDate(data.period_start) : "-"} sampai ${data && data.period_end ? shortDate(data.period_end) : "-"} · Menampilkan ${pageFrom}-${pageTo} dari ${rows.length} site`)), loading && h(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" })), generalFilters, h("div", { className: "kpi-scrollbar preventive-card-list" }, ...(cards.length ? cards : [h("div", { key: "empty", className: "flex h-[180px] items-center justify-center text-[10px] text-slate-400" }, `Belum ada data ${title} pada rentang tanggal dan filter ini.`)])), h("nav", { className: "pm-work-pagination", "aria-label": `Navigasi daftar ${title}` }, h("button", { className: "pm-page-button", disabled: safePage <= 1, onClick: () => setPage((value) => Math.max(1, value - 1)) }, "← Sebelumnya"), h("span", { className: "pm-page-position" }, "Halaman ", safePage, " / ", totalPages), h("button", { className: "pm-page-button", disabled: safePage >= totalPages, onClick: () => setPage((value) => Math.min(totalPages, value + 1)) }, "Berikutnya →"))));
+}
+class PreventiveRoutinePage extends React.Component {
+  constructor(props) { super(props); this.state = { page: 1, filterKey: this.filterKey(props) }; }
+  filterKey(props) { const f = props.filters || {}; return [f.month, f.dateFrom, f.dateTo, f.regional, f.nop, f.search, f.pic, f.typePower, f.scopeItem, f.status].join('|'); }
+  componentDidUpdate() { const key = this.filterKey(this.props); if (key !== this.state.filterKey) this.setState({ page: 1, filterKey: key }); }
+  render() { return renderPreventiveRoutinePage(this.props, this.state.page, (next) => this.setState({ page: typeof next === 'function' ? next(this.state.page) : next })); }
 }
 function UploadPanel({ run, draftFile, draftDate, busyUpload, setDraftFile, setDraftDate, onUpload }) {
   return null;
@@ -2143,9 +2151,9 @@ class PunchlistWorkspace extends React.Component {
           h("div", null, h("p", { className: "pl-eyebrow" }, `GENERAL INFORMATION — ${levelTitle}`), h("h2", { className: "section-title" }, listTitle), h("p", { className: "pl-section-desc" }, activeLevel === "punchlist_l0" ? "Catatan lapangan berasal dari Notes PM Site dan bersifat referensi." : "Filter status review L1 dan buka card site untuk mengisi Action Temuan.")),
           h("div", { className: "pl-head-actions" }, findingFilter && h("button", { type: "button", onClick: this.clearFindingFilter, className: "btn-secondary h-8 px-3 text-[9px] font-semibold" }, "× ", findingText), h("span", { className: "pl-count", role: "status" }, countText), s.loading && h(RefreshCw, { size: 15, className: "animate-spin text-[#173E68]" }), s.category === "LAINNYA" && h("button", { type: "button", onClick: this.closeOthers, className: "btn-secondary h-8 px-3 text-[9px] font-semibold" }, "KEMBALI KE SEMUA"))),
         segments,
-        h("div", { className: "pl-list kpi-scrollbar" }, ...cards,
-          !s.loading && h("nav", { className: "pm-work-pagination", "aria-label": "Navigasi daftar PM Punchlist" }, h("button", { className: "pm-page-button", disabled: page <= 1, onClick: () => this.setState((state) => ({ page: Math.max(1, (state.page || 1) - 1) })) }, "← Sebelumnya"), h("span", { className: "pm-page-position" }, "Menampilkan ", pageFrom, "-", pageTo, " dari ", number(visibleRows.length), " · Halaman ", page, " / ", totalPages), h("button", { className: "pm-page-button", disabled: page >= totalPages, onClick: () => this.setState((state) => ({ page: Math.min(totalPages, (state.page || 1) + 1) })) }, "Berikutnya →")),
-          !s.loading && !visibleRows.length && h("p", { className: "pl-empty" }, findingFilter ? `Tidak ada site dengan temuan ${findingText} pada filter aktif.` : s.category === "LAINNYA" ? "Tidak ada temuan Lainnya pada filter aktif." : total ? "Tidak ada site yang cocok dengan filter status ini." : "Belum ada data PM Site. Upload data PM Site terlebih dahulu."))));
+        h("div", { className: "pl-list kpi-scrollbar" }, ...cards),
+        !s.loading && h("nav", { className: "pm-work-pagination", "aria-label": "Navigasi daftar PM Punchlist" }, h("button", { className: "pm-page-button", disabled: page <= 1, onClick: () => this.setState((state) => ({ page: Math.max(1, (state.page || 1) - 1) })) }, "← Sebelumnya"), h("span", { className: "pm-page-position" }, "Menampilkan ", pageFrom, "-", pageTo, " dari ", number(visibleRows.length), " · Halaman ", page, " / ", totalPages), h("button", { className: "pm-page-button", disabled: page >= totalPages, onClick: () => this.setState((state) => ({ page: Math.min(totalPages, (state.page || 1) + 1) })) }, "Berikutnya →")),
+        !s.loading && !visibleRows.length && h("p", { className: "pl-empty" }, findingFilter ? `Tidak ada site dengan temuan ${findingText} pada filter aktif.` : s.category === "LAINNYA" ? "Tidak ada temuan Lainnya pada filter aktif." : total ? "Tidak ada site yang cocok dengan filter status ini." : "Belum ada data PM Site. Upload data PM Site terlebih dahulu.")));
   }
 }
 class App extends React.Component {

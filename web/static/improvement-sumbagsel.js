@@ -69,42 +69,44 @@
  // Evidence foto disimpan melalui API terpisah agar tautan tidak hilang jika
  // pengguna masih melengkapi field Edit lain sebelum menekan Simpan Perubahan.
  const baseImprovementEditModal=SumbagselImprovement.prototype.editModal;
- SumbagselImprovement.prototype.uploadEvidence=async function(file){
-  if(!file)return;
-  if(!['image/jpeg','image/png'].includes(file.type)){this.setState({error:'Evidence harus berupa foto .jpg, .jpeg, atau .png.'});return;}
+ SumbagselImprovement.prototype.uploadEvidence=async function(fileList){
+  const files=Array.from(fileList||[]);if(!files.length)return;
+  const invalid=files.find(file=>!['image/jpeg','image/png'].includes(file.type));
+  if(invalid){this.setState({error:'Evidence harus berupa foto .jpg, .jpeg, atau .png.'});return;}
+  const oversized=files.find(file=>file.size>8*1024*1024);
+  if(oversized){this.setState({error:'Ukuran setiap foto maksimal 8 MB.'});return;}
   if(!this.state.editing)return;
   this.setState({evidenceUploading:true,error:''});
   try{
-   const form=new FormData();form.append('file',file);
+   const form=new FormData();files.forEach(file=>form.append('files',file,file.name));
    const result=await api('/api/improvement-sumbagsel/'+encodeURIComponent(this.state.editing.site_id)+'/evidence',{method:'POST',body:form});
-   this.setState(state=>({evidenceUploading:false,form:{...state.form,evidence_link:result.evidence_link},editing:{...state.editing,evidence_link:result.evidence_link},notice:'Evidence foto berhasil disimpan.'}));
+   const items=result.evidence_items||[];
+   this.setState(state=>({evidenceUploading:false,form:{...state.form,evidence_items:items,evidence_link:items.at(-1)||''},editing:{...state.editing,evidence_items:items,evidence_link:items.at(-1)||''},notice:`${files.length} foto evidence berhasil disimpan.`}));
+  }catch(error){this.setState({evidenceUploading:false,error:error.message});}
+ };
+ SumbagselImprovement.prototype.removeEvidence=async function(evidence_link){
+  if(!evidence_link||!this.state.editing||!window.confirm('Hapus foto evidence ini?'))return;
+  this.setState({evidenceUploading:true,error:''});
+  try{
+   const result=await api('/api/improvement-sumbagsel/'+encodeURIComponent(this.state.editing.site_id)+'/evidence',{method:'DELETE',body:JSON.stringify({evidence_link})});
+   const items=result.evidence_items||[];
+   this.setState(state=>({evidenceUploading:false,form:{...state.form,evidence_items:items,evidence_link:items.at(-1)||''},editing:{...state.editing,evidence_items:items,evidence_link:items.at(-1)||''},notice:'Foto evidence berhasil dihapus.'}));
   }catch(error){this.setState({evidenceUploading:false,error:error.message});}
  };
  SumbagselImprovement.prototype.editModal=function(){
   const backdrop=baseImprovementEditModal.call(this),modal=React.Children.toArray(backdrop.props.children)[0];
   if(!modal)return backdrop;
-  const children=React.Children.toArray(modal.props.children),footerIndex=children.findIndex(child=>child&&child.type==='footer'),evidence=this.state.form.evidence_link||this.state.editing.evidence_link||'';
+  const children=React.Children.toArray(modal.props.children),footerIndex=children.findIndex(child=>child&&child.type==='footer'),items=[...new Set([...(this.state.form.evidence_items||[]),...(this.state.editing.evidence_items||[]),this.state.form.evidence_link||this.state.editing.evidence_link||''].filter(Boolean))];
   const evidenceSection=h('section',{className:'imp-evidence-section',key:'improvement-evidence'},
-   h('div',{className:'imp-evidence-copy'},h('span',null,'EVIDENCE FOTO'),h('small',null,'Format .jpg, .jpeg, atau .png. Tautan disimpan pada kolom Evidence.')),
-   h('label',{className:'imp-evidence-upload'},h('span',null,this.state.evidenceUploading?'Mengunggah...':'Pilih Foto'),h('input',{type:'file',accept:'.jpg,.jpeg,.png,image/jpeg,image/png',disabled:this.state.evidenceUploading,onChange:event=>{this.uploadEvidence(event.target.files&&event.target.files[0]);event.target.value='';}})),
-   evidence&&h('div',{className:'imp-evidence-preview'},h('a',{href:evidence,target:'_blank',rel:'noreferrer',title:'Buka foto ukuran penuh'},h('img',{src:evidence,alt:'Evidence '+this.state.editing.site_id})),h('a',{href:evidence,target:'_blank',rel:'noreferrer'},'Lihat Foto'))
+   h('div',{className:'imp-evidence-copy'},h('span',null,'EVIDENCE FOTO'),h('small',null,'Format .jpg, .jpeg, atau .png. Maksimal 8 MB per foto dan dapat memilih banyak foto.')),
+   h('label',{className:'imp-evidence-upload'},h('span',null,this.state.evidenceUploading?'Mengunggah...':'Pilih Foto'),h('input',{type:'file',multiple:true,accept:'.jpg,.jpeg,.png,image/jpeg,image/png',disabled:this.state.evidenceUploading,onChange:event=>{this.uploadEvidence(event.target.files);event.target.value='';}})),
+   items.length?h('div',{className:'imp-evidence-preview'},items.map((evidence,index)=>h('div',{className:'imp-evidence-item',key:evidence},
+    h('a',{href:evidence,target:'_blank',rel:'noreferrer',title:'Buka foto ukuran penuh'},h('img',{src:evidence,alt:'Evidence '+this.state.editing.site_id+' '+(index+1)})),
+    h('button',{type:'button',className:'imp-evidence-delete',disabled:this.state.evidenceUploading,onClick:()=>this.removeEvidence(evidence),'aria-label':'Hapus foto evidence'},'×')
+   ))):h('p',{className:'imp-evidence-empty'},'Belum ada foto evidence.')
   );
   children.splice(footerIndex<0?children.length:footerIndex,0,evidenceSection);
   return React.cloneElement(backdrop,null,React.cloneElement(modal,null,...children));
- };
- const priorImprovementDidUpdate=SumbagselImprovement.prototype.componentDidUpdate;
- SumbagselImprovement.prototype.componentDidUpdate=function(){
-  if(priorImprovementDidUpdate)priorImprovementDidUpdate.apply(this,arguments);
-  const table=document.querySelector('.imp-tablebox table'),sites=this.state.data&&this.state.data.sites;
-  if(!table||!Array.isArray(sites))return;
-  const head=table.querySelector('thead tr');
-  if(head&&!Array.from(head.children).some(cell=>cell.textContent.trim()==='Evidence')){const cell=document.createElement('th');cell.textContent='Evidence';head.insertBefore(cell,head.lastElementChild);}
-  Array.from(table.querySelectorAll('tbody tr')).forEach((row,index)=>{
-   if(row.querySelector('[data-improvement-evidence]'))return;
-   const cell=document.createElement('td'),url=sites[index]&&sites[index].evidence_link;cell.dataset.improvementEvidence='true';
-   if(url){const link=document.createElement('a');link.href=url;link.target='_blank';link.rel='noreferrer';link.className='imp-evidence-link';link.textContent='Lihat Foto';cell.appendChild(link);}else cell.textContent='–';
-   row.insertBefore(cell,row.lastElementChild);
-  });
  };
  window.SumbagselImprovement=SumbagselImprovement;
 })();

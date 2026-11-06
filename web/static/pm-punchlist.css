@@ -288,4 +288,6 @@
 .pm-page-button{border:1px solid #c5d2e1;background:#fff;color:#29496c;border-radius:5px;padding:7px 12px;font:inherit;cursor:pointer;transition:background .15s ease,border-color .15s ease}
 .pm-page-button:hover:not(:disabled){background:#eef4fa;border-color:#8ea9c4}
 .pm-page-button:disabled{cursor:not-allowed;opacity:.45}
+.pl-section > .pm-work-pagination{width:100%;box-sizing:border-box;justify-content:center;margin:16px 0 0;padding:12px 0 0;clear:both}
+.pl-section > .pm-work-pagination{margin-left:-22px;margin-right:-22px;width:calc(100% + 44px);padding:12px 22px 0;background:#eef3f8}
 .pm-page-position{min-width:150px;text-align:center;color:#667992}
