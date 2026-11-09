@@ -1357,6 +1357,13 @@ KpiWorkspace = class KpiWorkspace extends React.Component {
   }
 };
 // KPI Table dapat membedakan file Closing dan Bulan berjalan pada tanggal upload yang sama.
+function closingSnapshotLabel(uploadDate) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(uploadDate || ""))) return "-";
+  const date = new Date(`${uploadDate}T00:00:00Z`);
+  const previousMonth = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - 1, 1));
+  const month = new Intl.DateTimeFormat("id-ID", { month: "short", timeZone: "UTC" }).format(previousMonth);
+  return `${month}+${String(date.getUTCDate()).padStart(2, "0")}`;
+}
 excelDateLabel = function(value) {
   if (!value) return "-";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return String(value);
@@ -1410,14 +1417,11 @@ KpiWorkspace = class KpiWorkspace extends React.Component {
         const source = filename.match(/(20\d{2})(0?[1-9]|1[0-2])(?:\D|$)/);
         return upload.reporting_period && upload.reporting_period.source_period || (source ? `${source[1]}-${String(source[2]).padStart(2, "0")}` : String(item.date_end || "").slice(0, 7));
       });
-      // Closing memakai bulan upload dengan pemisah "+" (mis. Nov+01),
-      // sedangkan Bulan berjalan tetap memakai format tanggal biasa (Nov-01).
-      // Isi Closing dan pembandingannya tetap berdasarkan source period.
+      // Closing menampilkan bulan sebelumnya + hari upload (mis. Okt+09).
+      // Tanggal upload asli tetap dipakai untuk filter dan perbandingan snapshot.
       const labels = matches.map((item) => {
         if (periodType !== "closing_previous_month") return excelDateLabel(item.date_end);
-        const date = new Date(`${item.date_end}T00:00:00Z`);
-        const month = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" }).format(date);
-        return `${month}+${String(date.getUTCDate()).padStart(2, "0")}`;
+        return closingSnapshotLabel(item.date_end);
       });
       const latestSourcePeriod = sourcePeriods[sourcePeriods.length - 1];
       const baselineItem = matches.length > 1 ? matches[matches.length - 2] : null;
