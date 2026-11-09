@@ -166,8 +166,10 @@ export async function revertImprovementEdit(siteId,body={}){
  return {site:mergeSite(site,previous),plan_week:week(previous.plan_date),done_week:week(previous.done_date)}
 }
 export async function approveImprovement(siteId,body={}){
- const code=text(body.authorization_code);if(!code)throw Object.assign(new Error('Kode otorisasi wajib diisi.'),{status:422})
- const configured=text(process.env.IMPROVEMENT_APPROVAL_PASSWORD);if(configured&&code!==configured)throw Object.assign(new Error('Kode otorisasi tidak sesuai.'),{status:403})
+ const configured=text(process.env.IMPROVEMENT_APPROVAL_PASSWORD)
+ if(!configured)throw Object.assign(new Error('Password Otoritas server belum dikonfigurasi. Approval dinonaktifkan sampai konfigurasi selesai.'),{status:503})
+ const code=text(body.authorization_code);if(!code)throw Object.assign(new Error('Password Otoritas wajib diisi.'),{status:422})
+ if(code!==configured)throw Object.assign(new Error('Password Otoritas tidak sesuai.'),{status:403})
  const source=await seed(), site=source.sites.find(row=>row.site_id===siteId);if(!site)throw Object.assign(new Error('Site Improvement tidak ditemukan.'),{status:404})
  const existing=(await updates())[siteId]||{}, role=text(body.verifier_role)||'NOP Lead (Approval -> Close Activity (ENOM))', decision=text(body.decision)||'approve';checkRevision(existing,body.expected_revision)
  const decisionMap={approve:{action:role.startsWith('NOP Lead')?'Close Activity (ENOM)':'Close Validasi (NOP)',status:role.startsWith('NOP Lead')?'Close Activity (ENOM)':'Close Validasi (NOP)'},return_open:{action:'Reject (Return to Open)',status:'Open'},set_escalated:{action:'Set Escalated',status:'Escalated'}}
