@@ -161,7 +161,7 @@ const PAGE_ASSETS = {
   "preventive-site": { styles: ["/static/pm-site.css?v=20261105-asset-integrity"], scripts: ["/static/pm-site.js?v=20261105-asset-integrity"] },
   "preventive-genset": { styles: ["/static/pm-site.css?v=20261105-asset-integrity", "/static/pm-genset.css?v=20261105-asset-integrity"], scripts: ["/static/pm-site.js?v=20261105-asset-integrity", "/static/pm-genset.js?v=20261105-asset-integrity"] },
   rca: { styles: ["/static/rca.css?v=20261105-asset-integrity", "/static/rca-template.css?v=20261105-asset-integrity", "/static/rca-typography.css?v=20261105-asset-integrity"], scripts: ["/static/rca.js?v=20261105-asset-integrity"] },
-  "improvement-sumbagsel": { styles: ["/static/improvement-sumbagsel.css?v=20261106-pm-visual-style-v4"], scripts: ["/static/improvement-sumbagsel.js?v=20261106-page-limit-50-v5"] }
+  "improvement-sumbagsel": { styles: ["/static/improvement-sumbagsel.css?v=20261106-pm-visual-style-v4"], scripts: ["/static/improvement-sumbagsel.js?v=20261109-shared-sync"] }
 };
 const PAGE_MODULES = {
   "preventive-site": ["PMSiteModule"],

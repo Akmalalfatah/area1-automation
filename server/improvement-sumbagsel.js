@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import {createHash} from 'node:crypto'
 import {DATA_DIR,SERVER_DIR} from './config.js'
 import {databaseEnabled,getPool} from './db.js'
 
@@ -7,6 +8,10 @@ const SEED_FILE=path.join(SERVER_DIR,'data','sumbagsel-improvement-seed.json')
 const LOCAL_FILE=path.join(DATA_DIR,'sumbagsel-improvement-updates.json')
 const text=value=>String(value??'').trim()
 const upper=value=>text(value).toUpperCase()
+const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value
+const revision=value=>createHash('sha256').update(JSON.stringify(canonical(value||{}))).digest('hex')
+const conflict=()=>Object.assign(new Error('Data site telah berubah oleh pengguna lain. Tutup form dan buka kembali site untuk memakai data terbaru; draft Anda belum disimpan.'),{status:409})
+function checkRevision(existing,expected){if(expected!==undefined&&expected!==revision(existing))throw conflict()}
 const canonicalNop=value=>upper(value).replace(/^NOP\s*/,'').trim()
 const fields=['responsibility','pic_team_lapangan','status','remark_progress','plan_date','done_date','problem_dependency','evidence_link','program','detail_program_activity','activity_program','category_program','rc_tier_1','tp','rca','po_htde_2026','po_upgrade_daya_2026']
 // Close Activity/Close Validasi are produced only by Approval Activity. The
@@ -26,7 +31,7 @@ async function updates(){
  return Object.fromEntries(rows.map(row=>[row.site_id,typeof row.data==='string'?JSON.parse(row.data):row.data]))
 }
 const evidenceItems=update=>[...new Set([...(Array.isArray(update?.evidence_items)?update.evidence_items:[]),text(update?.evidence_link)].map(text).filter(Boolean))]
-function mergeSite(site,update){const items=evidenceItems(update);return {...site,...(update||{}),evidence_items:items,evidence_link:items.at(-1)||'',site_id:site.site_id,nop:canonicalNop(site.nop),priority_enhancement:site.priority_enhancement,program:text(update?.activity_program)||update?.program||site.program,rca:update?.rca??site.rca,site_flicker:site.site_flicker,action_cat:site.action_cat}}
+function mergeSite(site,update){const items=evidenceItems(update);return {...site,...(update||{}),sync_revision:revision(update),evidence_items:items,evidence_link:items.at(-1)||'',site_id:site.site_id,nop:canonicalNop(site.nop),priority_enhancement:site.priority_enhancement,program:text(update?.activity_program)||update?.program||site.program,rca:update?.rca??site.rca,site_flicker:site.site_flicker,action_cat:site.action_cat}}
 const week=value=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(text(value)))return '';const d=new Date(`${value}T00:00:00Z`),jan4=new Date(Date.UTC(d.getUTCFullYear(),0,4)),week=1+Math.round(((d-jan4)/86400000-3+(jan4.getUTCDay()+6)%7)/7);return `Week ${week}`}
 const csvHeader=value=>text(value).replace(/^\uFEFF/,'').toLowerCase().replace(/\s+/g,' ')
 const activityHeaders={
@@ -113,12 +118,12 @@ export async function importActivityProgressCsv(buffer,filename='activity-progre
   nextUpdates[site.site_id]=imported
  }
  if(!seen.size)throw Object.assign(new Error(`Tidak ada Site ID CSV yang cocok dengan master Sumbagsel. Contoh yang tidak cocok: ${unmatched.slice(0,5).join(', ')||'-'}.`),{status:422})
- await persistBatch(nextUpdates)
+ await persistBatch(Object.fromEntries([...seen].map(siteId=>[siteId,nextUpdates[siteId]])),existing)
  return {imported:seen.size,unmatched:rows.length-seen.size,unmatched_examples:unmatched,filename:text(filename),fields:['Detail Program Activity','Responsibility','PIC Team','Problem Dependency','Status','Date Plan','Actual Done','Remark','Evidence']}
 }
 export async function updateImprovement(siteId,body={}){
  const source=await seed(), site=source.sites.find(row=>row.site_id===siteId);if(!site)throw Object.assign(new Error('Site Improvement tidak ditemukan.'),{status:404})
- const existing=(await updates())[siteId]||{}, next={...existing}
+ const existing=(await updates())[siteId]||{}, next={...existing};checkRevision(existing,body.expected_revision)
  // Simpan snapshot sebelum edit pertama agar tombol revert tidak menghapus
  // hasil import Activity Progress yang telah ada sebelumnya.
  if(!Object.prototype.hasOwnProperty.call(existing,'edit_backup'))next.edit_backup={...existing}
@@ -127,59 +132,73 @@ export async function updateImprovement(siteId,body={}){
  const candidates=source.teams_by_nop[canonicalNop(site.nop)]||[]
  if(next.pic_team_lapangan&&!candidates.includes(next.pic_team_lapangan))throw Object.assign(new Error(`PIC harus berasal dari team NOP ${site.nop}.`),{status:422})
  next.activity_history=[...(existing.activity_history||[]),{type:'update',at:new Date().toISOString(),status:next.status||site.status,note:next.remark_progress||''}]
- await persist(siteId,next);return {site:mergeSite(site,next),plan_week:week(next.plan_date),done_week:week(next.done_date)}
+ await persist(siteId,next,existing);return {site:mergeSite(site,next),plan_week:week(next.plan_date),done_week:week(next.done_date)}
 }
-export async function addImprovementEvidence(siteId,evidenceLink){
+export async function addImprovementEvidence(siteId,evidenceLink,expectedRevision){
  const source=await seed(),site=source.sites.find(row=>row.site_id===siteId);if(!site)throw Object.assign(new Error('Site Improvement tidak ditemukan.'),{status:404})
- const existing=(await updates())[siteId]||{},next={...existing}
+ const existing=(await updates())[siteId]||{},next={...existing};checkRevision(existing,expectedRevision)
  if(!Object.prototype.hasOwnProperty.call(existing,'edit_backup'))next.edit_backup={...existing}
  const incoming=(Array.isArray(evidenceLink)?evidenceLink:[evidenceLink]).map(text).filter(Boolean)
  next.evidence_items=[...new Set([...evidenceItems(existing),...incoming])]
  next.evidence_link=next.evidence_items.at(-1)||''
  next.activity_history=[...(existing.activity_history||[]),{type:'evidence',action:'upload',at:new Date().toISOString(),evidence_link:incoming.join(', ')}]
- await persist(siteId,next)
+ await persist(siteId,next,existing)
  return {site:mergeSite(site,next),evidence_items:next.evidence_items}
 }
-export async function removeImprovementEvidence(siteId,evidenceLink){
+export async function removeImprovementEvidence(siteId,evidenceLink,expectedRevision){
  const source=await seed(),site=source.sites.find(row=>row.site_id===siteId);if(!site)throw Object.assign(new Error('Site Improvement tidak ditemukan.'),{status:404})
- const existing=(await updates())[siteId]||{},target=text(evidenceLink),items=evidenceItems(existing)
+ const existing=(await updates())[siteId]||{},target=text(evidenceLink),items=evidenceItems(existing);checkRevision(existing,expectedRevision)
  if(!target||!items.includes(target))throw Object.assign(new Error('Foto evidence tidak ditemukan.'),{status:404})
  const next={...existing,evidence_items:items.filter(item=>item!==target)}
  next.evidence_link=next.evidence_items.at(-1)||''
  next.activity_history=[...(existing.activity_history||[]),{type:'evidence',action:'delete',at:new Date().toISOString(),evidence_link:target}]
- await persist(siteId,next)
+ await persist(siteId,next,existing)
  return {site:mergeSite(site,next),evidence_items:next.evidence_items}
 }
-export async function revertImprovementEdit(siteId){
+export async function revertImprovementEdit(siteId,body={}){
  const source=await seed(),site=source.sites.find(row=>row.site_id===siteId);if(!site)throw Object.assign(new Error('Site Improvement tidak ditemukan.'),{status:404})
- const existing=(await updates())[siteId]||{}
+ const existing=(await updates())[siteId]||{};checkRevision(existing,body.expected_revision)
  if(!Object.prototype.hasOwnProperty.call(existing,'edit_backup')){
   const error=new Error('Belum ada perubahan Edit yang dapat dikembalikan untuk site ini.');error.status=409;throw error
  }
  const previous=existing.edit_backup||{}
- await persist(siteId,previous)
+ await persist(siteId,previous,existing)
  return {site:mergeSite(site,previous),plan_week:week(previous.plan_date),done_week:week(previous.done_date)}
 }
 export async function approveImprovement(siteId,body={}){
  const code=text(body.authorization_code);if(!code)throw Object.assign(new Error('Kode otorisasi wajib diisi.'),{status:422})
  const configured=text(process.env.IMPROVEMENT_APPROVAL_PASSWORD);if(configured&&code!==configured)throw Object.assign(new Error('Kode otorisasi tidak sesuai.'),{status:403})
  const source=await seed(), site=source.sites.find(row=>row.site_id===siteId);if(!site)throw Object.assign(new Error('Site Improvement tidak ditemukan.'),{status:404})
- const existing=(await updates())[siteId]||{}, role=text(body.verifier_role)||'NOP Lead (Approval -> Close Activity (ENOM))', decision=text(body.decision)||'approve'
+ const existing=(await updates())[siteId]||{}, role=text(body.verifier_role)||'NOP Lead (Approval -> Close Activity (ENOM))', decision=text(body.decision)||'approve';checkRevision(existing,body.expected_revision)
  const decisionMap={approve:{action:role.startsWith('NOP Lead')?'Close Activity (ENOM)':'Close Validasi (NOP)',status:role.startsWith('NOP Lead')?'Close Activity (ENOM)':'Close Validasi (NOP)'},return_open:{action:'Reject (Return to Open)',status:'Open'},set_escalated:{action:'Set Escalated',status:'Escalated'}}
  if(!decisionMap[decision])throw Object.assign(new Error('Aksi approval tidak valid.'),{status:422})
  const result=decisionMap[decision], next={...existing,status:result.status,responsibility:text(body.responsibility)||existing.responsibility||'',problem_dependency:text(body.problem_dependency)||existing.problem_dependency||'No Dependency',activity_history:[...(existing.activity_history||[]),{type:'approval',at:new Date().toISOString(),role:text(body.verifier_role)||'NOP Lead',action:result.action,status:result.status,note:text(body.approval_note)}]}
- await persist(siteId,next);return {site:mergeSite(site,next),plan_week:week(next.plan_date),done_week:week(next.done_date)}
+ await persist(siteId,next,existing);return {site:mergeSite(site,next),plan_week:week(next.plan_date),done_week:week(next.done_date)}
 }
-async function persist(siteId,data){
- if(databaseEnabled){await getPool().query('INSERT INTO sumbagsel_improvement_updates(site_id,data) VALUES(?,?) ON DUPLICATE KEY UPDATE data=VALUES(data),updated_at=CURRENT_TIMESTAMP',[siteId,JSON.stringify(data)]);return}
- const all=await localUpdates();all[siteId]=data;await fs.mkdir(DATA_DIR,{recursive:true});await fs.writeFile(LOCAL_FILE+'.tmp',JSON.stringify(all),'utf8');await fs.rename(LOCAL_FILE+'.tmp',LOCAL_FILE)
-}
-async function persistBatch(all){
+let localWrite=Promise.resolve()
+async function persist(siteId,data,expected){
  if(databaseEnabled){
   const connection=await getPool().getConnection()
-  try{await connection.beginTransaction();for(const entries of chunk(Object.entries(all),100))await connection.query('INSERT INTO sumbagsel_improvement_updates(site_id,data) VALUES ? ON DUPLICATE KEY UPDATE data=VALUES(data),updated_at=CURRENT_TIMESTAMP',[entries.map(([siteId,data])=>[siteId,JSON.stringify(data)])]);await connection.commit()}catch(error){await connection.rollback();throw error}finally{connection.release()}
+  try{
+   await connection.beginTransaction()
+   await connection.query('INSERT IGNORE INTO sumbagsel_improvement_updates(site_id,data) VALUES(?,?)',[siteId,'{}'])
+   const [rows]=await connection.query('SELECT data FROM sumbagsel_improvement_updates WHERE site_id=? FOR UPDATE',[siteId])
+   const current=typeof rows[0].data==='string'?JSON.parse(rows[0].data):rows[0].data
+   checkRevision(current,revision(expected))
+   await connection.query('UPDATE sumbagsel_improvement_updates SET data=?,updated_at=CURRENT_TIMESTAMP WHERE site_id=?',[JSON.stringify(data),siteId])
+   await connection.commit()
+  }catch(error){await connection.rollback();throw error}finally{connection.release()}
   return
  }
- await fs.mkdir(DATA_DIR,{recursive:true});await fs.writeFile(LOCAL_FILE+'.tmp',JSON.stringify(all),'utf8');await fs.rename(LOCAL_FILE+'.tmp',LOCAL_FILE)
+ const write=localWrite.catch(()=>{}).then(async()=>{const all=await localUpdates();checkRevision(all[siteId],revision(expected));all[siteId]=data;await fs.mkdir(DATA_DIR,{recursive:true});await fs.writeFile(LOCAL_FILE+'.tmp',JSON.stringify(all),'utf8');await fs.rename(LOCAL_FILE+'.tmp',LOCAL_FILE)})
+ localWrite=write;await write
+}
+async function persistBatch(all,expected={}){
+ if(databaseEnabled){
+  const connection=await getPool().getConnection()
+  try{await connection.beginTransaction();for(const siteId of Object.keys(all).sort()){await connection.query('INSERT IGNORE INTO sumbagsel_improvement_updates(site_id,data) VALUES(?,?)',[siteId,'{}']);const [rows]=await connection.query('SELECT data FROM sumbagsel_improvement_updates WHERE site_id=? FOR UPDATE',[siteId]);const current=typeof rows[0].data==='string'?JSON.parse(rows[0].data):rows[0].data;checkRevision(current,revision(expected[siteId]));await connection.query('UPDATE sumbagsel_improvement_updates SET data=?,updated_at=CURRENT_TIMESTAMP WHERE site_id=?',[JSON.stringify(all[siteId]),siteId])}await connection.commit()}catch(error){await connection.rollback();throw error}finally{connection.release()}
+  return
+ }
+ const write=localWrite.catch(()=>{}).then(async()=>{const current=await localUpdates();for(const siteId of Object.keys(all)){checkRevision(current[siteId],revision(expected[siteId]));current[siteId]=all[siteId]}await fs.mkdir(DATA_DIR,{recursive:true});await fs.writeFile(LOCAL_FILE+'.tmp',JSON.stringify(current),'utf8');await fs.rename(LOCAL_FILE+'.tmp',LOCAL_FILE)});localWrite=write;await write
 }
 const chunk=(items,size)=>Array.from({length:Math.ceil(items.length/size)},(_item,index)=>items.slice(index*size,(index+1)*size))

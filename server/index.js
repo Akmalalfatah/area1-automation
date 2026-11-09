@@ -50,7 +50,7 @@ app.post('/api/rca/sync',asyncHandler(async(req,res)=>res.json(await syncRcaGoog
 app.get('/api/rca/dashboard',asyncHandler(async(req,res)=>res.json(await rcaDashboard(req.query))))
 app.post('/api/rca/template',asyncHandler(async(req,res)=>res.json(await rcaTemplate(req.body||{}))))
 
-app.get('/api/improvement-sumbagsel',asyncHandler(async(req,res)=>res.json(await improvementDashboard(req.query))))
+app.get('/api/improvement-sumbagsel',asyncHandler(async(req,res)=>{res.setHeader('Cache-Control','no-store');res.json(await improvementDashboard(req.query))}))
 app.post('/api/improvement-sumbagsel/activity-import',upload.single('file'),asyncHandler(async(req,res)=>{assertCsv(req.file);res.json(await importActivityProgressCsv(req.file.buffer,req.file.originalname))}))
 app.post('/api/improvement-sumbagsel/:siteId/evidence',evidenceUpload.array('files',50),asyncHandler(async(req,res)=>{
   const files=Array.isArray(req.files)?req.files:[]
@@ -66,12 +66,12 @@ app.post('/api/improvement-sumbagsel/:siteId/evidence',evidenceUpload.array('fil
     await fs.writeFile(path.join(improvementEvidenceDir,filename),file.buffer,{flag:'wx'})
     evidence_links.push(`/evidence/improvement/${filename}`)
   }
-  const result=await addImprovementEvidence(req.params.siteId,evidence_links)
+  const result=await addImprovementEvidence(req.params.siteId,evidence_links,req.body?.expected_revision)
   res.status(201).json({evidence_links,evidence_items:result.evidence_items,site:result.site})
 }))
 app.delete('/api/improvement-sumbagsel/:siteId/evidence',asyncHandler(async(req,res)=>{
   const evidence_link=String(req.body?.evidence_link||'')
-  const result=await removeImprovementEvidence(req.params.siteId,evidence_link)
+  const result=await removeImprovementEvidence(req.params.siteId,evidence_link,req.body?.expected_revision)
   const match=evidence_link.match(/^\/evidence\/improvement\/([^/]+)$/)
   if(match)await fs.rm(path.join(improvementEvidenceDir,match[1]),{force:true})
   res.json({evidence_items:result.evidence_items,site:result.site})
@@ -86,7 +86,7 @@ app.get('/api/improvement-sumbagsel/export.xlsx',asyncHandler(async(req,res)=>{
   const buffer=await workbook.xlsx.writeBuffer();res.set({'content-type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','content-disposition':'attachment; filename="Site-Priority-Enhancement-Sumbagsel.xlsx"'});res.send(Buffer.from(buffer))
 }))
 app.put('/api/improvement-sumbagsel/:siteId',asyncHandler(async(req,res)=>res.json(await updateImprovement(req.params.siteId,req.body||{}))))
-app.post('/api/improvement-sumbagsel/:siteId/revert-edit',asyncHandler(async(req,res)=>res.json(await revertImprovementEdit(req.params.siteId))))
+app.post('/api/improvement-sumbagsel/:siteId/revert-edit',asyncHandler(async(req,res)=>res.json(await revertImprovementEdit(req.params.siteId,req.body||{}))))
 app.post('/api/improvement-sumbagsel/:siteId/approval',asyncHandler(async(req,res)=>res.json(await approveImprovement(req.params.siteId,req.body||{}))))
 
 app.post('/api/runs',asyncHandler(async(_req,res)=>res.json(await createRun(RUNS_DIR))))
