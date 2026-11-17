@@ -6,6 +6,7 @@ import {PROJECT_ROOT} from './config.js'
 import {databaseEnabled,getPool,loadPreventiveRows,recordApplicationUpload} from './db.js'
 import {workOrderKey,isTerminal} from './preventive.js'
 import {generateGeminiJson} from './services.js'
+import {productivityRow,buildProductivityDataset,saveProductivitySnapshot} from './productivity.js'
 
 export const normalizeSite=value=>String(value??'').trim().toUpperCase()
 const noteHash=value=>crypto.createHash('sha256').update(String(value||'').trim()).digest('hex')
@@ -47,10 +48,11 @@ export async function parseSiteSource(buffer,kind){
     if(sheet)break
   }
   if(!sheet)throw Object.assign(new Error(`Header sumber ${kind} tidak sesuai: ${requirements[kind].join(', ')}`),{status:422})
-  const records=new Map(),issues=[]
+  const records=new Map(),issues=[],productivityRows=[]
   for(let index=header+1;index<=sheet.rowCount;index++){
     const raw={};for(const [name,column] of Object.entries(columns))raw[name]=scalar(sheet.getCell(index,column).value)
     const get=(...names)=>names.map(name=>raw[name]).find(value=>value!==null&&value!==undefined&&value!=='')??''
+    if(kind==='swfm'&&columns.PICTAKEOVERTICKET&&columns.CHECKINAT&&columns.RHSTART){const row=productivityRow(raw,index);if(row)productivityRows.push(row)}
     const original=String(get('SITEID','SITE')).trim()
     if(!original)continue
     const sites=kind==='inap'?original.split(/[;,\s]+/).filter(Boolean):[original]
@@ -70,7 +72,7 @@ export async function parseSiteSource(buffer,kind){
     }
   }
   if(!records.size)throw Object.assign(new Error('Tidak ada baris sumber yang valid; data sebelumnya tidak diganti.'),{status:422})
-  return{rows:[...records.values()],row_count:records.size,issues}
+  return{rows:[...records.values()],row_count:records.size,issues,...(productivityRows.length?{productivity:buildProductivityDataset(productivityRows)}:{})}
 }
 
 let previewPromise
@@ -83,7 +85,7 @@ export async function saveSiteSource(kind,filename,date,dataset){
   const connection=await getPool().getConnection()
   try{
     await connection.beginTransaction()
-    const {rows,...metadata}=dataset,sourceUploadId=crypto.randomUUID()
+    const {rows,productivity,...metadata}=dataset,sourceUploadId=crypto.randomUUID()
     await connection.query('INSERT INTO pm_site_sources(source_kind,filename,upload_date,dataset) VALUES(?,?,?,?) ON DUPLICATE KEY UPDATE filename=VALUES(filename),upload_date=VALUES(upload_date),dataset=VALUES(dataset)',[kind,filename,date,JSON.stringify(metadata)])
     await connection.query('DELETE FROM pm_site_source_rows WHERE source_kind=?',[kind])
     for(let start=0;start<rows.length;start+=100){const values=rows.slice(start,start+100).map((row,index)=>[kind,start+index,JSON.stringify(row)]);await connection.query('INSERT INTO pm_site_source_rows(source_kind,row_no,payload) VALUES ?',[values])}
@@ -94,6 +96,7 @@ export async function saveSiteSource(kind,filename,date,dataset){
     await connection.query("UPDATE pm_site_source_uploads SET archived_at=NULL WHERE source_kind='master'")
     await connection.query("UPDATE pm_site_source_uploads SET archived_at=COALESCE(archived_at,CURRENT_TIMESTAMP) WHERE source_kind<>'master' AND upload_date<?",[monthStart])
     await recordApplicationUpload(kind,sourceUploadId,filename,date,dataset.row_count,connection)
+    if(kind==='swfm'&&productivity)await saveProductivitySnapshot(productivity,filename,date,connection)
     await connection.commit()
     return{source_kind:kind,filename,row_count:dataset.row_count,issue_count:dataset.issues.length,source_upload_id:sourceUploadId}
   }catch(error){await connection.rollback().catch(()=>{});throw error}finally{connection.release()}
@@ -261,7 +264,7 @@ export function analyzeSite(pm,data,today=new Date().toISOString().slice(0,10)){
     const sameDay=pm.last_maintenance?.slice(0,10)===row.occurred_at?.slice(0,10)
     if(!Number.isFinite(delta)||delta<0||delta>30||(delta===0&&!dateOnly))continue
     const identity=row.source==='ggr'?`ggr|${row.ticket_no}`:`ticket|${row.parent_ticket||row.ticket_no}`
-    const bucket=sameDay?'Hari 0':delta<=7?'Hari 1-7':delta<=14?'Hari 8-14':'Hari 15-30'
+    const bucket=sameDay?'Hari 0':delta<=7?'Hari 1–7':delta<=14?'Hari 8–14':'Hari 15–30'
     const end=milliseconds(row.closed_at)
     const duration=Number.isFinite(end)&&end>=occurred?(end-occurred)/60000:row.duration_minutes
     const incident={...row,id:identity,delay_days:Math.floor(delta),bucket,time_confirmation:sameDay&&dateOnly,category:category(row.rc_category),validated:validated(row.rca_validated),duration_minutes:duration,type:row.source==='ggr'?'Genset Gagal Running':row.source==='inap'?'INAP Incident':/EVENT/.test(normalizeSite(row.ticket_type))?'SWFM Event':'SWFM Incident',lineage:[{source:row.source,ticket_no:row.ticket_no}]}

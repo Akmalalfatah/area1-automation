@@ -1,4 +1,5 @@
 import {enrichDashboardReview} from './dashboard-review.js'
+import {productivitySummary,productivityRegion,productivityTickets,productivityRoster,saveProductivityPics} from './productivity.js'
 import {enrichWorkConditions} from './work-condition.js'
 import {freshnessTypes,buildFreshness} from './data-freshness.js'
 import express from 'express'
@@ -43,6 +44,11 @@ const improvementEvidenceDir=path.join(DATA_DIR,'improvement-evidence')
 app.use('/evidence/improvement',express.static(improvementEvidenceDir,{etag:true,maxAge:0,setHeaders(res){res.setHeader('Cache-Control','private, max-age=0, must-revalidate')}}))
 app.get('/',(_req,res)=>res.sendFile(`${WEB_DIR}/index.html`))
 app.get('/api/health',(_req,res)=>res.json({status:'ok',runtime:'node'}))
+app.get('/api/productivity/summary',asyncHandler(async(req,res)=>{res.setHeader('Cache-Control','no-store');res.json(await productivitySummary(req.query))}))
+app.get('/api/productivity/regions/:regional',asyncHandler(async(req,res)=>{res.setHeader('Cache-Control','no-store');res.json(await productivityRegion(req.params.regional,req.query))}))
+app.get('/api/productivity/tickets',asyncHandler(async(req,res)=>{res.setHeader('Cache-Control','no-store');res.json(await productivityTickets(req.query))}))
+app.get('/api/productivity/pics',asyncHandler(async(req,res)=>{res.setHeader('Cache-Control','no-store');res.json(await productivityRoster(req.query))}))
+app.post('/api/productivity/pics',asyncHandler(async(req,res)=>res.json(await saveProductivityPics(req.body))))
 app.get('/api/config',(_req,res)=>res.json({regions:REGION_NOPS,default_prompt:DEFAULT_REPORT_PROMPT,database_enabled:databaseEnabled}))
 
 app.get('/api/rca/snapshots',asyncHandler(async(_req,res)=>res.json({items:await rcaSnapshots()})))

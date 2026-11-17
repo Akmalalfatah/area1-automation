@@ -156,6 +156,7 @@ const getKpiCategoryExport = ({ runId, region, nop, periods } = {}) => {
   return api(`/api/kpi-category-export${params.size ? `?${params}` : ""}`);
 };
 const PAGE_ASSETS = {
+  productivity: { styles: ["/static/productivity.css?v=20261117-back-text"], scripts: ["/static/productivity.js?v=20261117-back-text"] },
   "preventive-dashboard": { styles: ["/static/pm-site.css?v=20261105-asset-integrity"] },
   "preventive-punchlist": { styles: ["/static/pm-punchlist.css?v=20261106-pagination-spread-v1"] },
   "preventive-site": { styles: ["/static/pm-site.css?v=20261105-asset-integrity"], scripts: ["/static/pm-site.js?v=20261105-asset-integrity"] },
@@ -164,6 +165,7 @@ const PAGE_ASSETS = {
   "improvement-sumbagsel": { styles: ["/static/improvement-sumbagsel.css?v=20261106-pm-visual-style-v4"], scripts: ["/static/improvement-sumbagsel.js?v=20261109-shared-sync"] }
 };
 const PAGE_MODULES = {
+  productivity: ["ProductivityWorkspace"],
   "preventive-site": ["PMSiteModule"],
   "preventive-genset": ["PMSiteModule", "PMGensetWorkspace"],
   rca: ["RCAWorkspace"],
@@ -406,6 +408,7 @@ function Sidebar({ activePage, preventiveOpen, onPage, onTogglePreventive }) {
       h("button", { onClick: onTogglePreventive, "aria-expanded": preventiveOpen, className: `sidebar-nav-button sidebar-main-item flex h-[42px] items-center gap-2 text-left text-xs font-semibold ${preventiveOpen ? "is-active" : ""}` }, h(ChevronRight, { size: 15, className: `sidebar-arrow ${preventiveOpen ? "is-open" : ""}` }), h("span", null, "Preventive Management")),
       preventiveOpen && h("div", { className: "sidebar-subnav py-1" }, menu("preventive-dashboard", "Dashboard"), menu("preventive-site", "PM Site"), menu("preventive-punchlist", "PM Punchlist"), menu("preventive-genset", "PM Genset")),
       h("button", { onClick: () => onPage("improvement-sumbagsel"), className: `sidebar-nav-button sidebar-main-item flex h-[42px] items-center text-left text-xs font-semibold ${activePage === "improvement-sumbagsel" ? "is-active" : ""}` }, h("span", null, "Improvement Sumbagsel")),
+      h("button", { onClick: () => onPage("productivity"), className: `sidebar-nav-button sidebar-main-item flex h-[42px] items-center text-left text-xs font-semibold ${activePage === "productivity" ? "is-active" : ""}` }, h("span", null, "Productivity PIC")),
       h("button", { onClick: () => onPage("rca"), className: `sidebar-nav-button sidebar-main-item flex h-[42px] items-center text-left text-xs font-semibold ${activePage === "rca" ? "is-active" : ""}` }, h("span", null, "RCA Alarm Down"))
     ),
     h(
@@ -2181,7 +2184,7 @@ class App extends React.Component {
         this.setState({ pageLoading: false, pageError: error.message });
         return;
       }
-      window.history.replaceState({}, "", page === "data-upload" ? `${window.location.pathname}?page=data-upload` : page === "rca" ? `${window.location.pathname}?page=rca` : window.location.pathname);
+      window.history.replaceState({}, "", page === "data-upload" ? `${window.location.pathname}?page=data-upload` : page === "rca" ? `${window.location.pathname}?page=rca` : page === "productivity" ? `${window.location.pathname}?page=productivity` : window.location.pathname);
       window.dispatchEvent(new Event("app:navigate"));
       clearTimeout(this.preventiveSearchTimer);
       const filters = preserveFilters ? this.state.preventiveFilters : defaultPreventiveFilters();
@@ -2386,7 +2389,7 @@ class App extends React.Component {
         this.setState({ shareLoading: false });
       }
     });
-    this.state = { config: null, run: null, dashboard: null, activePage: ["data-upload", "rca", "improvement-sumbagsel"].includes(new URLSearchParams(window.location.search).get("page")) ? new URLSearchParams(window.location.search).get("page") : "ekpi", pageLoading: false, preventiveOpen: false, preventiveData: null, preventiveScope: "", preventiveFile: null, preventiveDate: "", preventiveBusy: false, preventiveLoading: false, preventiveFilters: defaultPreventiveFilters(), region: "", nop: "", rowGroup: "", historyFilters: { day: "", month: "", year: "" }, historyItems: [], rangeStart: "", rangeEnd: "", rangeDashboard: null, kpiFilterContext: null, rangeLoading: false, draftFile: null, draftDate: "", busyUpload: false, pageError: "", prompt: "", promptDraft: "", reportText: "", reportError: "", reportLoading: false, tableImageLoading: false, shareLoading: false, showPrompt: false, notice: "" };
+    this.state = { config: null, run: null, dashboard: null, activePage: ["data-upload", "rca", "improvement-sumbagsel", "productivity"].includes(new URLSearchParams(window.location.search).get("page")) ? new URLSearchParams(window.location.search).get("page") : "ekpi", pageLoading: false, preventiveOpen: false, preventiveData: null, preventiveScope: "", preventiveFile: null, preventiveDate: "", preventiveBusy: false, preventiveLoading: false, preventiveFilters: defaultPreventiveFilters(), region: "", nop: "", rowGroup: "", historyFilters: { day: "", month: "", year: "" }, historyItems: [], rangeStart: "", rangeEnd: "", rangeDashboard: null, kpiFilterContext: null, rangeLoading: false, draftFile: null, draftDate: "", busyUpload: false, pageError: "", prompt: "", promptDraft: "", reportText: "", reportError: "", reportLoading: false, tableImageLoading: false, shareLoading: false, showPrompt: false, notice: "" };
     this.requestId = 0;
     this.preventiveRequestId = 0;
     this.preventiveSearchTimer = null;
@@ -2421,7 +2424,7 @@ class App extends React.Component {
     // Halaman mandiri tidak memerlukan konfigurasi, riwayat, atau dashboard
     // eKPI. Menunda seluruh bootstrap ini menghilangkan pembacaan snapshot
     // KPI lama saat pengguna hanya membuka RCA/Improvement.
-    if (["rca", "improvement-sumbagsel"].includes(this.state.activePage)) {
+    if (["rca", "improvement-sumbagsel", "productivity"].includes(this.state.activePage)) {
       this.setState({ config: { default_prompt: "", regions: {} }, run: { id: "__deferred__", processed: false } });
       return;
     }
@@ -2491,8 +2494,8 @@ class App extends React.Component {
     const bestNopName = best ? compactNop(best.nop) : "-";
     const decliningNopName = declining ? compactNop(declining.nop) : "-";
     const preventivePage = s.activePage.startsWith("preventive");
-    const pageTitle = s.activePage === "data-upload" ? "DATA UPLOAD" : s.activePage === "rca" ? "RCA ALARM DOWN" : s.activePage === "improvement-sumbagsel" ? "IMPROVEMENT SUMBAGSEL" : preventivePage ? "PREVENTIVE MANAGEMENT" : "AUTOMATION MANAGEMENT";
-    if (s.activePage === "rca") return /* @__PURE__ */ React.createElement("div", { className: "app-shell min-h-screen bg-[#E9EFF5] pl-[250px]" }, /* @__PURE__ */ React.createElement(Sidebar, { activePage: s.activePage, preventiveOpen: s.preventiveOpen, onPage: this.openPage, onTogglePreventive: this.togglePreventive }), /* @__PURE__ */ React.createElement("header", { className: "h-[66px] bg-white shadow-[0_1px_0_#D7DFE8]" }, /* @__PURE__ */ React.createElement("div", { className: "flex h-full items-center px-6" }, /* @__PURE__ */ React.createElement("h1", { className: "text-[20px] font-semibold text-[#29496C]" }, pageTitle))), /* @__PURE__ */ React.createElement("main", { className: "space-y-4 p-5" }, /* @__PURE__ */ React.createElement(runtimeComponent("RCAWorkspace"), { key: s.navigationRevision, title: "RCA ALARM DOWN BELUM TERSEDIA" })));
+    const pageTitle = s.activePage === "productivity" ? "DAILY PRODUCTIVITY" : s.activePage === "data-upload" ? "DATA UPLOAD" : s.activePage === "rca" ? "RCA ALARM DOWN" : s.activePage === "improvement-sumbagsel" ? "IMPROVEMENT SUMBAGSEL" : preventivePage ? "PREVENTIVE MANAGEMENT" : "AUTOMATION MANAGEMENT";
+    if (s.activePage === "rca" || s.activePage === "productivity") return /* @__PURE__ */ React.createElement("div", { className: "app-shell min-h-screen bg-[#E9EFF5] pl-[250px]" }, /* @__PURE__ */ React.createElement(Sidebar, { activePage: s.activePage, preventiveOpen: s.preventiveOpen, onPage: this.openPage, onTogglePreventive: this.togglePreventive }), /* @__PURE__ */ React.createElement("header", { className: "h-[66px] bg-white shadow-[0_1px_0_#D7DFE8]" }, /* @__PURE__ */ React.createElement("div", { className: "flex h-full items-center px-6" }, /* @__PURE__ */ React.createElement("h1", { className: "text-[20px] font-semibold text-[#29496C]" }, pageTitle))), /* @__PURE__ */ React.createElement("main", { className: "space-y-4 p-5" }, /* @__PURE__ */ React.createElement(runtimeComponent(s.activePage === "productivity" ? "ProductivityWorkspace" : "RCAWorkspace"), { key: s.navigationRevision, title: "RCA ALARM DOWN BELUM TERSEDIA" })));
     if (s.activePage === "improvement-sumbagsel") return /* @__PURE__ */ React.createElement("div", { className: "app-shell min-h-screen bg-[#E9EFF5] pl-[250px]" }, /* @__PURE__ */ React.createElement(Sidebar, { activePage: s.activePage, preventiveOpen: s.preventiveOpen, onPage: this.openPage, onTogglePreventive: this.togglePreventive }), /* @__PURE__ */ React.createElement("header", { className: "h-[66px] bg-white shadow-[0_1px_0_#D7DFE8]" }, /* @__PURE__ */ React.createElement("div", { className: "flex h-full items-center px-6" }, /* @__PURE__ */ React.createElement("h1", { className: "text-[20px] font-semibold text-[#29496C]" }, pageTitle))), /* @__PURE__ */ React.createElement("main", { className: "space-y-4 p-5" }, /* @__PURE__ */ React.createElement(runtimeComponent("SumbagselImprovement"), { key: s.navigationRevision, title: "DASHBOARD IMPROVEMENT SUMBAGSEL BELUM TERSEDIA" })));
     const refreshTicketSummary = async () => {
       const dashboard = await getDashboard(s.run.id, s.region, s.nop);

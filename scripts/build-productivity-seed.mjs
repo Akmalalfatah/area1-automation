@@ -1,0 +1,11 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {gzipSync} from 'node:zlib';
+import {parseProductivityWorkbook,measureProductivity} from '../server/productivity.js';
+const input=process.argv[2];if(!input)throw Error('Pass a Ticket SWFM .xlsx path.');
+const data=await parseProductivityWorkbook(input,path.basename(input));
+const root=path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+await fs.mkdir(path.join(root,'server/data'),{recursive:true});
+await fs.writeFile(path.join(root,'server/data/productivity-swfm-default.json.gz'),gzipSync(JSON.stringify(data)));
+console.log(JSON.stringify({rows:data.rows.length,pics:data.roster.length,dates:data.dates,total:measureProductivity(data.rows,''),seed_bytes:gzipSync(JSON.stringify(data)).length}));
