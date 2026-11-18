@@ -156,7 +156,7 @@ const getKpiCategoryExport = ({ runId, region, nop, periods } = {}) => {
   return api(`/api/kpi-category-export${params.size ? `?${params}` : ""}`);
 };
 const PAGE_ASSETS = {
-  productivity: { styles: ["/static/productivity.css?v=20261117-back-text"], scripts: ["/static/productivity.js?v=20261117-back-text"] },
+  productivity: { styles: ["/static/productivity.css?v=20261118-view-filters"], scripts: ["/static/productivity.js?v=20261118-view-filters"] },
   "preventive-dashboard": { styles: ["/static/pm-site.css?v=20261105-asset-integrity"] },
   "preventive-punchlist": { styles: ["/static/pm-punchlist.css?v=20261106-pagination-spread-v1"] },
   "preventive-site": { styles: ["/static/pm-site.css?v=20261105-asset-integrity"], scripts: ["/static/pm-site.js?v=20261105-asset-integrity"] },

@@ -82,3 +82,19 @@ test('mixed ticket types are split by role without duplicating totals; manual co
   await p.saveProductivityPics({ids:[pic.id],role:'MBP'});assert.equal((await p.productivitySummary({...q,role:'MBP'})).total.take_over,2);
   await p.saveProductivityPics({ids:[pic.id],role:'auto'});assert.equal((await p.productivitySummary({...q,role:'MBP'})).total.take_over,1);
 });
+test('regional NOP options exclude other regions and an obsolete NOP cannot silently hide data',async()=>{
+  const r01=await p.productivityRegion('R01_Sumbagut',{date:'2026-09-14'});
+  assert.ok(r01.nops.includes('MEDAN'));assert.ok(!r01.nops.includes('JAMBI'));assert.ok(!r01.nops.includes('BATAM'));
+  const r02=await p.productivityRegion('R02_Sumbagsel',{date:'2026-09-14'});assert.ok(r02.nops.includes('JAMBI'));assert.ok(!r02.nops.includes('MEDAN'));
+  const invalid=await p.productivityRegion('R01_Sumbagut',{date:'2026-09-14',nop:'JAMBI'});assert.equal(invalid.nop,'');assert.deepEqual(invalid.summary,r01.summary);
+  const medan=await p.productivityRegion('R01_Sumbagut',{date:'2026-09-14',nop:'MEDAN'});assert.equal(medan.nop,'MEDAN');assert.ok(medan.pics.every(pic=>pic.nops.includes('MEDAN')));assert.ok(medan.pics.length<=50);
+});
+test('summary has three filters, regional view adds NOP, and ticket detail has no filters',async()=>{
+  const sandbox={React:{Component:class {},createElement:(type,props,...children)=>({type,props:{...props,children}})},window:{},location:{search:'?nop=JAMBI'},URLSearchParams};
+  vm.runInNewContext(await fs.readFile(new URL('../web/static/productivity.js',import.meta.url),'utf8'),sandbox);
+  const page=new sandbox.window.ProductivityWorkspace({}),nodes=[];
+  const walk=node=>{if(Array.isArray(node)){node.forEach(walk);return;}if(node&&typeof node==='object'){nodes.push(node);walk(node.props?.children);}};
+  walk(page.renderFilters());assert.equal(page.state.nop,'');assert.deepEqual(nodes.filter(x=>x.type==='label').map(x=>x.props.children[0].props.children[0]),['Tanggal','Jenis PIC','Search']);
+  page.state.regional='R01_Sumbagut';page.state.meta={regional:'R01_Sumbagut',nops:['MEDAN']};nodes.length=0;walk(page.renderFilters());assert.equal(nodes.filter(x=>x.type==='label').length,4);assert.equal(nodes.find(x=>x.type==='select').props['aria-label'],'NOP Productivity');
+  page.state.picId='test';assert.equal(page.renderFilters(),null);nodes.length=0;walk(page.renderTickets({pic:{pic:'Test',regional:'R01_Sumbagut',nops:['MEDAN'],role:'TS'},tickets:[],pagination:null}));assert.equal(nodes.filter(x=>x.type==='input'||x.type==='select').length,0);
+});

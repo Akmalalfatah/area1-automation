@@ -146,9 +146,11 @@ export async function productivitySummary(query={}){
 function pagination(query,count){const page=Number(query.page||1);if(!Number.isSafeInteger(page)||page<1)throw fail('Halaman tidak valid.');return{page:Math.min(page,Math.max(1,Math.ceil(count/50))),page_size:50,total:count,total_pages:Math.max(1,Math.ceil(count/50))}}
 export async function productivityRegion(regional,query={}){
   if(!PRODUCTIVITY_REGIONS.includes(regional))throw fail('Regional tidak ditemukan.',404)
-  const c=await context(query),all=filterPics(c,regional).map(p=>({...p,...metricsFor(c,p)})).sort((a,b)=>(b.take_over+b.check_in+b.backup)-(a.take_over+a.check_in+a.backup)||a.pic.localeCompare(b.pic,'id'))
-  const paging=pagination(query,all.length),summary=(await productivitySummary({...query,date:c.date})).regions.find(r=>r.regional===regional)
-  return{...responseMeta(c),regional,summary,pagination:paging,pics:all.slice((paging.page-1)*50,paging.page*50)}
+  const c=await context(query),nops=[...new Set(c.pics.filter(p=>p.regional===regional).flatMap(p=>p.nops))].filter(Boolean).sort()
+  if(c.nop&&!nops.includes(c.nop))c.nop=''
+  const all=filterPics(c,regional).map(p=>({...p,...metricsFor(c,p)})).sort((a,b)=>(b.take_over+b.check_in+b.backup)-(a.take_over+a.check_in+a.backup)||a.pic.localeCompare(b.pic,'id'))
+  const paging=pagination(query,all.length),summary=(await productivitySummary({...query,date:c.date,nop:c.nop})).regions.find(r=>r.regional===regional)
+  return{...responseMeta(c),regional,nops,nop:c.nop,summary,pagination:paging,pics:all.slice((paging.page-1)*50,paging.page*50)}
 }
 export async function productivityTickets(query={}){
   const c=await context(query),pic=c.pics.find(p=>p.id===query.pic_id)
