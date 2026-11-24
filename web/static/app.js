@@ -470,7 +470,7 @@ class UploadHistoryButton extends React.Component {
   }
   render() {
     const h = React.createElement, s = this.state, label = this.props.label;
-    return h("div", { className: "pm-upload-history" }, h("button", { type: "button", className: "pm-upload-history-button", "aria-label": `Riwayat upload ${label}`, title: `Riwayat upload ${label}`, onClick: this.open, ref: (node) => this.trigger = node }, h(CalendarDays, { size: 17 })), s.open && h("div", { className: "pm-upload-history-overlay", onClick: (event) => {
+    return h("div", { className: "pm-upload-history" }, h("button", { type: "button", className: "pm-upload-history-button"+(this.props.showLabel?" source-history-button":""), "aria-label": `Riwayat upload ${label}`, title: `Riwayat upload ${label}`, onClick: this.open, ref: (node) => this.trigger = node }, h(CalendarDays, { size: 17 }),this.props.showLabel?h("span",null,"Riwayat Upload"):null), s.open && h("div", { className: "pm-upload-history-overlay", onClick: (event) => {
       if (event.target === event.currentTarget) this.close();
     }, onKeyDown: (event) => {
       if (event.key === "Escape") this.close();
@@ -540,44 +540,41 @@ class MasterSiteUploadSection extends React.Component {
     if (previous.revision !== this.props.revision) this.load();
   }
   render() {
-    var _a, _b, _c;
-    const h = React.createElement, s = this.state, draft = s.drafts[s.kind] || {}, types = [["ekpi", "eKPI Automation"], ["kpi_category", "SOMSA L0"], ["dashboard", "PM Punchlist"], ["genset", "PM Genset"], ["site", "PM Site"], ["master", "Master Site"], ["ggr", "GGR"], ["inap", "Ticket INAP"], ["swfm", "Ticket SWFM"], ["kpi_b13_r01", "KPIData B.1-B.3 R01"], ["kpi_b13_r02", "KPIData B.1-B.3 R02"], ["kpi_b13_r10", "KPIData B.1-B.3 R10"]], label = types.find(([key]) => key === s.kind)[1], latest = (_a = s.items.find((item) => item.key === s.kind)) == null ? void 0 : _a.latest;
-    const formatDate = (value) => value && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(8, 10) + "/" + value.slice(5, 7) + "/" + value.slice(0, 4) : "-";
-    const formatDateTime = (value) => { const date = value ? new Date(value) : null; return date && !Number.isNaN(date.getTime()) ? new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Jakarta", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }).format(date).replace(",", ", ") + " WIB" : formatDate(value); };
-    return h(
-      "div",
-      { className: "space-y-4" },
-      h(
-        "section",
-        { className: "corporate-panel data-freshness", "aria-label": "Data Freshness" },
-        h("header", null, h("h2", { className: "section-title" }, "DATA FRESHNESS"), h("span", null, s.loading ? "Memuat\u2026" : s.error ? "Data belum dapat dibaca" : s.items.filter((item) => item.latest).length + " dari " + s.items.length + " data tersedia")),
-        h("div", { className: "freshness-grid" }, ...s.items.map((item) => {
-          var _a2, _b2, _c2;
-          return h("article", { key: item.key, className: "freshness-item" }, h("div", { className: "freshness-item-head" }, h("strong", null, item.label), h("span", { className: "freshness-status " + (item.needs_upload ? "needs-update" : item.status === "Tanggal perlu validasi" ? "invalid-date" : "current") }, item.status)), h("p", { className: "freshness-file", title: ((_a2 = item.latest) == null ? void 0 : _a2.filename) || "" }, ((_b2 = item.latest) == null ? void 0 : _b2.filename) || "Belum ada file tersimpan"), h("div", { className: "freshness-item-foot" }, h("span", null, "Terakhir: " + formatDateTime(item.latest && (item.latest.updated_at || item.latest.upload_date)))), h("p", { className: "freshness-renewal " + (item.needs_update ? "due" : "") }, item.renewal_label));
-        })),
-        s.error && h("p", { role: "alert", className: "pm-site-error" }, s.error)
-      ),
-      h(
-        "section",
-        { className: "corporate-panel source-upload-section", "aria-label": "Upload seluruh data" },
-        h("header", null, h("h2", { className: "section-title" }, "UPLOAD SELURUH DATA"), h("p", null, "Pilih jenis data, tanggal, dan file Excel. Semua upload aplikasi dilakukan dari halaman ini.")),
-        h("div", { className: "source-tabs upload-center-tabs", role: "tablist", "aria-label": "Jenis data upload" }, ...types.map(([key, name]) => h("button", { key, type: "button", role: "tab", "aria-selected": key === s.kind, "aria-controls": "source-upload-panel", id: "source-tab-" + key, disabled: s.busy, onClick: () => this.setState({ kind: key, error: "", message: "" }) }, name))),
-        h(
-          "div",
-          { id: "source-upload-panel", role: "tabpanel", "aria-labelledby": "source-tab-" + s.kind },
-          h("div", { className: "source-current" }, h("strong", null, (latest == null ? void 0 : latest.filename) || "Belum ada file " + label + " tersimpan"), h("span", null, "Terakhir upload: " + formatDate(latest == null ? void 0 : latest.upload_date))),
-          s.kind === "ekpi" && h("div", { className: "source-upload-period" }, h("label", null, "JENIS PERIODE KPI"), h("select", { className: "control", "aria-label": "Jenis periode KPI", value: draft.reportingType || "current", disabled: s.busy, onChange: (event) => { const reportingType = event.target.value; this.setDraft({ reportingType, date: reportingType === "closing_previous_month" ? todayIso() : draft.file ? inferDateFromFilename(draft.file.name) : draft.date }); } }, h("option", { value: "current" }, "Bulan berjalan"), h("option", { value: "closing_previous_month" }, "Closing bulan sebelumnya (H+1 tanpa batas)")), h("p", { className: "source-upload-note" }, "Untuk Closing, tanggal upload otomatis memakai hari ini sehingga periode file selalu divalidasi sebagai bulan sebelumnya. Berlaku setiap bulan dan dapat diubah bila mengunggah data historis.")),
-          s.kind === "kpi_category" && h("p", { className: "source-upload-note" }, "Upload histori kategori SOMSA L0 untuk R01, R02, dan R10. Kategori SON L1 pada bulan aktif diambil otomatis dari KPI Table eKPI terbaru."),
-          h("div", { className: "source-upload-form" }, h("label", { className: "source-file-picker" }, h("span", null, "Choose File"), h("span", { title: ((_b = draft.file) == null ? void 0 : _b.name) || "" }, ((_c = draft.file) == null ? void 0 : _c.name) || "Pilih file " + label + " (.xlsx)"), h("input", { key: s.kind + "-" + Boolean(draft.file), type: "file", accept: ".xlsx", "aria-label": "File upload " + label, onChange: (event) => {
-            var _a2;
-            const file = ((_a2 = event.target.files) == null ? void 0 : _a2[0]) || null;
-            this.setDraft({ file, date: file ? (draft.reportingType === "closing_previous_month" ? todayIso() : inferDateFromFilename(file.name)) : draft.date });
-          } })), h("input", { type: "date", className: "control", "aria-label": "Tanggal data upload " + label, value: draft.date || "", disabled: s.busy, onChange: (event) => this.setDraft({ date: event.target.value }) }), h("button", { type: "button", className: "btn-primary", disabled: !draft.file || !draft.date || s.busy, onClick: this.upload }, s.busy ? "UPLOADING\u2026" : "UPLOAD FILE"), h(UploadHistoryButton, { key: s.kind, page: s.kind, label }))
-        ),
-        s.message && h("p", { role: "status", className: "source-upload-success" }, s.message)
-      ),
-      this.props.children
-    );
+    const h=React.createElement,s=this.state,draft=s.drafts[s.kind]||{};
+    const groups=[
+      {name:'KPI',items:[['ekpi','eKPI Automation'],['kpi_category','SOMSA L0'],['kpi_b13_r01','KPIData B.1–B.3 R01'],['kpi_b13_r02','KPIData B.1–B.3 R02'],['kpi_b13_r10','KPIData B.1–B.3 R10']]},
+      {name:'Preventive Management',items:[['dashboard','PM Punchlist'],['genset','PM Genset'],['site','PM Site']]},
+      {name:'Referensi & Ticket',items:[['master','Master Site'],['ggr','GGR'],['inap','Ticket INAP'],['swfm','Ticket SWFM']]}
+    ];
+    const types=groups.flatMap(group=>group.items),label=types.find(([key])=>key===s.kind)[1],latest=s.items.find(item=>item.key===s.kind)?.latest;
+    const dateLabel=value=>value&&/^\d{4}-\d{2}-\d{2}/.test(value)?value.slice(8,10)+'/'+value.slice(5,7)+'/'+value.slice(0,4):'—';
+    const dateTime=value=>{const date=value?new Date(value):null;return date&&!Number.isNaN(date.getTime())?new Intl.DateTimeFormat('id-ID',{timeZone:'Asia/Jakarta',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(date)+' WIB':dateLabel(value);};
+    const svg=(name,size=20)=>h('svg',{width:size,height:size,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.7,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true},h('path',{d:{upload:'M12 16V4m-5 5 5-5 5 5M4 16v4h16v-4',file:'M14 2H5v20h14V7l-5-5Zm0 0v6h5M8 12h8m-8 4h8',chevron:'m9 5 7 7-7 7',down:'m6 9 6 6 6-6',check:'m5 12 4 4L19 6'}[name]}));
+    const choose=kind=>this.setState({kind,error:'',message:''});
+    const tabKey=(event,key)=>{const keys=types.map(([value])=>value),index=keys.indexOf(key);let next;if(['ArrowDown','ArrowRight'].includes(event.key))next=keys[(index+1)%keys.length];else if(['ArrowUp','ArrowLeft'].includes(event.key))next=keys[(index-1+keys.length)%keys.length];else if(event.key==='Home')next=keys[0];else if(event.key==='End')next=keys.at(-1);if(next&&!s.busy){event.preventDefault();this.setState({kind:next,error:'',message:''},()=>document.getElementById('source-tab-'+next)?.focus());}};
+    const catalog=h('nav',{className:'source-catalog','aria-label':'Pilih jenis data'},
+      h('p',{className:'source-catalog-title',id:'source-catalog-label'},'JENIS DATA'),h('select',{className:'source-mobile-kind','aria-labelledby':'source-catalog-label',value:s.kind,disabled:s.busy,onChange:event=>choose(event.target.value)},...groups.map(group=>h('optgroup',{key:group.name,label:group.name},...group.items.map(([key,name])=>h('option',{key,value:key},name))))),
+      h('div',{className:'source-catalog-tabs',role:'tablist','aria-orientation':'vertical','aria-label':'Jenis data upload'},...groups.map(group=>h('div',{key:group.name,className:'source-catalog-group'},h('h3',null,group.name),...group.items.map(([key,name])=>h('button',{key,id:'source-tab-'+key,type:'button',role:'tab','aria-selected':key===s.kind,'aria-controls':'source-upload-panel',tabIndex:key===s.kind?0:-1,disabled:s.busy,onClick:()=>choose(key),onKeyDown:event=>tabKey(event,key)},h('span',null,name),key===s.kind?svg('chevron',14):null))))));
+    const picker=h('div',{className:'source-file-field'},h('span',{className:'source-control-label'},'FILE EXCEL'),
+      h('label',{className:'source-file-picker'+(draft.file?' has-file':''),'aria-disabled':s.busy},svg(draft.file?'file':'upload',30),
+        h('span',{className:'source-picker-copy'},h('strong',{title:draft.file?.name||''},draft.file?.name||'Pilih file Excel'),h('small',null,draft.file?((draft.file.size/1024/1024).toLocaleString('id-ID',{maximumFractionDigits:2})+' MB · Klik untuk mengganti file'):'Klik untuk memilih file .xlsx')),
+        h('input',{key:s.kind+'-'+Boolean(draft.file),type:'file',accept:'.xlsx','aria-label':'File upload '+label,disabled:s.busy,onChange:event=>{const nextFile=event.target.files?.[0]||null;this.setDraft({file:nextFile,date:nextFile?(draft.reportingType==='closing_previous_month'?todayIso():inferDateFromFilename(nextFile.name)):draft.date});}})));
+    const dateChange=event=>{if(event.target.value!==(this.state.drafts[this.state.kind]?.date||''))this.setDraft({date:event.target.value});};
+    const dateField=h('label',{className:'source-date-field'},h('span',{className:'source-control-label'},'TANGGAL DATA'),h('input',{type:'date',className:'control','aria-label':'Tanggal data upload '+label,value:draft.date||'',disabled:s.busy,onInput:dateChange,onChange:dateChange}));
+    const period=s.kind==='ekpi'?h('label',{className:'source-period-field'},h('span',{className:'source-control-label'},'JENIS PERIODE KPI'),h('select',{className:'control','aria-label':'Jenis periode KPI',value:draft.reportingType||'current',disabled:s.busy,onChange:event=>{const reportingType=event.target.value;this.setDraft({reportingType,date:reportingType==='closing_previous_month'?todayIso():draft.file?inferDateFromFilename(draft.file.name):draft.date});}},h('option',{value:'current'},'Bulan berjalan'),h('option',{value:'closing_previous_month'},'Closing bulan sebelumnya (H+1 tanpa batas)'))):null;
+    const note=s.kind==='kpi_category'?'Menerima KPIData_SOMSAL0 atau histori kategori bulanan. Histori bulan lain tetap tersimpan; SON L1 tetap mengikuti KPI Table eKPI.':s.kind==='ekpi'&&draft.reportingType==='closing_previous_month'?'Periode file Closing harus bulan sebelumnya. Tanggal data otomatis memakai hari ini dan dapat diubah untuk data historis.':null;
+    const panel=h('div',{className:'source-upload-panel',id:'source-upload-panel',role:'tabpanel','aria-labelledby':'source-tab-'+s.kind},
+      h('div',{className:'source-panel-heading'},h('div',null,h('p',{className:'source-overline'},'UPLOAD FILE'),h('h3',null,label)),h(UploadHistoryButton,{key:s.kind,page:s.kind,label,showLabel:true})),
+      h('div',{className:'source-last-file'},h('span',{className:'source-last-icon'},svg('file',21)),h('div',null,h('span',{className:'source-control-label'},'FILE TERAKHIR'),h('strong',{title:latest?.filename||''},latest?.filename||'Belum ada file tersimpan'),h('small',null,latest?'Terakhir upload: '+dateLabel(latest.upload_date):'Pilih file pertama untuk jenis data ini.')),h('span',{className:'source-availability'+(latest?' is-available':'')},latest?'Tersedia':'Belum upload')),
+      h('div',{className:'source-upload-form'},picker,h('div',{className:'source-fields-row'},dateField,period),note?h('p',{className:'source-upload-note'},note):null,
+        s.error?h('p',{role:'alert',className:'source-upload-error'},s.error):null,
+        h('div',{className:'source-submit-row'},h('p',null,'Format .xlsx · Maksimal 25 MB'),h('button',{type:'button',className:'btn-primary',disabled:!draft.file||!draft.date||s.busy,onClick:this.upload},svg('upload',17),s.busy?'Mengunggah…':'Upload File'))),
+      s.message?h('p',{role:'status',className:'source-upload-success'},svg('check',17),s.message):null);
+    const available=s.items.filter(item=>item.latest).length;
+    const freshness=h('details',{className:'corporate-panel data-freshness'},
+      h('summary',null,h('div',null,h('h2',{className:'section-title'},'DATA FRESHNESS'),h('p',null,'Status file sumber dan waktu pembaruan')),h('span',{className:'freshness-summary-count'},s.loading?'Memuat status…':s.items.length?available+' dari '+s.items.length+' data tersedia':'Status belum tersedia'),svg('down',18)),
+      h('div',{className:'freshness-grid'},...s.items.map(item=>h('article',{key:item.key,className:'freshness-item'},h('div',{className:'freshness-item-head'},h('strong',null,item.label),h('span',{className:'freshness-status '+(item.needs_upload?'needs-update':item.status==='Tanggal perlu validasi'?'invalid-date':'current')},item.status)),h('p',{className:'freshness-file',title:item.latest?.filename||''},item.latest?.filename||'Belum ada file tersimpan'),h('div',{className:'freshness-item-foot'},'Terakhir: '+dateTime(item.latest&&(item.latest.updated_at||item.latest.upload_date))),h('p',{className:'freshness-renewal '+(item.needs_update?'due':'')},item.renewal_label)))));
+    return h('div',{className:'data-upload-workspace'},h('section',{className:'corporate-panel source-upload-section','aria-label':'Upload seluruh data'},h('header',null,h('h2',{className:'section-title'},'UPLOAD DATA'),h('p',null,'Pilih jenis data, tentukan file dan tanggal, lalu unggah.')),h('div',{className:'source-upload-layout'},catalog,panel)),freshness,this.props.children);
   }
 }
 function PreventiveUploadPanel({ file, date, busy, latest, onFile, onDate, onUpload, label = "Preventive", historyPage }) {

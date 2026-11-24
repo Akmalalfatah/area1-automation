@@ -102,21 +102,40 @@ export async function loadPreviousHistoryDataset(runId,currentDate,reportingType
 // Satu snapshot ekspor KPI Category memuat seluruh histori bulan. Simpan
 // terpisah dari kpi_history agar impor SON L1/SOMSA L0 tidak mengganti KPI
 // Table maupun baseline perbandingan eKPI.
+export function mergeKpiCategoryDatasets(...datasets){
+  const records=new Map()
+  for(const dataset of datasets){for(const row of dataset?.rows||[]){
+    const key=`${row.period}|${row.name}`,previous={...(records.get(key)||{})}
+    if(row.somsa_l0_category&&!Object.prototype.hasOwnProperty.call(row,'somsa_l0_score'))delete previous.somsa_l0_score
+    for(const [field,value] of Object.entries(row))if(value!==null&&value!==undefined&&value!=='')previous[field]=value
+    records.set(key,previous)
+  }}
+  const rows=[...records.values()].sort((a,b)=>a.period.localeCompare(b.period)||a.name.localeCompare(b.name))
+  return{...datasets.filter(Boolean).at(-1),kind:'kpi_category_export',rows,row_count:rows.length,periods:[...new Set(rows.map(row=>row.period))]}
+}
+let categoryUploadQueue=Promise.resolve()
 export async function saveKpiCategoryExport(filename,uploadDate,dataset){
   const rowCount=Number(dataset?.row_count||dataset?.rows?.length||0)
   if(!databaseEnabled){
+    const operation=categoryUploadQueue.catch(()=>{}).then(async()=>{
     const file=path.join(DATA_DIR,'kpi-category-export.json')
     await fs.mkdir(DATA_DIR,{recursive:true})
-    const record={filename,upload_date:uploadDate,dataset,updated_at:new Date().toISOString()}
+    const previous=await readLocalJson(file,null),bundled=await loadBundledKpiCategoryExport()
+    const merged=mergeKpiCategoryDatasets(bundled?.dataset,previous?.dataset,dataset)
+    const record={filename,upload_date:uploadDate,dataset:merged,updated_at:new Date().toISOString()}
     await writeJsonAtomic(file,record)
     await recordApplicationUpload('kpi_category','kpi-category-export',filename,uploadDate,rowCount)
     return {filename,upload_date:uploadDate,row_count:rowCount,period_count:(dataset?.periods||[]).length}
+    });categoryUploadQueue=operation;return operation
   }
   const connection=await getPool().getConnection()
   try{
     await connection.beginTransaction()
+    const [existing]=await connection.query('SELECT dataset FROM kpi_category_exports ORDER BY updated_at DESC LIMIT 1 FOR UPDATE')
+    const previous=existing[0]?.dataset,bundled=await loadBundledKpiCategoryExport()
+    const merged=mergeKpiCategoryDatasets(bundled?.dataset,typeof previous==='string'?JSON.parse(previous):previous,dataset)
     await connection.query('DELETE FROM kpi_category_exports')
-    await connection.query('INSERT INTO kpi_category_exports(filename,upload_date,dataset) VALUES(?,?,?)',[filename,uploadDate,json(dataset)])
+    await connection.query('INSERT INTO kpi_category_exports(filename,upload_date,dataset) VALUES(?,?,?)',[filename,uploadDate,json(merged)])
     await recordApplicationUpload('kpi_category','kpi-category-export',filename,uploadDate,rowCount,connection)
     await connection.commit()
     return {filename,upload_date:uploadDate,row_count:rowCount,period_count:(dataset?.periods||[]).length}

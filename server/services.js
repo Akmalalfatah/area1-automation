@@ -93,6 +93,44 @@ const categoryExportPeriod=value=>{
   return month?`${match[2]}-${String(month).padStart(2,'0')}`:null
 }
 
+const SOMSA_COMPONENTS=['1.1','1.2','1.3','1.4','1.5','1.6','1.7','1.8','2.1','2.2','2.3','3','4.1','4.2','5.1','5.2','6']
+const CATEGORY_NAMES={K:'Kurang',C:'Cukup',B:'Baik',BS:'Baik Sekali',IS:'Istimewa'}
+function parseSomsaL0Components(matrix,headers){
+  const groups=new Map()
+  for(let index=1;index<matrix.length;index++){
+    const row=matrix[index],read=key=>row[headers[key]],uploadedNop=normalizeNop(read('nop')).replace(/^NOP\s+/,'')
+    const name=NOP_ORDER.find(item=>normalizeNop(item).replace(/^NOP\s+/,'')===uploadedNop)
+    if(!name)continue
+    const component=String(read('no')??'').trim().replace(',','.')
+    // Ignore explicit total/footer lines, but never accept SON L1's A/B layout.
+    if(!component||/^total/i.test(component))continue
+    const rowNumber=index+1,month=Number(read('month')),year=Number(read('year'))
+    if(!Number.isInteger(month)||month<1||month>12||!Number.isInteger(year)||year<2000||year>9999)throw new ValidationError(`Periode Month/Year SOMSA L0 tidak valid pada baris ${rowNumber}.`)
+    if(String(read('regional')??'').trim()!==NOP_TO_REGION[name])throw new ValidationError(`Regional SOMSA L0 tidak sesuai untuk ${name} pada baris ${rowNumber}.`)
+    if(!/^A(?:\.|\s|$)/i.test(String(read('group')??'').trim())||!SOMSA_COMPONENTS.includes(component))throw new ValidationError(`Struktur komponen SOMSA L0 tidak sesuai pada baris ${rowNumber}. Gunakan file KPIData_SOMSAL0 dengan 17 komponen, bukan KPIData SON L1.`)
+    const raw=read('skor kpi'),score=Number(raw)
+    if(raw===null||raw===undefined||String(raw).trim()===''||!Number.isFinite(score)||score<0)throw new ValidationError(`Skor KPI SOMSA L0 tidak valid pada baris ${rowNumber} (${name}, No ${component}).`)
+    const period=`${year}-${String(month).padStart(2,'0')}`,key=`${period}|${name}`
+    if(!groups.has(key))groups.set(key,{name,region:NOP_TO_REGION[name],period,components:new Map()})
+    const item=groups.get(key)
+    if(item.components.has(component))throw new ValidationError(`Komponen SOMSA L0 berulang: ${name}, ${period}, No ${component}. Data tidak dijumlahkan dua kali.`)
+    item.components.set(component,score)
+  }
+  const rows=[]
+  for(const item of groups.values()){
+    const missing=SOMSA_COMPONENTS.filter(key=>!item.components.has(key))
+    if(missing.length)throw new ValidationError(`Komponen SOMSA L0 belum lengkap untuk ${item.name}, ${item.period}: ${missing.join(', ')}.`)
+    const score=Math.round([...item.components.values()].reduce((sum,value)=>sum+value,0)*1e10)/1e10
+    // Seventeen source scores rounded to four decimals can exceed 100 by <.001.
+    const code=category(score<=100.001?Math.min(score,100):score)
+    if(!code)throw new ValidationError(`Total Skor KPI SOMSA L0 di luar rentang 0–100 untuk ${item.name}, ${item.period}: ${score}.`)
+    rows.push({name:item.name,region:item.region,period:item.period,son_l1_category:'',somsa_l0_category:CATEGORY_NAMES[code],somsa_l0_score:score})
+  }
+  rows.sort((a,b)=>a.period.localeCompare(b.period)||a.name.localeCompare(b.name))
+  if(!rows.length)throw new ValidationError('Tidak ada skor SOMSA L0 untuk R01, R02, dan R10 pada file ini.')
+  return{kind:'kpi_category_export',input_format:'somsa_l0_components',row_count:rows.length,periods:[...new Set(rows.map(row=>row.period))],rows}
+}
+
 export async function parseKpiCategoryExport(buffer){
   const workbook=await workbookFrom(buffer),sheet=workbook.worksheets[0]
   if(!sheet)throw new ValidationError('File KPI Category tidak memiliki sheet data.')
@@ -104,6 +142,7 @@ export async function parseKpiCategoryExport(buffer){
   // untuk mempertahankan histori yang sudah tersedia.
   const somsaHeader=['somsa l0 score category','somsal 0 score category','somsa l 0 score category'].find(key=>headers[key]!==undefined)
   const sonHeader=['son l1 score category','sonl 1 score category','son l 1 score category'].find(key=>headers[key]!==undefined)
+  if(!somsaHeader&&['regional','nop','month','year','no','group','skor kpi'].every(key=>headers[key]!==undefined))return parseSomsaL0Components(matrix,headers)
   const missing=['nop','period'].filter(key=>headers[key]===undefined)
   if(!somsaHeader)missing.push('SOMSA L0 Score Category')
   if(missing.length)throw new ValidationError(`Kolom KPI Category tidak lengkap: ${missing.join(', ')}.`)
